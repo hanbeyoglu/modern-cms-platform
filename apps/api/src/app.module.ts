@@ -18,6 +18,8 @@ import { CampaignsModule } from './campaigns/campaigns.module';
 import { CinemasModule } from './cinemas/cinemas.module';
 import { MoviesModule } from './movies/movies.module';
 import { MovieSessionsModule } from './movie-sessions/movie-sessions.module';
+import { PagesModule } from './pages/pages.module';
+import { PageBlocksModule } from './page-blocks/page-blocks.module';
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { MovieSessionsModule } from './movie-sessions/movie-sessions.module';
     CinemasModule,
     MoviesModule,
     MovieSessionsModule,
+    PagesModule,
+    PageBlocksModule,
     HealthModule,
   ],
 })

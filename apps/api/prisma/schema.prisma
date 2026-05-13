@@ -61,6 +61,10 @@ model User {
   updatedMovies         Movie[]         @relation("MovieUpdater")
   createdMovieSessions  MovieSession[]  @relation("MovieSessionCreator")
   updatedMovieSessions  MovieSession[]  @relation("MovieSessionUpdater")
+  createdPages          Page[]          @relation("PageCreator")
+  updatedPages          Page[]          @relation("PageUpdater")
+  createdPageBlocks     PageBlock[]     @relation("PageBlockCreator")
+  updatedPageBlocks     PageBlock[]     @relation("PageBlockUpdater")
 }
 
 model Tenant {
@@ -84,6 +88,8 @@ model Tenant {
   cinemas       Cinema[]
   movies        Movie[]
   movieSessions MovieSession[]
+  pages         Page[]
+  pageBlocks    PageBlock[]
 }
 
 model Mall {
@@ -107,6 +113,8 @@ model Mall {
   campaigns        Campaign[]
   cinemas          Cinema[]
   movieSessions    MovieSession[]
+  pages            Page[]
+  pageBlocks       PageBlock[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -632,4 +640,82 @@ model MovieSession {
   @@index([cinemaId, startsAt])
   @@index([movieId])
   @@index([tenantId, status])
+}
+
+// ─── Page Builder (Sprint 9) ──────────────────────────────────────────────────
+
+enum PageStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PageType {
+  STANDARD
+  LANDING
+  LEGAL
+  CONTACT
+  CUSTOM
+}
+
+enum PageBlockStatus {
+  ACTIVE
+  PASSIVE
+}
+
+model Page {
+  id             String     @id @default(cuid())
+  tenantId       String
+  mallId         String?
+  title          String
+  slug           String
+  type           PageType   @default(STANDARD)
+  status         PageStatus @default(DRAFT)
+  seoTitle       String?
+  seoDescription String?
+  seoKeywords    String?
+  createdBy      String
+  updatedBy      String?
+  publishedAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  deletedAt      DateTime?
+
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall          Mall?       @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  createdByUser User        @relation("PageCreator", fields: [createdBy], references: [id])
+  updatedByUser User?       @relation("PageUpdater", fields: [updatedBy], references: [id])
+  blocks        PageBlock[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@index([tenantId, mallId])
+  @@index([tenantId, type])
+}
+
+model PageBlock {
+  id        String          @id @default(cuid())
+  tenantId  String
+  mallId    String?
+  pageId    String
+  type      String
+  title     String?
+  dataJson  Json            @default("{}")
+  sortOrder Int             @default(0)
+  status    PageBlockStatus @default(ACTIVE)
+  createdBy String
+  updatedBy String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  deletedAt DateTime?
+
+  tenant        Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall          Mall?   @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  page          Page    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  createdByUser User    @relation("PageBlockCreator", fields: [createdBy], references: [id])
+  updatedByUser User?   @relation("PageBlockUpdater", fields: [updatedBy], references: [id])
+
+  @@index([pageId, sortOrder])
+  @@index([tenantId, pageId])
 }

@@ -54,6 +54,14 @@ export const NAV_ITEMS: NavItem[] = [
     group: 'İçerik',
   },
   {
+    id: 'pages',
+    label: 'Sayfalar',
+    icon: '◧',
+    href: '/pages',
+    permission: 'page:read',
+    group: 'İçerik',
+  },
+  {
     id: 'campaigns',
     label: 'Kampanyalar',
     icon: '◈',

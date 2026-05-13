@@ -143,3 +143,29 @@ export type {
   MovieSessionListResponse,
   CreateMovieSessionPayload,
 } from './movie-sessions';
+
+export {
+  apiPagesList,
+  apiPageGet,
+  apiPageCreate,
+  apiPageUpdate,
+  apiPageDelete,
+  apiPagePublish,
+  apiPageArchive,
+  apiPageBlocksList,
+  apiPageBlockCreate,
+  apiPageBlockUpdate,
+  apiPageBlockDelete,
+  apiPageBlocksReorder,
+} from './pages';
+export type {
+  PageStatus,
+  PageType,
+  PageBlockStatus,
+  CmsPage,
+  CmsPageBlock,
+  PageListResponse,
+  CreatePagePayload,
+  CreatePageBlockPayload,
+  ReorderBlocksPayload,
+} from './pages';
