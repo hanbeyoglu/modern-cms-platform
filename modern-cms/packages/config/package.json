@@ -1,0 +1,14 @@
+{
+  "name": "@modern-cms/config",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "typescript"
+  ],
+  "scripts": {
+    "build": "mkdir -p dist && touch dist/.keep",
+    "lint": "echo \"@modern-cms/config: no sources to lint\"",
+    "typecheck": "echo \"@modern-cms/config: no types\"",
+    "clean": "rm -rf dist"
+  }
+}

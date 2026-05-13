@@ -1,0 +1,15 @@
+{
+  "extends": "../../packages/config/typescript/react.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "useDefineForClassFields": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@modern-cms/ui": ["../../packages/ui/src/index.tsx"]
+    }
+  },
+  "include": ["src"]
+}

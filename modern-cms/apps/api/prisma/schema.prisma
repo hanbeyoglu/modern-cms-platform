@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+  DELETED
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+  ARCHIVED
+}
+
+enum MallStatus {
+  DRAFT
+  LIVE
+  MAINTENANCE
+  CLOSED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  status       UserStatus @default(ACTIVE)
+  isSuperAdmin Boolean    @default(false)
+  deletedAt    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  tenantUsers   TenantUser[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[] @relation("AuditActor")
+}
+
+model Tenant {
+  id        String       @id @default(cuid())
+  name      String
+  slug      String       @unique
+  status    TenantStatus @default(ACTIVE)
+  deletedAt DateTime?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime   @updatedAt
+
+  malls       Mall[]
+  tenantUsers TenantUser[]
+  auditLogs   AuditLog[]
+}
+
+model Mall {
+  id        String     @id @default(cuid())
+  tenantId  String
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  slug      String
+  status    MallStatus @default(LIVE)
+  deletedAt DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  userMallAccesses UserMallAccess[]
+  auditLogs        AuditLog[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  isSystem    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenantUsers     TenantUser[]
+  rolePermissions RolePermission[]
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  roleId         String
+  permissionId String
+  role           Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission     Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt      DateTime   @default(now())
+
+  @@id([roleId, permissionId])
+}
+
+model TenantUser {
+  id        String    @id @default(cuid())
+  tenantId  String
+  userId    String
+  roleId    String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  mallAccess UserMallAccess[]
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@index([tenantId])
+}
+
+model UserMallAccess {
+  id           String     @id @default(cuid())
+  tenantUserId String
+  mallId       String
+  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
+  mall         Mall       @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([tenantUserId, mallId])
+  @@index([mallId])
+}
+
+model RefreshToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  actor       User?    @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  mallId      String?
+  mall        Mall?    @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  action      String
+  resource    String
+  resourceId  String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([actorUserId, createdAt])
+}

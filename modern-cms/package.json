@@ -1,0 +1,25 @@
+{
+  "name": "modern-cms",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "turbo clean && rm -rf node_modules",
+    "db:migrate": "pnpm --filter @modern-cms/api exec prisma migrate dev",
+    "db:migrate:deploy": "pnpm --filter @modern-cms/api exec prisma migrate deploy",
+    "db:seed": "pnpm --filter @modern-cms/api exec prisma db seed"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  }
+}
