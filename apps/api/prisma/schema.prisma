@@ -40,9 +40,11 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  tenantUsers   TenantUser[]
-  refreshTokens RefreshToken[]
-  auditLogs     AuditLog[] @relation("AuditActor")
+  tenantUsers    TenantUser[]
+  refreshTokens  RefreshToken[]
+  auditLogs      AuditLog[]    @relation("AuditActor")
+  mediaFolders   MediaFolder[] @relation("FolderCreator")
+  uploadedAssets MediaAsset[]  @relation("AssetUploader")
 }
 
 model Tenant {
@@ -52,11 +54,13 @@ model Tenant {
   status    TenantStatus @default(ACTIVE)
   deletedAt DateTime?
   createdAt DateTime     @default(now())
-  updatedAt DateTime   @updatedAt
+  updatedAt DateTime     @updatedAt
 
-  malls       Mall[]
-  tenantUsers TenantUser[]
-  auditLogs   AuditLog[]
+  malls        Mall[]
+  tenantUsers  TenantUser[]
+  auditLogs    AuditLog[]
+  mediaFolders MediaFolder[]
+  mediaAssets  MediaAsset[]
 }
 
 model Mall {
@@ -72,6 +76,8 @@ model Mall {
 
   userMallAccesses UserMallAccess[]
   auditLogs        AuditLog[]
+  mediaFolders     MediaFolder[]
+  mediaAssets      MediaAsset[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -101,11 +107,11 @@ model Permission {
 }
 
 model RolePermission {
-  roleId         String
+  roleId       String
   permissionId String
-  role           Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission     Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  createdAt      DateTime   @default(now())
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
 
   @@id([roleId, permissionId])
 }
@@ -142,15 +148,15 @@ model UserMallAccess {
 }
 
 model RefreshToken {
-  id         String    @id @default(cuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash  String
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  userAgent  String?
-  ipAddress  String?
-  createdAt  DateTime  @default(now())
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime  @default(now())
 
   @@index([userId])
   @@index([tokenHash])
@@ -172,4 +178,60 @@ model AuditLog {
 
   @@index([tenantId, createdAt])
   @@index([actorUserId, createdAt])
+}
+
+// ─── Media ────────────────────────────────────────────────────────────────────
+
+model MediaFolder {
+  id        String   @id @default(cuid())
+  tenantId  String
+  mallId    String?
+  parentId  String?
+  name      String
+  slug      String
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall     Mall?         @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  parent   MediaFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children MediaFolder[] @relation("FolderHierarchy")
+  creator  User          @relation("FolderCreator", fields: [createdBy], references: [id])
+  assets   MediaAsset[]
+
+  @@index([tenantId])
+  @@index([tenantId, parentId])
+  @@index([mallId])
+}
+
+model MediaAsset {
+  id           String    @id @default(cuid())
+  tenantId     String
+  mallId       String?
+  folderId     String?
+  uploadedBy   String
+  originalName String
+  fileName     String
+  mimeType     String
+  extension    String
+  size         Int
+  width        Int?
+  height       Int?
+  storageKey   String    @unique
+  publicUrl    String
+  altText      String?
+  metadataJson Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall     Mall?        @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  folder   MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  uploader User         @relation("AssetUploader", fields: [uploadedBy], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, folderId])
+  @@index([mallId])
 }

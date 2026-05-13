@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { TenantContextMiddleware } from './common/middleware/tenant-context.middleware';
 import { HealthModule } from './health/health.module';
 import { MallsModule } from './malls/malls.module';
+import { MediaModule } from './media/media.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { TenantsModule } from './tenants/tenants.module';
 
@@ -21,6 +22,7 @@ import { TenantsModule } from './tenants/tenants.module';
     AuthModule,
     TenantsModule,
     MallsModule,
+    MediaModule,
     HealthModule,
   ],
 })

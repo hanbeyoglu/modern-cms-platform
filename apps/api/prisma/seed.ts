@@ -15,6 +15,9 @@ const PERMISSIONS = [
   'content:create',
   'content:update',
   'content:publish',
+  'media:read',
+  'media:upload',
+  'media:delete',
 ] as const;
 
 async function main(): Promise<void> {
@@ -61,6 +64,9 @@ async function main(): Promise<void> {
         'content:create',
         'content:update',
         'content:publish',
+        'media:read',
+        'media:upload',
+        'media:delete',
       ],
     },
     {
@@ -73,12 +79,14 @@ async function main(): Promise<void> {
         'content:read',
         'content:create',
         'content:update',
+        'media:read',
+        'media:upload',
       ],
     },
     {
       code: 'REPORT_VIEWER',
       name: 'Report Viewer',
-      permissions: ['tenant:read', 'mall:read', 'analytics:view'],
+      permissions: ['tenant:read', 'mall:read', 'analytics:view', 'media:read'],
     },
   ];
 
@@ -115,12 +123,7 @@ async function main(): Promise<void> {
   const mallEmaar = await prisma.mall.upsert({
     where: { tenantId_slug: { tenantId: tenantEmaar.id, slug: 'emaar-avm' } },
     update: { name: 'Emaar AVM' },
-    create: {
-      tenantId: tenantEmaar.id,
-      name: 'Emaar AVM',
-      slug: 'emaar-avm',
-      status: 'LIVE',
-    },
+    create: { tenantId: tenantEmaar.id, name: 'Emaar AVM', slug: 'emaar-avm', status: 'LIVE' },
   });
 
   const mallIstanbul = await prisma.mall.upsert({
@@ -221,20 +224,16 @@ async function main(): Promise<void> {
 
   await prisma.userMallAccess.deleteMany({ where: { tenantUserId: mallManagerTu.id } });
   await prisma.userMallAccess.create({
-    data: {
-      tenantUserId: mallManagerTu.id,
-      mallId: mallIstanbul.id,
-    },
+    data: { tenantUserId: mallManagerTu.id, mallId: mallIstanbul.id },
   });
 
   await prisma.userMallAccess.deleteMany({ where: { tenantUserId: groupAdminTu.id } });
 
-  // Emaar tenant: örnek veri (kullanıcı atanmadı); süper admin tüm tenantları görebilir.
-
-  console.log('Seed tamam.', {
+  console.log('Seed complete.', {
     tenants: [tenantEmaar.slug, tenantMallGroup.slug],
     malls: [mallEmaar.slug, mallIstanbul.slug, mallBursa.slug],
     users: [superAdmin.email, groupAdmin.email, mallManager.email],
+    permissions: PERMISSIONS.length,
   });
 }
 

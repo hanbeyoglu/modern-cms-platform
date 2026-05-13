@@ -1,19 +1,47 @@
+import { useState } from 'react';
 import { AuthProvider } from './auth/AuthProvider';
 import { useAuth } from './auth/useAuth';
 import { TenantMallSelector } from './components/TenantMallSelector';
 import { LoginPage } from './pages/LoginPage';
+import { MediaPage } from './pages/MediaPage';
+
+type Page = 'dashboard' | 'media';
+
+const NAV_ITEMS: Array<{ id: Page; label: string }> = [
+  { id: 'dashboard', label: 'Gösterge Paneli' },
+  { id: 'media', label: 'Medya Kütüphanesi' },
+];
+
+function Nav({ current, onNavigate }: { current: Page; onNavigate: (p: Page) => void }) {
+  return (
+    <nav style={{ display: 'flex', gap: 4 }}>
+      {NAV_ITEMS.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onNavigate(item.id)}
+          style={{
+            padding: '4px 12px',
+            fontSize: 13,
+            border: '1px solid',
+            borderColor: current === item.id ? '#2563eb' : '#d1d5db',
+            background: current === item.id ? '#eff6ff' : '#fff',
+            color: current === item.id ? '#1d4ed8' : '#374151',
+            borderRadius: 6,
+            cursor: 'pointer',
+          }}
+        >
+          {item.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
 
 function AuthenticatedShell() {
-  const {
-    user,
-    email,
-    tenants,
-    activeTenantId,
-    malls,
-    activeMallId,
-    profileLoading,
-    clearSession,
-  } = useAuth();
+  const { user, email, tenants, activeTenantId, malls, activeMallId, profileLoading, clearSession } =
+    useAuth();
+  const [currentPage, setCurrentPage] = useState<Page>('dashboard');
 
   if (profileLoading) {
     return (
@@ -32,73 +60,96 @@ function AuthenticatedShell() {
   const activeMall = malls.find((m) => m.id === activeMallId);
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 960, margin: '0 auto', padding: 24 }}>
+    <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1100, margin: '0 auto', padding: 24 }}>
       {/* Header */}
       <header
         style={{
-          marginBottom: 24,
+          marginBottom: 20,
           paddingBottom: 16,
           borderBottom: '1px solid #e5e7eb',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'flex-start',
+          alignItems: 'center',
           gap: 16,
           flexWrap: 'wrap',
         }}
       >
-        <div>
-          <h1 style={{ margin: 0, fontSize: 20 }}>CMS Admin</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#4b5563' }}>
-            {displayName}
-            {user?.isSuperAdmin && (
-              <span
-                style={{
-                  marginLeft: 8,
-                  fontSize: 11,
-                  background: '#fef3c7',
-                  color: '#92400e',
-                  padding: '1px 6px',
-                  borderRadius: 4,
-                }}
-              >
-                SUPER ADMIN
-              </span>
-            )}
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>CMS Admin</span>
+            <span style={{ marginLeft: 10, fontSize: 12, color: '#6b7280' }}>
+              {displayName}
+              {user?.isSuperAdmin && (
+                <span
+                  style={{
+                    marginLeft: 6,
+                    fontSize: 10,
+                    background: '#fef3c7',
+                    color: '#92400e',
+                    padding: '1px 5px',
+                    borderRadius: 4,
+                  }}
+                >
+                  SUPER ADMIN
+                </span>
+              )}
+            </span>
+          </div>
+          <Nav current={currentPage} onNavigate={setCurrentPage} />
         </div>
-        <button type="button" onClick={() => clearSession()} style={{ fontSize: 13 }}>
-          Çıkış
-        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <TenantMallSelector />
+          <button type="button" onClick={() => clearSession()} style={{ fontSize: 12 }}>
+            Çıkış
+          </button>
+        </div>
       </header>
 
-      {/* Tenant / Mall Selector */}
-      <section style={{ marginBottom: 24 }}>
-        <TenantMallSelector />
-      </section>
-
-      {/* Context Panel */}
-      <section
-        style={{
-          background: '#f9fafb',
-          border: '1px solid #e5e7eb',
-          borderRadius: 8,
-          padding: 16,
-          marginBottom: 24,
-          fontSize: 13,
-        }}
-      >
-        <h2 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 600 }}>Aktif Bağlam</h2>
-        <div style={{ display: 'grid', gap: 4 }}>
-          <div>
-            <strong>Tenant:</strong> {activeTenant ? `${activeTenant.name} (${activeTenant.id})` : '—'}
-          </div>
-          <div>
-            <strong>Mall:</strong> {activeMall ? `${activeMall.name} (${activeMall.id})` : '—'}
-          </div>
+      {/* Active context bar */}
+      {(activeTenant || activeMall) && (
+        <div
+          style={{
+            fontSize: 12,
+            color: '#4b5563',
+            marginBottom: 16,
+            padding: '6px 10px',
+            background: '#f9fafb',
+            border: '1px solid #e5e7eb',
+            borderRadius: 6,
+            display: 'flex',
+            gap: 16,
+          }}
+        >
+          {activeTenant && (
+            <span>
+              <strong>Tenant:</strong> {activeTenant.name}
+            </span>
+          )}
+          {activeMall && (
+            <span>
+              <strong>Mall:</strong> {activeMall.name}
+            </span>
+          )}
         </div>
-      </section>
+      )}
 
-      {/* User Profile */}
+      {/* Page content */}
+      <main>
+        {currentPage === 'dashboard' && <DashboardView />}
+        {currentPage === 'media' && <MediaPage />}
+      </main>
+    </div>
+  );
+}
+
+function DashboardView() {
+  const { user, tenants, malls, activeTenantId, activeMallId } = useAuth();
+  const activeTenant = tenants.find((t) => t.id === activeTenantId);
+
+  return (
+    <div style={{ display: 'grid', gap: 16 }}>
+      {/* User card */}
       {user && (
         <section
           style={{
@@ -106,23 +157,20 @@ function AuthenticatedShell() {
             border: '1px solid #e5e7eb',
             borderRadius: 8,
             padding: 16,
-            marginBottom: 24,
             fontSize: 13,
           }}
         >
-          <h2 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 600 }}>Kullanıcı</h2>
-          <div style={{ display: 'grid', gap: 4 }}>
+          <h2 style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 600 }}>Kullanıcı</h2>
+          <div style={{ display: 'grid', gap: 3 }}>
             <div><strong>ID:</strong> {user.id}</div>
             <div><strong>E-posta:</strong> {user.email}</div>
             <div><strong>Durum:</strong> {user.status}</div>
-            <div>
-              <strong>Super Admin:</strong> {user.isSuperAdmin ? 'Evet' : 'Hayır'}
-            </div>
+            <div><strong>Super Admin:</strong> {user.isSuperAdmin ? 'Evet' : 'Hayır'}</div>
           </div>
         </section>
       )}
 
-      {/* Tenants */}
+      {/* Tenant list */}
       {tenants.length > 0 && (
         <section
           style={{
@@ -130,37 +178,32 @@ function AuthenticatedShell() {
             border: '1px solid #e5e7eb',
             borderRadius: 8,
             padding: 16,
-            marginBottom: 24,
             fontSize: 13,
           }}
         >
-          <h2 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 600 }}>
+          <h2 style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 600 }}>
             Tenantlar ({tenants.length})
           </h2>
-          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }}>
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 5 }}>
             {tenants.map((t) => (
               <li
                 key={t.id}
                 style={{
-                  padding: '6px 10px',
+                  padding: '5px 10px',
                   background: t.id === activeTenantId ? '#eff6ff' : '#fff',
                   border: `1px solid ${t.id === activeTenantId ? '#bfdbfe' : '#e5e7eb'}`,
                   borderRadius: 6,
-                  cursor: 'pointer',
                 }}
-                onClick={() => (t.id !== activeTenantId ? undefined : undefined)}
               >
                 <strong>{t.name}</strong>{' '}
-                <span style={{ color: '#6b7280' }}>
-                  {t.slug} · {t.status}
-                </span>
+                <span style={{ color: '#6b7280' }}>{t.slug} · {t.status}</span>
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      {/* Malls */}
+      {/* Mall list */}
       {malls.length > 0 && (
         <section
           style={{
@@ -171,34 +214,30 @@ function AuthenticatedShell() {
             fontSize: 13,
           }}
         >
-          <h2 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 600 }}>
+          <h2 style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 600 }}>
             Malllar — {activeTenant?.name} ({malls.length})
           </h2>
-          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }}>
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 5 }}>
             {malls.map((m) => (
               <li
                 key={m.id}
                 style={{
-                  padding: '6px 10px',
+                  padding: '5px 10px',
                   background: m.id === activeMallId ? '#eff6ff' : '#fff',
                   border: `1px solid ${m.id === activeMallId ? '#bfdbfe' : '#e5e7eb'}`,
                   borderRadius: 6,
                 }}
               >
                 <strong>{m.name}</strong>{' '}
-                <span style={{ color: '#6b7280' }}>
-                  {m.slug} · {m.status}
-                </span>
+                <span style={{ color: '#6b7280' }}>{m.slug} · {m.status}</span>
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      {/* Placeholder for future modules */}
       <section
         style={{
-          marginTop: 24,
           padding: 16,
           border: '1px dashed #d1d5db',
           borderRadius: 8,
@@ -207,7 +246,7 @@ function AuthenticatedShell() {
           textAlign: 'center',
         }}
       >
-        Sprint 3+ — CMS iş modülleri burada yer alacak
+        Sprint 4+ — CMS iş modülleri burada yer alacak
       </section>
     </div>
   );
@@ -215,11 +254,7 @@ function AuthenticatedShell() {
 
 function Shell() {
   const { accessToken } = useAuth();
-
-  if (!accessToken) {
-    return <LoginPage />;
-  }
-
+  if (!accessToken) return <LoginPage />;
   return <AuthenticatedShell />;
 }
 
