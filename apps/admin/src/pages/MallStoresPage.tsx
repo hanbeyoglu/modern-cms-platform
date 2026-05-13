@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
+import { PageContainer } from '../components/layout/PageContainer';
+import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { Button } from '../components/ui/Button';
 import {
   apiGlobalStoresList,
   apiMallStoreAssign,
@@ -192,6 +198,7 @@ export function MallStoresPage() {
         setTotal((t) => t + 1);
       }
       setShowAssign(false);
+      toast.success(editing ? 'AVM mağazası güncellendi' : 'Mağaza AVM\'ye atandı');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Kayıt hatası');
     } finally {
@@ -206,8 +213,9 @@ export function MallStoresPage() {
       await apiMallStoreDelete(accessToken, tenantId, mallId, id);
       setItems((prev) => prev.filter((x) => x.id !== id));
       setTotal((t) => t - 1);
+      toast.success('AVM ataması kaldırıldı');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Silme hatası');
+      toast.error(e instanceof Error ? e.message : 'Silme hatası');
     }
   }
 
@@ -218,28 +226,38 @@ export function MallStoresPage() {
         ? await apiMallStoreUnfeature(accessToken, tenantId, mallId, m.id)
         : await apiMallStoreFeature(accessToken, tenantId, mallId, m.id);
       setItems((prev) => prev.map((x) => (x.id === u.id ? u : x)));
+      toast.success(u.isFeatured ? 'Öne çıkarıldı' : 'Öne çıkarma kaldırıldı');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'İşlem hatası');
+      toast.error(e instanceof Error ? e.message : 'İşlem hatası');
     }
   }
 
   if (!tenantId) {
-    return <p style={{ color: '#6b7280', fontSize: 13 }}>Tenant seçin.</p>;
+    return (
+      <PageContainer>
+        <PageHeader title="AVM Mağazaları" />
+        <EmptyState title="Tenant seçilmedi" description="AVM mağazaları için üstten bir tenant seçin." />
+      </PageContainer>
+    );
   }
   if (!mallId) {
-    return <p style={{ color: '#6b7280', fontSize: 13 }}>Mall mağaza listesi için bir AVM (mall) seçin.</p>;
+    return (
+      <PageContainer>
+        <PageHeader title="AVM Mağazaları" />
+        <EmptyState title="Mall seçilmedi" description="AVM mağaza listesi için üstten bir AVM seçin." />
+      </PageContainer>
+    );
   }
 
   return (
+    <PageContainer>
+      <PageHeader
+        title="AVM Mağazaları"
+        meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} mağaza</span>}
+        action={<Button variant="primary" onClick={() => setShowAssign(true)}>+ Mağaza Ata</Button>}
+      />
     <div style={{ fontSize: 13 }}>
-      {error && (
-        <div style={{ marginBottom: 12, padding: 8, background: '#fef2f2', borderRadius: 6, color: '#b91c1c' }}>
-          {error}
-          <button type="button" style={{ marginLeft: 8 }} onClick={() => setError(null)}>
-            ✕
-          </button>
-        </div>
-      )}
+      {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <input
@@ -393,5 +411,6 @@ export function MallStoresPage() {
         </table>
       )}
     </div>
+    </PageContainer>
   );
 }

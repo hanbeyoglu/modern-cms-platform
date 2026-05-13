@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
+import { PageContainer } from '../components/layout/PageContainer';
+import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { Button } from '../components/ui/Button';
 import {
   apiGlobalStoreCreate,
   apiGlobalStoreDelete,
@@ -136,6 +142,7 @@ export function GlobalStoresPage() {
         setTotal((t) => t + 1);
       }
       setShowForm(false);
+      toast.success(editing ? 'Mağaza güncellendi' : 'Mağaza oluşturuldu');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Kayıt hatası');
     } finally {
@@ -150,25 +157,30 @@ export function GlobalStoresPage() {
       await apiGlobalStoreDelete(accessToken, tenantId, id);
       setItems((prev) => prev.filter((x) => x.id !== id));
       setTotal((t) => t - 1);
+      toast.success('Mağaza silindi');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Silme hatası');
+      toast.error(e instanceof Error ? e.message : 'Silme hatası');
     }
   }
 
   if (!tenantId) {
-    return <p style={{ color: '#6b7280', fontSize: 13 }}>Global mağazalar için tenant seçin.</p>;
+    return (
+      <PageContainer>
+        <PageHeader title="Global Mağazalar" />
+        <EmptyState title="Tenant seçilmedi" description="Global mağazalar için üstten bir tenant seçin." />
+      </PageContainer>
+    );
   }
 
   return (
+    <PageContainer>
+      <PageHeader
+        title="Global Mağazalar"
+        meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} mağaza</span>}
+        action={<Button variant="primary" onClick={openCreate}>+ Yeni Mağaza</Button>}
+      />
     <div style={{ fontSize: 13 }}>
-      {error && (
-        <div style={{ marginBottom: 12, padding: 8, background: '#fef2f2', borderRadius: 6, color: '#b91c1c' }}>
-          {error}
-          <button type="button" style={{ marginLeft: 8 }} onClick={() => setError(null)}>
-            ✕
-          </button>
-        </div>
-      )}
+      {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <input
@@ -302,5 +314,6 @@ export function GlobalStoresPage() {
         </table>
       )}
     </div>
+    </PageContainer>
   );
 }

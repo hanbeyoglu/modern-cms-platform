@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
+import { PageContainer } from '../components/layout/PageContainer';
+import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { Button } from '../components/ui/Button';
 import {
   apiStoreCategoriesList,
   apiStoreCategoryCreate,
@@ -106,6 +112,7 @@ export function StoreCategoriesPage() {
         setTotal((t) => t + 1);
       }
       setShowForm(false);
+      toast.success(editing ? 'Kategori güncellendi' : 'Kategori oluşturuldu');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Kayıt hatası');
     } finally {
@@ -120,25 +127,30 @@ export function StoreCategoriesPage() {
       await apiStoreCategoryDelete(accessToken, tenantId, id);
       setItems((prev) => prev.filter((x) => x.id !== id));
       setTotal((t) => t - 1);
+      toast.success('Kategori silindi');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Silme hatası');
+      toast.error(e instanceof Error ? e.message : 'Silme hatası');
     }
   }
 
   if (!tenantId) {
-    return <p style={{ color: '#6b7280', fontSize: 13 }}>Mağaza kategorileri için tenant seçin.</p>;
+    return (
+      <PageContainer>
+        <PageHeader title="Mağaza Kategorileri" />
+        <EmptyState title="Tenant seçilmedi" description="Mağaza kategorileri için üstten bir tenant seçin." />
+      </PageContainer>
+    );
   }
 
   return (
+    <PageContainer>
+      <PageHeader
+        title="Mağaza Kategorileri"
+        meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} kayıt</span>}
+        action={<Button variant="primary" onClick={openCreate}>+ Yeni Kategori</Button>}
+      />
     <div style={{ fontSize: 13 }}>
-      {error && (
-        <div style={{ marginBottom: 12, padding: 8, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, color: '#b91c1c' }}>
-          {error}
-          <button type="button" style={{ marginLeft: 8 }} onClick={() => setError(null)}>
-            ✕
-          </button>
-        </div>
-      )}
+      {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
@@ -155,7 +167,6 @@ export function StoreCategoriesPage() {
         <button type="button" onClick={() => void load()} style={{ padding: '5px 12px' }}>
           Filtrele
         </button>
-        <span style={{ color: '#6b7280' }}>{total} kayıt</span>
         <button type="button" onClick={openCreate} style={{ marginLeft: 'auto', padding: '6px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6 }}>
           + Kategori
         </button>
@@ -232,5 +243,6 @@ export function StoreCategoriesPage() {
         </table>
       )}
     </div>
+    </PageContainer>
   );
 }

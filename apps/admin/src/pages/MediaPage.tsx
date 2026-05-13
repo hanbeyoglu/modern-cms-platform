@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
+import { PageContainer } from '../components/layout/PageContainer';
+import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
 import {
   apiMediaDelete,
   apiMediaList,
@@ -80,9 +85,10 @@ export function MediaPage() {
         mallId: activeMallId ?? undefined,
       });
       setUploadProgress(null);
+      toast.success(`${file.name} yüklendi`);
       await loadAssets();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+      toast.error(err instanceof Error ? err.message : 'Yükleme başarısız');
       setUploadProgress(null);
     } finally {
       setUploading(false);
@@ -97,8 +103,9 @@ export function MediaPage() {
       await apiMediaDelete(accessToken, tenantId, id);
       setAssets((prev) => prev.filter((a) => a.id !== id));
       setTotal((t) => t - 1);
+      toast.success('Dosya silindi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed');
+      toast.error(err instanceof Error ? err.message : 'Silme başarısız');
     }
   }
 
@@ -109,8 +116,9 @@ export function MediaPage() {
       const folder = await apiFolderCreate(accessToken, tenantId, newFolderName.trim(), activeFolderId);
       setFolders((prev) => [...prev, folder]);
       setNewFolderName('');
+      toast.success('Klasör oluşturuldu');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create folder');
+      toast.error(err instanceof Error ? err.message : 'Klasör oluşturulamadı');
     } finally {
       setCreatingFolder(false);
     }
@@ -118,16 +126,22 @@ export function MediaPage() {
 
   if (!tenantId) {
     return (
-      <div style={{ padding: 24, fontSize: 14, color: '#6b7280' }}>
-        Medya kütüphanesini kullanmak için bir tenant seçin.
-      </div>
+      <PageContainer>
+        <PageHeader title="Medya Kütüphanesi" />
+        <EmptyState title="Tenant seçilmedi" description="Medya kütüphanesini kullanmak için üstten bir tenant seçin." />
+      </PageContainer>
     );
   }
 
   const isImage = (mimeType: string) => mimeType.startsWith('image/');
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', fontSize: 13 }}>
+    <PageContainer>
+      <PageHeader
+        title="Medya Kütüphanesi"
+        meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} dosya{activeFolderId ? ' (klasör filtreli)' : ''}</span>}
+      />
+    <div style={{ fontSize: 13 }}>
       {/* Toolbar */}
       <div
         style={{
@@ -172,48 +186,15 @@ export function MediaPage() {
           </button>
         )}
 
-        <span style={{ color: '#6b7280', marginLeft: 'auto' }}>
-          {total} dosya
-          {activeFolderId ? ` (klasör filtreli)` : ''}
-        </span>
       </div>
 
       {uploadProgress && (
-        <div
-          style={{
-            padding: '8px 12px',
-            background: '#eff6ff',
-            border: '1px solid #bfdbfe',
-            borderRadius: 6,
-            marginBottom: 12,
-            color: '#1e40af',
-          }}
-        >
+        <div style={{ padding: '8px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, marginBottom: 12, color: '#1e40af', fontSize: 13 }}>
           {uploadProgress}
         </div>
       )}
 
-      {error && (
-        <div
-          style={{
-            padding: '8px 12px',
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: 6,
-            marginBottom: 12,
-            color: '#b91c1c',
-          }}
-        >
-          {error}
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            style={{ marginLeft: 8, fontSize: 12, cursor: 'pointer' }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
       <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16 }}>
         {/* Folder sidebar */}
@@ -393,5 +374,6 @@ export function MediaPage() {
         </main>
       </div>
     </div>
+    </PageContainer>
   );
 }

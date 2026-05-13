@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
+import { PageContainer } from '../components/layout/PageContainer';
+import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/ui/EmptyState';
+import { LoadingState } from '../components/ui/LoadingState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { Button } from '../components/ui/Button';
 import {
   apiEventArchive,
   apiEventCreate,
@@ -214,10 +221,12 @@ export function EventsPage() {
       if (editing) {
         const updated = await apiEventUpdate(accessToken, tenantId, editing.id, payload, mallId);
         setEvents((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+        toast.success('Etkinlik güncellendi');
       } else {
         const created = await apiEventCreate(accessToken, tenantId, payload, mallId);
         setEvents((prev) => [created, ...prev]);
         setTotal((t) => t + 1);
+        toast.success('Etkinlik oluşturuldu');
       }
       cancelForm();
     } catch (err) {
@@ -234,8 +243,9 @@ export function EventsPage() {
       await apiEventDelete(accessToken, tenantId, id, mallId);
       setEvents((prev) => prev.filter((x) => x.id !== id));
       setTotal((t) => t - 1);
+      toast.success('Etkinlik silindi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Silinemedi');
+      toast.error(err instanceof Error ? err.message : 'Silinemedi');
     }
   }
 
@@ -244,8 +254,9 @@ export function EventsPage() {
     try {
       const updated = await apiEventPublish(accessToken, tenantId, id, mallId);
       setEvents((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+      toast.success('Etkinlik yayınlandı');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Yayınlanamadı');
+      toast.error(err instanceof Error ? err.message : 'Yayınlanamadı');
     }
   }
 
@@ -254,8 +265,9 @@ export function EventsPage() {
     try {
       const updated = await apiEventArchive(accessToken, tenantId, id, mallId);
       setEvents((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+      toast.success('Etkinlik arşivlendi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Arşivlenemedi');
+      toast.error(err instanceof Error ? err.message : 'Arşivlenemedi');
     }
   }
 
@@ -276,11 +288,22 @@ export function EventsPage() {
   };
 
   if (!tenantId) {
-    return <div style={{ padding: 24, color: '#6b7280' }}>Etkinlikler için tenant seçin.</div>;
+    return (
+      <PageContainer>
+        <PageHeader title="Etkinlikler" />
+        <EmptyState title="Tenant seçilmedi" description="Etkinlikler için üstten bir tenant seçin." />
+      </PageContainer>
+    );
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', fontSize: 13 }}>
+    <PageContainer>
+      <PageHeader
+        title="Etkinlikler"
+        meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} etkinlik</span>}
+        action={<Button variant="primary" onClick={openCreate}>+ Yeni Etkinlik</Button>}
+      />
+    <div style={{ fontSize: 13 }}>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
         <input
           type="text"
@@ -303,33 +326,11 @@ export function EventsPage() {
         <button type="button" onClick={() => void loadEvents()} style={inputStyle}>
           Filtrele
         </button>
-        <span style={{ marginLeft: 'auto', color: '#6b7280' }}>{total} etkinlik</span>
-        <button
-          type="button"
-          onClick={openCreate}
-          style={{
-            background: '#2563eb',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 6,
-            padding: '6px 14px',
-            cursor: 'pointer',
-          }}
-        >
-          + Yeni etkinlik
-        </button>
       </div>
 
-      {error && (
-        <div style={{ padding: 8, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, marginBottom: 12 }}>
-          {error}
-          <button type="button" onClick={() => setError(null)} style={{ marginLeft: 8 }}>
-            Kapat
-          </button>
-        </div>
-      )}
+      {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
-      {loading && <p style={{ color: '#6b7280' }}>Yükleniyor…</p>}
+      {loading && <LoadingState />}
 
       {showForm && (
         <div
@@ -502,5 +503,6 @@ export function EventsPage() {
         </tbody>
       </table>
     </div>
+    </PageContainer>
   );
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, type ReactNode } from 'react';
-import { apiMe, apiTenants, apiMalls, type Mall, type Tenant } from '../lib/api';
+import { apiMe, apiTenants, apiMalls, onUnauthorized, type Mall, type Tenant } from '../lib/api';
 import {
   AuthContext,
   initialAuthState,
@@ -117,6 +117,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.activeTenantId]);
+
+  // Auto-logout on 401 from any API call
+  useEffect(() => {
+    return onUnauthorized(() => {
+      persistTokens({ accessToken: null, refreshToken: null, email: null });
+      dispatch({ type: 'CLEAR_SESSION' });
+    });
+  }, []);
 
   const setSession = useCallback(
     (tokens: { accessToken: string; refreshToken: string; email: string }) => {

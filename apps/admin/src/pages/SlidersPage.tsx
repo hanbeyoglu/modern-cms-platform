@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
+import { PageContainer } from '../components/layout/PageContainer';
+import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/ui/EmptyState';
+import { LoadingState } from '../components/ui/LoadingState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { Button } from '../components/ui/Button';
 import {
   apiMediaList,
   apiSliderArchive,
@@ -480,10 +487,12 @@ export function SlidersPage() {
       if (editingSlider) {
         const updated = await apiSliderUpdate(accessToken, tenantId, editingSlider.id, payload);
         setSliders((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        toast.success('Slider güncellendi');
       } else {
         const created = await apiSliderCreate(accessToken, tenantId, payload, mallId);
         setSliders((prev) => [created, ...prev]);
         setTotal((t) => t + 1);
+        toast.success('Slider oluşturuldu');
       }
       setShowForm(false);
       setEditingSlider(null);
@@ -501,8 +510,9 @@ export function SlidersPage() {
       await apiSliderDelete(accessToken, tenantId, id);
       setSliders((prev) => prev.filter((s) => s.id !== id));
       setTotal((t) => t - 1);
+      toast.success('Slider silindi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Silme başarısız');
+      toast.error(err instanceof Error ? err.message : 'Silme başarısız');
     }
   }
 
@@ -511,8 +521,9 @@ export function SlidersPage() {
     try {
       const updated = await apiSliderPublish(accessToken, tenantId, id);
       setSliders((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      toast.success('Slider yayınlandı');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Yayınlama başarısız');
+      toast.error(err instanceof Error ? err.message : 'Yayınlama başarısız');
     }
   }
 
@@ -521,21 +532,32 @@ export function SlidersPage() {
     try {
       const updated = await apiSliderArchive(accessToken, tenantId, id);
       setSliders((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      toast.success('Slider arşivlendi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Arşivleme başarısız');
+      toast.error(err instanceof Error ? err.message : 'Arşivleme başarısız');
     }
   }
 
   if (!tenantId) {
     return (
-      <div style={{ padding: 24, fontSize: 14, color: '#6b7280' }}>
-        Slider yönetimi için bir tenant seçin.
-      </div>
+      <PageContainer>
+        <PageHeader title="Slider Yönetimi" />
+        <EmptyState
+          title="Tenant seçilmedi"
+          description="Slider yönetimi için üstten bir tenant seçin."
+        />
+      </PageContainer>
     );
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', fontSize: 13 }}>
+    <PageContainer>
+      <PageHeader
+        title="Slider Yönetimi"
+        meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} slider</span>}
+        action={<Button variant="primary" onClick={openCreate}>+ Yeni Slider</Button>}
+      />
+    <div style={{ fontSize: 13 }}>
       {/* Toolbar */}
       <div
         style={{
@@ -592,47 +614,10 @@ export function SlidersPage() {
           Filtrele
         </button>
 
-        <span style={{ marginLeft: 'auto', color: '#6b7280' }}>{total} slider</span>
-
-        <button
-          type="button"
-          onClick={openCreate}
-          style={{
-            background: '#2563eb',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 6,
-            padding: '6px 14px',
-            fontSize: 13,
-            cursor: 'pointer',
-          }}
-        >
-          + Yeni Slider
-        </button>
+        <span style={{ marginLeft: 'auto', color: '#6b7280' }} />
       </div>
 
-      {/* Error banner */}
-      {error && (
-        <div
-          style={{
-            padding: '8px 12px',
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: 6,
-            marginBottom: 12,
-            color: '#b91c1c',
-          }}
-        >
-          {error}
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            style={{ marginLeft: 8, fontSize: 12, cursor: 'pointer', background: 'none', border: 'none' }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
       {/* Form panel */}
       {showForm && (
@@ -650,7 +635,7 @@ export function SlidersPage() {
 
       {/* Table */}
       {loading ? (
-        <p style={{ color: '#6b7280' }}>Yükleniyor…</p>
+        <LoadingState />
       ) : sliders.length === 0 ? (
         <div
           style={{
@@ -810,5 +795,6 @@ export function SlidersPage() {
         </div>
       )}
     </div>
+    </PageContainer>
   );
 }
