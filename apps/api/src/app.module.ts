@@ -9,6 +9,9 @@ import { MallsModule } from './malls/malls.module';
 import { MediaModule } from './media/media.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SlidersModule } from './sliders/sliders.module';
+import { StoreCategoriesModule } from './store-categories/store-categories.module';
+import { GlobalStoresModule } from './global-stores/global-stores.module';
+import { MallStoresModule } from './mall-stores/mall-stores.module';
 import { TenantsModule } from './tenants/tenants.module';
 
 @Module({
@@ -25,6 +28,9 @@ import { TenantsModule } from './tenants/tenants.module';
     MallsModule,
     MediaModule,
     SlidersModule,
+    StoreCategoriesModule,
+    GlobalStoresModule,
+    MallStoresModule,
     HealthModule,
   ],
 })

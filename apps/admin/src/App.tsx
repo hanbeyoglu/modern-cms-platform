@@ -5,13 +5,19 @@ import { TenantMallSelector } from './components/TenantMallSelector';
 import { LoginPage } from './pages/LoginPage';
 import { MediaPage } from './pages/MediaPage';
 import { SlidersPage } from './pages/SlidersPage';
+import { StoreCategoriesPage } from './pages/StoreCategoriesPage';
+import { GlobalStoresPage } from './pages/GlobalStoresPage';
+import { MallStoresPage } from './pages/MallStoresPage';
 
-type Page = 'dashboard' | 'media' | 'sliders';
+type Page = 'dashboard' | 'media' | 'sliders' | 'store-categories' | 'global-stores' | 'mall-stores';
 
 const NAV_ITEMS: Array<{ id: Page; label: string }> = [
   { id: 'dashboard', label: 'Gösterge Paneli' },
   { id: 'media', label: 'Medya Kütüphanesi' },
   { id: 'sliders', label: 'Slider Yönetimi' },
+  { id: 'store-categories', label: 'Mağaza Kategorileri' },
+  { id: 'global-stores', label: 'Global Mağazalar' },
+  { id: 'mall-stores', label: 'AVM Mağazaları' },
 ];
 
 function Nav({ current, onNavigate }: { current: Page; onNavigate: (p: Page) => void }) {
@@ -141,6 +147,9 @@ function AuthenticatedShell() {
         {currentPage === 'dashboard' && <DashboardView />}
         {currentPage === 'media' && <MediaPage />}
         {currentPage === 'sliders' && <SlidersPage />}
+        {currentPage === 'store-categories' && <StoreCategoriesPage />}
+        {currentPage === 'global-stores' && <GlobalStoresPage />}
+        {currentPage === 'mall-stores' && <MallStoresPage />}
       </main>
     </div>
   );
@@ -249,7 +258,7 @@ function DashboardView() {
           textAlign: 'center',
         }}
       >
-        Sprint 5+ — Etkinlik, kampanya, mağaza modülleri burada yer alacak
+        Sprint 6+ — Etkinlik, kampanya, sinema ve sayfa oluşturucu modülleri burada yer alacak
       </section>
     </div>
   );

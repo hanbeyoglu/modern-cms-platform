@@ -47,6 +47,10 @@ model User {
   uploadedAssets MediaAsset[]  @relation("AssetUploader")
   createdSliders Slider[]      @relation("SliderCreator")
   updatedSliders Slider[]      @relation("SliderUpdater")
+  createdGlobalStores GlobalStore[] @relation("GlobalStoreCreator")
+  updatedGlobalStores GlobalStore[] @relation("GlobalStoreUpdater")
+  createdMallStores     MallStore[]     @relation("MallStoreCreator")
+  updatedMallStores     MallStore[]     @relation("MallStoreUpdater")
 }
 
 model Tenant {
@@ -64,6 +68,7 @@ model Tenant {
   mediaFolders MediaFolder[]
   mediaAssets  MediaAsset[]
   sliders      Slider[]
+  mallStores   MallStore[]
 }
 
 model Mall {
@@ -82,6 +87,7 @@ model Mall {
   mediaFolders     MediaFolder[]
   mediaAssets      MediaAsset[]
   sliders          Slider[]
+  mallStores       MallStore[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -238,6 +244,8 @@ model MediaAsset {
   slidersDesktop Slider[] @relation("SliderDesktopMedia")
   slidersMobile  Slider[] @relation("SliderMobileMedia")
   slidersVideo   Slider[] @relation("SliderVideoMedia")
+  globalStoreLogos GlobalStore[] @relation("GlobalStoreLogo")
+  mallStoreLocalLogos MallStore[] @relation("MallStoreLocalLogo")
 
   @@index([tenantId, createdAt])
   @@index([tenantId, folderId])
@@ -303,4 +311,95 @@ model Slider {
   @@index([tenantId, status])
   @@index([tenantId, mallId])
   @@index([tenantId, sortOrder])
+}
+
+// ─── Store Center (global pool + mall assignment) ─────────────────────────────
+
+enum StoreCategoryStatus {
+  ACTIVE
+  PASSIVE
+}
+
+enum StoreStatus {
+  ACTIVE
+  PASSIVE
+  ARCHIVED
+}
+
+model StoreCategory {
+  id        String              @id @default(cuid())
+  name      String
+  slug      String              @unique
+  icon      String?
+  sortOrder Int                 @default(0)
+  status    StoreCategoryStatus @default(ACTIVE)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  deletedAt DateTime?
+
+  globalStores GlobalStore[]
+
+  @@index([status])
+  @@index([sortOrder])
+}
+
+model GlobalStore {
+  id              String      @id @default(cuid())
+  name            String
+  slug            String      @unique
+  logoMediaId     String?
+  categoryId      String?
+  description     String?
+  websiteUrl      String?
+  socialLinksJson Json?
+  status          StoreStatus @default(ACTIVE)
+  createdBy       String
+  updatedBy       String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+
+  category        StoreCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  logoMedia       MediaAsset?    @relation("GlobalStoreLogo", fields: [logoMediaId], references: [id], onDelete: SetNull)
+  createdByUser   User           @relation("GlobalStoreCreator", fields: [createdBy], references: [id])
+  updatedByUser   User?          @relation("GlobalStoreUpdater", fields: [updatedBy], references: [id])
+  mallStores      MallStore[]
+
+  @@index([categoryId])
+  @@index([status])
+}
+
+model MallStore {
+  id               String      @id @default(cuid())
+  tenantId         String
+  mallId           String
+  globalStoreId    String
+  localName        String?
+  localDescription String?
+  localLogoMediaId String?
+  floor            String?
+  storeNo          String?
+  phone            String?
+  email            String?
+  workingHoursJson Json?
+  locationJson     Json?
+  isFeatured       Boolean     @default(false)
+  sortOrder        Int         @default(0)
+  status           StoreStatus @default(ACTIVE)
+  createdBy        String
+  updatedBy        String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  deletedAt        DateTime?
+
+  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall             Mall         @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  globalStore      GlobalStore  @relation(fields: [globalStoreId], references: [id], onDelete: Restrict)
+  localLogoMedia   MediaAsset?  @relation("MallStoreLocalLogo", fields: [localLogoMediaId], references: [id], onDelete: SetNull)
+  createdByUser    User         @relation("MallStoreCreator", fields: [createdBy], references: [id])
+  updatedByUser    User?        @relation("MallStoreUpdater", fields: [updatedBy], references: [id])
+
+  @@index([tenantId, mallId])
+  @@index([globalStoreId])
+  @@index([tenantId, mallId, status])
 }

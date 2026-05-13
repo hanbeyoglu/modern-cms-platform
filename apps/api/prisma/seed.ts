@@ -24,6 +24,19 @@ const PERMISSIONS = [
   'slider:delete',
   'slider:publish',
   'slider:reorder',
+  'store-category:read',
+  'store-category:create',
+  'store-category:update',
+  'store-category:delete',
+  'global-store:read',
+  'global-store:create',
+  'global-store:update',
+  'global-store:delete',
+  'mall-store:read',
+  'mall-store:assign',
+  'mall-store:update',
+  'mall-store:delete',
+  'mall-store:feature',
 ] as const;
 
 async function main(): Promise<void> {
@@ -79,6 +92,12 @@ async function main(): Promise<void> {
         'slider:delete',
         'slider:publish',
         'slider:reorder',
+        'store-category:read',
+        'global-store:read',
+        'mall-store:read',
+        'mall-store:assign',
+        'mall-store:update',
+        'mall-store:feature',
       ],
     },
     {
@@ -96,12 +115,25 @@ async function main(): Promise<void> {
         'slider:read',
         'slider:create',
         'slider:update',
+        'store-category:read',
+        'global-store:read',
+        'mall-store:read',
+        'mall-store:update',
       ],
     },
     {
       code: 'REPORT_VIEWER',
       name: 'Report Viewer',
-      permissions: ['tenant:read', 'mall:read', 'analytics:view', 'media:read', 'slider:read'],
+      permissions: [
+        'tenant:read',
+        'mall:read',
+        'analytics:view',
+        'media:read',
+        'slider:read',
+        'store-category:read',
+        'global-store:read',
+        'mall-store:read',
+      ],
     },
   ];
 
@@ -243,6 +275,69 @@ async function main(): Promise<void> {
   });
 
   await prisma.userMallAccess.deleteMany({ where: { tenantUserId: groupAdminTu.id } });
+
+  const catFashion = await prisma.storeCategory.upsert({
+    where: { slug: 'fashion' },
+    update: { name: 'Moda', deletedAt: null, status: 'ACTIVE' },
+    create: {
+      name: 'Moda',
+      slug: 'fashion',
+      icon: null,
+      sortOrder: 10,
+      status: 'ACTIVE',
+    },
+  });
+
+  await prisma.storeCategory.upsert({
+    where: { slug: 'food-beverage' },
+    update: { name: 'Yeme-İçme', deletedAt: null, status: 'ACTIVE' },
+    create: {
+      name: 'Yeme-İçme',
+      slug: 'food-beverage',
+      sortOrder: 20,
+      status: 'ACTIVE',
+    },
+  });
+
+  const globalZara = await prisma.globalStore.upsert({
+    where: { slug: 'zara' },
+    update: {
+      name: 'Zara',
+      categoryId: catFashion.id,
+      deletedAt: null,
+      status: 'ACTIVE',
+      updatedBy: superAdmin.id,
+    },
+    create: {
+      name: 'Zara',
+      slug: 'zara',
+      categoryId: catFashion.id,
+      description: 'Global mağaza havuzu — Zara',
+      websiteUrl: 'https://www.zara.com',
+      status: 'ACTIVE',
+      createdBy: superAdmin.id,
+    },
+  });
+
+  const zaraAtIstanbul = await prisma.mallStore.findFirst({
+    where: { mallId: mallIstanbul.id, globalStoreId: globalZara.id, deletedAt: null },
+  });
+  if (!zaraAtIstanbul) {
+    await prisma.mallStore.create({
+      data: {
+        tenantId: tenantMallGroup.id,
+        mallId: mallIstanbul.id,
+        globalStoreId: globalZara.id,
+        localName: 'Zara — Mall of İstanbul',
+        floor: '2',
+        storeNo: '230',
+        phone: '+90 212 555 0000',
+        status: 'ACTIVE',
+        sortOrder: 5,
+        createdBy: superAdmin.id,
+      },
+    });
+  }
 
   console.log('Seed complete.', {
     tenants: [tenantEmaar.slug, tenantMallGroup.slug],
