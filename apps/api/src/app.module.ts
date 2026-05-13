@@ -15,6 +15,9 @@ import { MallStoresModule } from './mall-stores/mall-stores.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { EventsModule } from './events/events.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
+import { CinemasModule } from './cinemas/cinemas.module';
+import { MoviesModule } from './movies/movies.module';
+import { MovieSessionsModule } from './movie-sessions/movie-sessions.module';
 
 @Module({
   imports: [
@@ -35,6 +38,9 @@ import { CampaignsModule } from './campaigns/campaigns.module';
     MallStoresModule,
     EventsModule,
     CampaignsModule,
+    CinemasModule,
+    MoviesModule,
+    MovieSessionsModule,
     HealthModule,
   ],
 })

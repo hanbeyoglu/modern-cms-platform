@@ -20,7 +20,16 @@ export function usePermission() {
 
     // Future: granular permission map per role
     // For now, authenticated tenant members can view; non-admin roles denied write actions
-    const readPermissions = ['media:list', 'sliders:list', 'events:list', 'campaigns:list', 'stores:list'];
+    const readPermissions = [
+      'media:list',
+      'sliders:list',
+      'events:list',
+      'campaigns:list',
+      'stores:list',
+      'cinema:read',
+      'movie:read',
+      'movie-session:read',
+    ];
     if (readPermissions.includes(permission)) return true;
 
     return false;

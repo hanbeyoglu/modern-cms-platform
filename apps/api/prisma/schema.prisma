@@ -55,6 +55,12 @@ model User {
   updatedEvents         Event[]         @relation("EventUpdater")
   createdCampaigns      Campaign[]      @relation("CampaignCreator")
   updatedCampaigns      Campaign[]      @relation("CampaignUpdater")
+  createdCinemas        Cinema[]        @relation("CinemaCreator")
+  updatedCinemas        Cinema[]        @relation("CinemaUpdater")
+  createdMovies         Movie[]         @relation("MovieCreator")
+  updatedMovies         Movie[]         @relation("MovieUpdater")
+  createdMovieSessions  MovieSession[]  @relation("MovieSessionCreator")
+  updatedMovieSessions  MovieSession[]  @relation("MovieSessionUpdater")
 }
 
 model Tenant {
@@ -71,10 +77,13 @@ model Tenant {
   auditLogs    AuditLog[]
   mediaFolders MediaFolder[]
   mediaAssets  MediaAsset[]
-  sliders      Slider[]
-  mallStores   MallStore[]
-  events       Event[]
-  campaigns    Campaign[]
+  sliders       Slider[]
+  mallStores    MallStore[]
+  events        Event[]
+  campaigns     Campaign[]
+  cinemas       Cinema[]
+  movies        Movie[]
+  movieSessions MovieSession[]
 }
 
 model Mall {
@@ -96,6 +105,8 @@ model Mall {
   mallStores       MallStore[]
   events           Event[]
   campaigns        Campaign[]
+  cinemas          Cinema[]
+  movieSessions    MovieSession[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -256,6 +267,8 @@ model MediaAsset {
   mallStoreLocalLogos MallStore[] @relation("MallStoreLocalLogo")
   eventCovers      Event[]      @relation("EventCoverMedia")
   campaignCovers   Campaign[]   @relation("CampaignCoverMedia")
+  cinemaLogos      Cinema[]     @relation("CinemaLogoMedia")
+  moviePosters     Movie[]      @relation("MoviePosterMedia")
 
   @@index([tenantId, createdAt])
   @@index([tenantId, folderId])
@@ -500,4 +513,123 @@ model Campaign {
   @@index([tenantId, mallId])
   @@index([tenantId, storeId])
   @@index([tenantId, sortOrder])
+}
+
+// ─── Cinema & sessions (Sprint 8) ─────────────────────────────────────────────
+
+enum CinemaStatus {
+  ACTIVE
+  PASSIVE
+  ARCHIVED
+}
+
+enum MovieStatus {
+  ACTIVE
+  PASSIVE
+  ARCHIVED
+}
+
+enum MovieSessionStatus {
+  SCHEDULED
+  CANCELLED
+  ARCHIVED
+}
+
+enum CinemaProviderType {
+  MANUAL
+  API
+  XML_FEED
+}
+
+model Cinema {
+  id                 String             @id @default(cuid())
+  tenantId           String
+  mallId             String
+  name               String
+  slug               String
+  logoMediaId        String?
+  description        String?
+  providerType       CinemaProviderType @default(MANUAL)
+  providerConfigJson Json?
+  status             CinemaStatus       @default(ACTIVE)
+  createdBy          String
+  updatedBy          String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deletedAt          DateTime?
+
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall            Mall         @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  logoMedia       MediaAsset?  @relation("CinemaLogoMedia", fields: [logoMediaId], references: [id], onDelete: SetNull)
+  createdByUser   User         @relation("CinemaCreator", fields: [createdBy], references: [id])
+  updatedByUser   User?        @relation("CinemaUpdater", fields: [updatedBy], references: [id])
+  movieSessions   MovieSession[]
+
+  @@unique([mallId, slug])
+  @@index([tenantId, mallId])
+  @@index([tenantId, status])
+}
+
+model Movie {
+  id              String      @id @default(cuid())
+  tenantId        String
+  title           String
+  slug            String
+  originalTitle   String?
+  posterMediaId   String?
+  description     String?
+  durationMinutes Int?
+  genre           String?
+  rating          String?
+  trailerUrl      String?
+  releaseDate     DateTime?
+  status          MovieStatus @default(ACTIVE)
+  createdBy       String
+  updatedBy       String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  posterMedia     MediaAsset?    @relation("MoviePosterMedia", fields: [posterMediaId], references: [id], onDelete: SetNull)
+  createdByUser   User           @relation("MovieCreator", fields: [createdBy], references: [id])
+  updatedByUser   User?          @relation("MovieUpdater", fields: [updatedBy], references: [id])
+  movieSessions   MovieSession[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@index([tenantId, title])
+}
+
+model MovieSession {
+  id         String             @id @default(cuid())
+  tenantId   String
+  mallId     String
+  cinemaId   String
+  movieId    String
+  hallName   String?
+  startsAt   DateTime
+  endsAt     DateTime?
+  language   String?
+  subtitle   String?
+  format     String?
+  ticketUrl  String?
+  status     MovieSessionStatus @default(SCHEDULED)
+  createdBy  String
+  updatedBy  String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  deletedAt  DateTime?
+
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall            Mall         @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  cinema          Cinema       @relation(fields: [cinemaId], references: [id], onDelete: Restrict)
+  movie           Movie        @relation(fields: [movieId], references: [id], onDelete: Restrict)
+  createdByUser   User         @relation("MovieSessionCreator", fields: [createdBy], references: [id])
+  updatedByUser   User?        @relation("MovieSessionUpdater", fields: [updatedBy], references: [id])
+
+  @@index([tenantId, mallId, startsAt])
+  @@index([cinemaId, startsAt])
+  @@index([movieId])
+  @@index([tenantId, status])
 }

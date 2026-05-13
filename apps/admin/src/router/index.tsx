@@ -11,6 +11,9 @@ import { CampaignsPage } from '../pages/CampaignsPage';
 import { StoreCategoriesPage } from '../pages/StoreCategoriesPage';
 import { GlobalStoresPage } from '../pages/GlobalStoresPage';
 import { MallStoresPage } from '../pages/MallStoresPage';
+import { CinemasPage } from '../pages/CinemasPage';
+import { MoviesPage } from '../pages/MoviesPage';
+import { MovieSessionsPage } from '../pages/MovieSessionsPage';
 
 export const router = createBrowserRouter([
   {
@@ -33,6 +36,9 @@ export const router = createBrowserRouter([
           { path: '/sliders', element: <SlidersPage /> },
           { path: '/events', element: <EventsPage /> },
           { path: '/campaigns', element: <CampaignsPage /> },
+          { path: '/cinemas', element: <CinemasPage /> },
+          { path: '/movies', element: <MoviesPage /> },
+          { path: '/movie-sessions', element: <MovieSessionsPage /> },
           { path: '/store-categories', element: <StoreCategoriesPage /> },
           { path: '/global-stores', element: <GlobalStoresPage /> },
           { path: '/mall-stores', element: <MallStoresPage /> },
