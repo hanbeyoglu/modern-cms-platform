@@ -18,6 +18,12 @@ const PERMISSIONS = [
   'media:read',
   'media:upload',
   'media:delete',
+  'slider:read',
+  'slider:create',
+  'slider:update',
+  'slider:delete',
+  'slider:publish',
+  'slider:reorder',
 ] as const;
 
 async function main(): Promise<void> {
@@ -32,7 +38,7 @@ async function main(): Promise<void> {
       }),
     ),
   );
-  const permByCode = Object.fromEntries(permissionRows.map((p) => [p.code, p])) as Record<
+  const permByCode = Object.fromEntries(permissionRows.map((p) => [p.code, p])) as unknown as Record<
     (typeof PERMISSIONS)[number],
     { id: string }
   >;
@@ -67,6 +73,12 @@ async function main(): Promise<void> {
         'media:read',
         'media:upload',
         'media:delete',
+        'slider:read',
+        'slider:create',
+        'slider:update',
+        'slider:delete',
+        'slider:publish',
+        'slider:reorder',
       ],
     },
     {
@@ -81,12 +93,15 @@ async function main(): Promise<void> {
         'content:update',
         'media:read',
         'media:upload',
+        'slider:read',
+        'slider:create',
+        'slider:update',
       ],
     },
     {
       code: 'REPORT_VIEWER',
       name: 'Report Viewer',
-      permissions: ['tenant:read', 'mall:read', 'analytics:view', 'media:read'],
+      permissions: ['tenant:read', 'mall:read', 'analytics:view', 'media:read', 'slider:read'],
     },
   ];
 

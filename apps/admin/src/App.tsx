@@ -4,12 +4,14 @@ import { useAuth } from './auth/useAuth';
 import { TenantMallSelector } from './components/TenantMallSelector';
 import { LoginPage } from './pages/LoginPage';
 import { MediaPage } from './pages/MediaPage';
+import { SlidersPage } from './pages/SlidersPage';
 
-type Page = 'dashboard' | 'media';
+type Page = 'dashboard' | 'media' | 'sliders';
 
 const NAV_ITEMS: Array<{ id: Page; label: string }> = [
   { id: 'dashboard', label: 'Gösterge Paneli' },
   { id: 'media', label: 'Medya Kütüphanesi' },
+  { id: 'sliders', label: 'Slider Yönetimi' },
 ];
 
 function Nav({ current, onNavigate }: { current: Page; onNavigate: (p: Page) => void }) {
@@ -138,6 +140,7 @@ function AuthenticatedShell() {
       <main>
         {currentPage === 'dashboard' && <DashboardView />}
         {currentPage === 'media' && <MediaPage />}
+        {currentPage === 'sliders' && <SlidersPage />}
       </main>
     </div>
   );
@@ -246,7 +249,7 @@ function DashboardView() {
           textAlign: 'center',
         }}
       >
-        Sprint 4+ — CMS iş modülleri burada yer alacak
+        Sprint 5+ — Etkinlik, kampanya, mağaza modülleri burada yer alacak
       </section>
     </div>
   );

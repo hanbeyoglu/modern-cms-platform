@@ -45,6 +45,8 @@ model User {
   auditLogs      AuditLog[]    @relation("AuditActor")
   mediaFolders   MediaFolder[] @relation("FolderCreator")
   uploadedAssets MediaAsset[]  @relation("AssetUploader")
+  createdSliders Slider[]      @relation("SliderCreator")
+  updatedSliders Slider[]      @relation("SliderUpdater")
 }
 
 model Tenant {
@@ -61,6 +63,7 @@ model Tenant {
   auditLogs    AuditLog[]
   mediaFolders MediaFolder[]
   mediaAssets  MediaAsset[]
+  sliders      Slider[]
 }
 
 model Mall {
@@ -78,6 +81,7 @@ model Mall {
   auditLogs        AuditLog[]
   mediaFolders     MediaFolder[]
   mediaAssets      MediaAsset[]
+  sliders          Slider[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -231,7 +235,72 @@ model MediaAsset {
   folder   MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
   uploader User         @relation("AssetUploader", fields: [uploadedBy], references: [id])
 
+  slidersDesktop Slider[] @relation("SliderDesktopMedia")
+  slidersMobile  Slider[] @relation("SliderMobileMedia")
+  slidersVideo   Slider[] @relation("SliderVideoMedia")
+
   @@index([tenantId, createdAt])
   @@index([tenantId, folderId])
   @@index([mallId])
+}
+
+// ─── Sliders ──────────────────────────────────────────────────────────────────
+
+enum SliderStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum SliderTargetDevice {
+  ALL
+  DESKTOP
+  MOBILE
+}
+
+enum SliderLinkType {
+  NONE
+  EXTERNAL_URL
+  INTERNAL_PAGE
+  EVENT
+  CAMPAIGN
+  STORE
+}
+
+model Slider {
+  id             String             @id @default(cuid())
+  tenantId       String
+  mallId         String?
+  title          String
+  subtitle       String?
+  description    String?
+  desktopMediaId String?
+  mobileMediaId  String?
+  videoMediaId   String?
+  linkType       SliderLinkType     @default(NONE)
+  linkValue      String?
+  buttonText     String?
+  startAt        DateTime?
+  endAt          DateTime?
+  sortOrder      Int                @default(0)
+  status         SliderStatus       @default(DRAFT)
+  targetDevice   SliderTargetDevice @default(ALL)
+  createdBy      String
+  updatedBy      String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  deletedAt      DateTime?
+
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall          Mall?       @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  desktopMedia  MediaAsset? @relation("SliderDesktopMedia", fields: [desktopMediaId], references: [id], onDelete: SetNull)
+  mobileMedia   MediaAsset? @relation("SliderMobileMedia", fields: [mobileMediaId], references: [id], onDelete: SetNull)
+  videoMedia    MediaAsset? @relation("SliderVideoMedia", fields: [videoMediaId], references: [id], onDelete: SetNull)
+  createdByUser User        @relation("SliderCreator", fields: [createdBy], references: [id])
+  updatedByUser User?       @relation("SliderUpdater", fields: [updatedBy], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, mallId])
+  @@index([tenantId, sortOrder])
 }
