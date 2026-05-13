@@ -20,6 +20,7 @@ import { MoviesModule } from './movies/movies.module';
 import { MovieSessionsModule } from './movie-sessions/movie-sessions.module';
 import { PagesModule } from './pages/pages.module';
 import { PageBlocksModule } from './page-blocks/page-blocks.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { PageBlocksModule } from './page-blocks/page-blocks.module';
     MovieSessionsModule,
     PagesModule,
     PageBlocksModule,
+    AnalyticsModule,
     HealthModule,
   ],
 })

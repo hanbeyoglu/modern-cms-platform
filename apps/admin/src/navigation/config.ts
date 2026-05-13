@@ -20,14 +20,30 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Medya Kütüphanesi',
     icon: '▤',
     href: '/media',
-    permission: 'media:list',
+    permission: 'media:read',
   },
   {
     id: 'sliders',
     label: 'Slider Yönetimi',
     icon: '▦',
     href: '/sliders',
-    permission: 'sliders:list',
+    permission: 'slider:read',
+  },
+  {
+    id: 'events',
+    label: 'Etkinlikler',
+    icon: '◷',
+    href: '/events',
+    permission: 'event:read',
+    group: 'İçerik',
+  },
+  {
+    id: 'analytics',
+    label: 'Raporlar',
+    icon: '∑',
+    href: '/analytics',
+    permission: 'analytics:view',
+    group: 'Analitik',
   },
   {
     id: 'cinemas',
@@ -66,7 +82,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Kampanyalar',
     icon: '◈',
     href: '/campaigns',
-    permission: 'campaigns:list',
+    permission: 'campaign:read',
     group: 'İçerik',
   },
   {
@@ -74,7 +90,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Mağaza Kategorileri',
     icon: '◫',
     href: '/store-categories',
-    permission: 'stores:list',
+    permission: 'store-category:read',
     group: 'Mağazalar',
   },
   {
@@ -82,7 +98,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Global Mağazalar',
     icon: '▣',
     href: '/global-stores',
-    permission: 'stores:list',
+    permission: 'global-store:read',
     group: 'Mağazalar',
   },
   {
@@ -90,9 +106,9 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'AVM Mağazaları',
     icon: '▩',
     href: '/mall-stores',
-    permission: 'stores:list',
+    permission: 'mall-store:read',
     group: 'Mağazalar',
   },
 ];
 
-export const NAV_GROUPS = ['İçerik', 'Mağazalar'] as const;
+export const NAV_GROUPS = ['Analitik', 'İçerik', 'Mağazalar'] as const;

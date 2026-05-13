@@ -57,7 +57,7 @@ const EMPTY_FORM: FormState = {
 };
 
 export function PagesPage() {
-  const { token, tenantId, mallId } = useAuth();
+  const { accessToken, activeTenantId, activeMallId } = useAuth();
   const navigate = useNavigate();
 
   const [pages, setPages] = useState<CmsPage[]>([]);
@@ -76,12 +76,12 @@ export function PagesPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const loadPages = useCallback(async () => {
-    if (!token || !tenantId) return;
+    if (!accessToken || !activeTenantId) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await apiPagesList(token, tenantId, {
-        mallId: mallId ?? undefined,
+      const res = await apiPagesList(accessToken, activeTenantId, {
+        mallId: activeMallId ?? undefined,
         status: filterStatus || undefined,
         type: filterType || undefined,
         search: search || undefined,
@@ -95,14 +95,14 @@ export function PagesPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, tenantId, mallId, filterStatus, filterType, search]);
+  }, [accessToken, activeTenantId, activeMallId, filterStatus, filterType, search]);
 
   useEffect(() => {
     void loadPages();
   }, [loadPages]);
 
   async function handleCreate() {
-    if (!token || !tenantId) return;
+    if (!accessToken || !activeTenantId) return;
     if (!formState.title.trim()) {
       toast.error('Başlık zorunludur');
       return;
@@ -118,7 +118,7 @@ export function PagesPage() {
         seoDescription: formState.seoDescription || undefined,
         seoKeywords: formState.seoKeywords || undefined,
       };
-      const created = await apiPageCreate(token, tenantId, payload, mallId ?? undefined);
+      const created = await apiPageCreate(accessToken, activeTenantId, payload, activeMallId ?? undefined);
       toast.success('Sayfa oluşturuldu');
       setShowForm(false);
       setFormState(EMPTY_FORM);
@@ -131,9 +131,9 @@ export function PagesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!token || !tenantId) return;
+    if (!accessToken || !activeTenantId) return;
     try {
-      await apiPageDelete(token, tenantId, id, mallId ?? undefined);
+      await apiPageDelete(accessToken, activeTenantId, id, activeMallId ?? undefined);
       toast.success('Sayfa silindi');
       setDeleteConfirmId(null);
       void loadPages();
@@ -143,9 +143,9 @@ export function PagesPage() {
   }
 
   async function handlePublish(id: string) {
-    if (!token || !tenantId) return;
+    if (!accessToken || !activeTenantId) return;
     try {
-      await apiPagePublish(token, tenantId, id, mallId ?? undefined);
+      await apiPagePublish(accessToken, activeTenantId, id, activeMallId ?? undefined);
       toast.success('Sayfa yayınlandı');
       void loadPages();
     } catch (e) {
@@ -154,9 +154,9 @@ export function PagesPage() {
   }
 
   async function handleArchive(id: string) {
-    if (!token || !tenantId) return;
+    if (!accessToken || !activeTenantId) return;
     try {
-      await apiPageArchive(token, tenantId, id, mallId ?? undefined);
+      await apiPageArchive(accessToken, activeTenantId, id, activeMallId ?? undefined);
       toast.success('Sayfa arşivlendi');
       void loadPages();
     } catch (e) {

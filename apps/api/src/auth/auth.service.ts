@@ -124,7 +124,11 @@ export class AuthService {
             where: { userId: user.id, deletedAt: null },
             include: {
               tenant: true,
-              role: true,
+              role: {
+                include: {
+                  rolePermissions: { include: { permission: true } },
+                },
+              },
               mallAccess: { include: { mall: true } },
             },
           });
@@ -141,6 +145,7 @@ export class AuthService {
         tenantId: m.tenantId,
         tenantName: m.tenant.name,
         role: { code: m.role.code, name: m.role.name },
+        permissions: m.role.rolePermissions.map((rp) => rp.permission.code),
         malls: m.mallAccess.map((a) => ({
           id: a.mall.id,
           name: a.mall.name,

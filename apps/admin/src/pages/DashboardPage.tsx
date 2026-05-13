@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import { usePermission } from '../hooks/usePermission';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
 import {
@@ -7,6 +9,7 @@ import {
   apiEventsList,
   apiCampaignsList,
   apiGlobalStoresList,
+  apiAnalyticsSummary,
 } from '../lib/api';
 
 type StatCard = {
@@ -59,6 +62,7 @@ function StatCard({ label, value, icon }: StatCard) {
 
 export function DashboardPage() {
   const { accessToken, activeTenantId, activeMallId, user, tenants, malls } = useAuth();
+  const { can } = usePermission();
   const activeTenant = tenants.find((t) => t.id === activeTenantId);
   const activeMall = malls.find((m) => m.id === activeMallId);
 
@@ -68,6 +72,11 @@ export function DashboardPage() {
     campaigns: number | null;
     stores: number | null;
   }>({ sliders: null, events: null, campaigns: null, stores: null });
+
+  const [analyticsPeek, setAnalyticsPeek] = useState<{
+    totalEvents: number | null;
+    pageViews: number | null;
+  }>({ totalEvents: null, pageViews: null });
 
   useEffect(() => {
     if (!accessToken || !activeTenantId) return;
@@ -96,6 +105,42 @@ export function DashboardPage() {
 
     void fetchStats();
   }, [accessToken, activeTenantId, activeMallId]);
+
+  useEffect(() => {
+    if (!accessToken || !activeTenantId || !user) {
+      setAnalyticsPeek({ totalEvents: null, pageViews: null });
+      return;
+    }
+    const membership = user.memberships?.find((m) => m.tenantId === activeTenantId);
+    const codes = membership?.permissions;
+    const allowed =
+      user.isSuperAdmin === true ||
+      (Array.isArray(codes) && codes.includes('analytics:view'));
+    if (!allowed) {
+      setAnalyticsPeek({ totalEvents: null, pageViews: null });
+      return;
+    }
+
+    const mallId = activeMallId ?? undefined;
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - 7);
+    const dateFrom = from.toISOString().slice(0, 10) + 'T00:00:00.000Z';
+    const dateTo = to.toISOString().slice(0, 10) + 'T23:59:59.999Z';
+    let cancelled = false;
+    void apiAnalyticsSummary(accessToken, activeTenantId, mallId, { dateFrom, dateTo })
+      .then((s) => {
+        if (!cancelled) {
+          setAnalyticsPeek({ totalEvents: s.totalEvents, pageViews: s.pageViews });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAnalyticsPeek({ totalEvents: null, pageViews: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, activeTenantId, activeMallId, user]);
 
   const contextLabel = [activeTenant?.name, activeMall?.name].filter(Boolean).join(' › ');
 
@@ -135,6 +180,27 @@ export function DashboardPage() {
             <StatCard label="Kampanya" value={stats.campaigns} icon="◈" href="/campaigns" />
             <StatCard label="Global Mağaza" value={stats.stores} icon="▣" href="/global-stores" />
           </div>
+
+          {can('analytics:view') && (
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 10 }}>
+                Analitik (son 7 gün, UTC)
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  gap: 16,
+                }}
+              >
+                <StatCard label="Toplam olay" value={analyticsPeek.totalEvents} icon="∑" href="/analytics" />
+                <StatCard label="Sayfa görüntüleme" value={analyticsPeek.pageViews} icon="◉" href="/analytics" />
+              </div>
+              <p style={{ margin: '10px 0 0', fontSize: 12, color: '#9ca3af' }}>
+                Ayrıntılar için <Link to="/analytics">Raporlar</Link> sayfasına gidin.
+              </p>
+            </div>
+          )}
 
           {/* User / tenant info */}
           {user && (

@@ -113,7 +113,7 @@ const EMPTY_BLOCK_FORM: BlockFormState = {
 
 export function PageDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { token, tenantId, mallId } = useAuth();
+  const { accessToken, activeTenantId, activeMallId } = useAuth();
   const navigate = useNavigate();
 
   const [page, setPage] = useState<CmsPage | null>(null);
@@ -134,13 +134,13 @@ export function PageDetailPage() {
   const [deleteBlockConfirmId, setDeleteBlockConfirmId] = useState<string | null>(null);
 
   const loadPage = useCallback(async () => {
-    if (!token || !tenantId || !id) return;
+    if (!accessToken || !activeTenantId || !id) return;
     setLoading(true);
     setError(null);
     try {
       const [p, b] = await Promise.all([
-        apiPageGet(token, tenantId, id, mallId ?? undefined),
-        apiPageBlocksList(token, tenantId, id, mallId ?? undefined),
+        apiPageGet(accessToken, activeTenantId, id, activeMallId ?? undefined),
+        apiPageBlocksList(accessToken, activeTenantId, id, activeMallId ?? undefined),
       ]);
       setPage(p);
       setBlocks(b);
@@ -158,16 +158,16 @@ export function PageDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, tenantId, mallId, id]);
+  }, [accessToken, activeTenantId, activeMallId, id]);
 
   useEffect(() => { void loadPage(); }, [loadPage]);
 
   async function handleSavePage() {
-    if (!token || !tenantId || !id || !pageForm) return;
+    if (!accessToken || !activeTenantId || !id || !pageForm) return;
     if (!pageForm.title.trim()) { toast.error('Başlık zorunludur'); return; }
     setSavingPage(true);
     try {
-      await apiPageUpdate(token, tenantId, id, {
+      await apiPageUpdate(accessToken, activeTenantId, id, {
         title: pageForm.title,
         slug: pageForm.slug || undefined,
         type: pageForm.type,
@@ -175,7 +175,7 @@ export function PageDetailPage() {
         seoTitle: pageForm.seoTitle || undefined,
         seoDescription: pageForm.seoDescription || undefined,
         seoKeywords: pageForm.seoKeywords || undefined,
-      }, mallId ?? undefined);
+      }, activeMallId ?? undefined);
       toast.success('Sayfa güncellendi');
       void loadPage();
     } catch (e) {
@@ -186,9 +186,9 @@ export function PageDetailPage() {
   }
 
   async function handlePublish() {
-    if (!token || !tenantId || !id) return;
+    if (!accessToken || !activeTenantId || !id) return;
     try {
-      await apiPagePublish(token, tenantId, id, mallId ?? undefined);
+      await apiPagePublish(accessToken, activeTenantId, id, activeMallId ?? undefined);
       toast.success('Sayfa yayınlandı');
       void loadPage();
     } catch (e) {
@@ -197,9 +197,9 @@ export function PageDetailPage() {
   }
 
   async function handleArchive() {
-    if (!token || !tenantId || !id) return;
+    if (!accessToken || !activeTenantId || !id) return;
     try {
-      await apiPageArchive(token, tenantId, id, mallId ?? undefined);
+      await apiPageArchive(accessToken, activeTenantId, id, activeMallId ?? undefined);
       toast.success('Sayfa arşivlendi');
       void loadPage();
     } catch (e) {
@@ -208,9 +208,9 @@ export function PageDetailPage() {
   }
 
   async function handleDeletePage() {
-    if (!token || !tenantId || !id) return;
+    if (!accessToken || !activeTenantId || !id) return;
     try {
-      await apiPageDelete(token, tenantId, id, mallId ?? undefined);
+      await apiPageDelete(accessToken, activeTenantId, id, activeMallId ?? undefined);
       toast.success('Sayfa silindi');
       navigate('/pages');
     } catch (e) {
@@ -244,7 +244,7 @@ export function PageDetailPage() {
   }
 
   async function handleSaveBlock() {
-    if (!token || !tenantId || !id) return;
+    if (!accessToken || !activeTenantId || !id) return;
     let parsedData: Record<string, unknown>;
     try {
       parsedData = JSON.parse(blockForm.dataJson) as Record<string, unknown>;
@@ -255,22 +255,22 @@ export function PageDetailPage() {
     setSavingBlock(true);
     try {
       if (editingBlockId) {
-        await apiPageBlockUpdate(token, tenantId, id, editingBlockId, {
+        await apiPageBlockUpdate(accessToken, activeTenantId, id, editingBlockId, {
           type: blockForm.type,
           title: blockForm.title || undefined,
           dataJson: parsedData,
           status: blockForm.status,
-        }, mallId ?? undefined);
+        }, activeMallId ?? undefined);
         toast.success('Blok güncellendi');
       } else {
         const sortOrder = blocks.length > 0 ? Math.max(...blocks.map((b) => b.sortOrder)) + 10 : 0;
-        await apiPageBlockCreate(token, tenantId, id, {
+        await apiPageBlockCreate(accessToken, activeTenantId, id, {
           type: blockForm.type,
           title: blockForm.title || undefined,
           dataJson: parsedData,
           sortOrder,
           status: blockForm.status,
-        }, mallId ?? undefined);
+        }, activeMallId ?? undefined);
         toast.success('Blok eklendi');
       }
       setShowBlockForm(false);
@@ -284,9 +284,9 @@ export function PageDetailPage() {
   }
 
   async function handleDeleteBlock(blockId: string) {
-    if (!token || !tenantId || !id) return;
+    if (!accessToken || !activeTenantId || !id) return;
     try {
-      await apiPageBlockDelete(token, tenantId, id, blockId, mallId ?? undefined);
+      await apiPageBlockDelete(accessToken, activeTenantId, id, blockId, activeMallId ?? undefined);
       toast.success('Blok silindi');
       setDeleteBlockConfirmId(null);
       void loadPage();
@@ -296,7 +296,7 @@ export function PageDetailPage() {
   }
 
   async function handleMoveBlock(blockId: string, direction: 'up' | 'down') {
-    if (!token || !tenantId || !id) return;
+    if (!accessToken || !activeTenantId || !id) return;
     const idx = blocks.findIndex((b) => b.id === blockId);
     if (idx < 0) return;
     if (direction === 'up' && idx === 0) return;
@@ -308,7 +308,7 @@ export function PageDetailPage() {
 
     const payload = reordered.map((b, i) => ({ id: b.id, sortOrder: i * 10 }));
     try {
-      const updated = await apiPageBlocksReorder(token, tenantId, id, { blocks: payload }, mallId ?? undefined);
+      const updated = await apiPageBlocksReorder(accessToken, activeTenantId, id, { blocks: payload }, activeMallId ?? undefined);
       setBlocks(updated);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Sıralanamadı');

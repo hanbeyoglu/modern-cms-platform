@@ -16,6 +16,7 @@ import { MoviesPage } from '../pages/MoviesPage';
 import { MovieSessionsPage } from '../pages/MovieSessionsPage';
 import { PagesPage } from '../pages/PagesPage';
 import { PageDetailPage } from '../pages/PageDetailPage';
+import { AnalyticsPage } from '../pages/AnalyticsPage';
 
 export const router = createBrowserRouter([
   {
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: '/dashboard', element: <DashboardPage /> },
+          { path: '/analytics', element: <AnalyticsPage /> },
           { path: '/media', element: <MediaPage /> },
           { path: '/sliders', element: <SlidersPage /> },
           { path: '/events', element: <EventsPage /> },

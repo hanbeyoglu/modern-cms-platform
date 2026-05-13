@@ -14,21 +14,26 @@ export function usePermission() {
 
     if (!membership) return false;
 
-    // Role-based check: admin roles get full access within tenant
-    const adminRoles = ['admin', 'superadmin', 'manager'];
-    if (adminRoles.includes(membership.role.code.toLowerCase())) return true;
+    const codes = membership.permissions;
+    if (Array.isArray(codes)) {
+      return codes.includes(permission);
+    }
 
-    // Future: granular permission map per role
-    // For now, authenticated tenant members can view; non-admin roles denied write actions
+    // Eski oturumlarda permissions yoksa sınırlı bir okuma listesi (geri uyumluluk)
     const readPermissions = [
-      'media:list',
-      'sliders:list',
-      'events:list',
-      'campaigns:list',
-      'stores:list',
+      'media:read',
+      'slider:read',
+      'event:read',
+      'campaign:read',
+      'store-category:read',
+      'global-store:read',
+      'mall-store:read',
       'cinema:read',
       'movie:read',
       'movie-session:read',
+      'page:read',
+      'page-block:read',
+      'analytics:view',
     ];
     if (readPermissions.includes(permission)) return true;
 

@@ -169,3 +169,15 @@ export type {
   CreatePageBlockPayload,
   ReorderBlocksPayload,
 } from './pages';
+
+export {
+  apiAnalyticsSummary,
+  apiAnalyticsTopContent,
+  apiAnalyticsTimeseries,
+} from './analytics';
+export type {
+  AnalyticsSummary,
+  AnalyticsTopRow,
+  AnalyticsTimeseriesRow,
+  AnalyticsQueryParams,
+} from './analytics';

@@ -90,6 +90,7 @@ model Tenant {
   movieSessions MovieSession[]
   pages         Page[]
   pageBlocks    PageBlock[]
+  analyticsEvents AnalyticsEvent[]
 }
 
 model Mall {
@@ -115,6 +116,7 @@ model Mall {
   movieSessions    MovieSession[]
   pages            Page[]
   pageBlocks       PageBlock[]
+  analyticsEvents  AnalyticsEvent[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -718,4 +720,58 @@ model PageBlock {
 
   @@index([pageId, sortOrder])
   @@index([tenantId, pageId])
+}
+
+enum AnalyticsEntityType {
+  PAGE
+  SLIDER
+  EVENT
+  CAMPAIGN
+  STORE
+  CINEMA
+  MOVIE
+  MOVIE_SESSION
+  FORM
+  CUSTOM
+}
+
+enum AnalyticsEventType {
+  PAGE_VIEW
+  SLIDER_VIEW
+  SLIDER_CLICK
+  EVENT_VIEW
+  EVENT_CLICK
+  CAMPAIGN_VIEW
+  CAMPAIGN_CLICK
+  STORE_VIEW
+  STORE_CLICK
+  CINEMA_VIEW
+  MOVIE_VIEW
+  MOVIE_SESSION_CLICK
+  FORM_SUBMIT
+  CUSTOM
+}
+
+model AnalyticsEvent {
+  id            String               @id @default(cuid())
+  tenantId      String
+  mallId        String?
+  entityType    AnalyticsEntityType
+  entityId      String?
+  eventType     AnalyticsEventType
+  path          String?
+  referrer      String?
+  userAgent     String?
+  deviceType    String?
+  ipHash        String?
+  metadataJson  Json?
+  createdAt     DateTime             @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall   Mall?  @relation(fields: [mallId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, mallId, createdAt])
+  @@index([entityType, entityId])
+  @@index([eventType])
+  @@index([createdAt])
 }
