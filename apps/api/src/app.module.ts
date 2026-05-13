@@ -13,6 +13,8 @@ import { StoreCategoriesModule } from './store-categories/store-categories.modul
 import { GlobalStoresModule } from './global-stores/global-stores.module';
 import { MallStoresModule } from './mall-stores/mall-stores.module';
 import { TenantsModule } from './tenants/tenants.module';
+import { EventsModule } from './events/events.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { TenantsModule } from './tenants/tenants.module';
     StoreCategoriesModule,
     GlobalStoresModule,
     MallStoresModule,
+    EventsModule,
+    CampaignsModule,
     HealthModule,
   ],
 })

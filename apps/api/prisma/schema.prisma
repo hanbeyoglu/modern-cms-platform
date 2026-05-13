@@ -51,6 +51,10 @@ model User {
   updatedGlobalStores GlobalStore[] @relation("GlobalStoreUpdater")
   createdMallStores     MallStore[]     @relation("MallStoreCreator")
   updatedMallStores     MallStore[]     @relation("MallStoreUpdater")
+  createdEvents         Event[]         @relation("EventCreator")
+  updatedEvents         Event[]         @relation("EventUpdater")
+  createdCampaigns      Campaign[]      @relation("CampaignCreator")
+  updatedCampaigns      Campaign[]      @relation("CampaignUpdater")
 }
 
 model Tenant {
@@ -69,6 +73,8 @@ model Tenant {
   mediaAssets  MediaAsset[]
   sliders      Slider[]
   mallStores   MallStore[]
+  events       Event[]
+  campaigns    Campaign[]
 }
 
 model Mall {
@@ -88,6 +94,8 @@ model Mall {
   mediaAssets      MediaAsset[]
   sliders          Slider[]
   mallStores       MallStore[]
+  events           Event[]
+  campaigns        Campaign[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -246,6 +254,8 @@ model MediaAsset {
   slidersVideo   Slider[] @relation("SliderVideoMedia")
   globalStoreLogos GlobalStore[] @relation("GlobalStoreLogo")
   mallStoreLocalLogos MallStore[] @relation("MallStoreLocalLogo")
+  eventCovers      Event[]      @relation("EventCoverMedia")
+  campaignCovers   Campaign[]   @relation("CampaignCoverMedia")
 
   @@index([tenantId, createdAt])
   @@index([tenantId, folderId])
@@ -398,8 +408,96 @@ model MallStore {
   localLogoMedia   MediaAsset?  @relation("MallStoreLocalLogo", fields: [localLogoMediaId], references: [id], onDelete: SetNull)
   createdByUser    User         @relation("MallStoreCreator", fields: [createdBy], references: [id])
   updatedByUser    User?        @relation("MallStoreUpdater", fields: [updatedBy], references: [id])
+  campaigns        Campaign[]
 
   @@index([tenantId, mallId])
   @@index([globalStoreId])
   @@index([tenantId, mallId, status])
+}
+
+// ─── Events & Campaigns (Sprint 6) ────────────────────────────────────────────
+
+enum ContentStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+model Event {
+  id                  String        @id @default(cuid())
+  tenantId            String
+  mallId              String?
+  title               String
+  slug                String
+  shortDescription    String?
+  description         String?
+  coverMediaId        String?
+  startAt             DateTime?
+  endAt               DateTime?
+  location            String?
+  category            String?
+  buttonText          String?
+  linkUrl             String?
+  status              ContentStatus @default(DRAFT)
+  sortOrder           Int           @default(0)
+  dynamicFieldsJson   Json?
+  createdBy           String
+  updatedBy           String?
+  publishedAt         DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  deletedAt           DateTime?
+
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall            Mall?       @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  coverMedia      MediaAsset? @relation("EventCoverMedia", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  createdByUser   User        @relation("EventCreator", fields: [createdBy], references: [id])
+  updatedByUser   User?       @relation("EventUpdater", fields: [updatedBy], references: [id])
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@index([tenantId, mallId])
+  @@index([tenantId, sortOrder])
+  @@index([tenantId, startAt])
+}
+
+model Campaign {
+  id                  String        @id @default(cuid())
+  tenantId            String
+  mallId              String?
+  storeId             String?
+  title               String
+  slug                String
+  shortDescription    String?
+  description         String?
+  coverMediaId        String?
+  startAt             DateTime?
+  endAt               DateTime?
+  terms               String?
+  couponCode          String?
+  buttonText          String?
+  linkUrl             String?
+  status              ContentStatus @default(DRAFT)
+  sortOrder           Int           @default(0)
+  dynamicFieldsJson   Json?
+  createdBy           String
+  updatedBy           String?
+  publishedAt         DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  deletedAt           DateTime?
+
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall            Mall?       @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  store           MallStore?  @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  coverMedia      MediaAsset? @relation("CampaignCoverMedia", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  createdByUser   User        @relation("CampaignCreator", fields: [createdBy], references: [id])
+  updatedByUser   User?       @relation("CampaignUpdater", fields: [updatedBy], references: [id])
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@index([tenantId, mallId])
+  @@index([tenantId, storeId])
+  @@index([tenantId, sortOrder])
 }

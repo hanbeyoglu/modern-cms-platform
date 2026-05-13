@@ -8,13 +8,25 @@ import { SlidersPage } from './pages/SlidersPage';
 import { StoreCategoriesPage } from './pages/StoreCategoriesPage';
 import { GlobalStoresPage } from './pages/GlobalStoresPage';
 import { MallStoresPage } from './pages/MallStoresPage';
+import { EventsPage } from './pages/EventsPage';
+import { CampaignsPage } from './pages/CampaignsPage';
 
-type Page = 'dashboard' | 'media' | 'sliders' | 'store-categories' | 'global-stores' | 'mall-stores';
+type Page =
+  | 'dashboard'
+  | 'media'
+  | 'sliders'
+  | 'events'
+  | 'campaigns'
+  | 'store-categories'
+  | 'global-stores'
+  | 'mall-stores';
 
 const NAV_ITEMS: Array<{ id: Page; label: string }> = [
   { id: 'dashboard', label: 'Gösterge Paneli' },
   { id: 'media', label: 'Medya Kütüphanesi' },
   { id: 'sliders', label: 'Slider Yönetimi' },
+  { id: 'events', label: 'Etkinlikler' },
+  { id: 'campaigns', label: 'Kampanyalar' },
   { id: 'store-categories', label: 'Mağaza Kategorileri' },
   { id: 'global-stores', label: 'Global Mağazalar' },
   { id: 'mall-stores', label: 'AVM Mağazaları' },
@@ -147,6 +159,8 @@ function AuthenticatedShell() {
         {currentPage === 'dashboard' && <DashboardView />}
         {currentPage === 'media' && <MediaPage />}
         {currentPage === 'sliders' && <SlidersPage />}
+        {currentPage === 'events' && <EventsPage />}
+        {currentPage === 'campaigns' && <CampaignsPage />}
         {currentPage === 'store-categories' && <StoreCategoriesPage />}
         {currentPage === 'global-stores' && <GlobalStoresPage />}
         {currentPage === 'mall-stores' && <MallStoresPage />}
@@ -258,7 +272,7 @@ function DashboardView() {
           textAlign: 'center',
         }}
       >
-        Sprint 6+ — Etkinlik, kampanya, sinema ve sayfa oluşturucu modülleri burada yer alacak
+        Sprint 7+ — Sinema, sayfa oluşturucu ve diğer içerik motorları burada planlanacak
       </section>
     </div>
   );
