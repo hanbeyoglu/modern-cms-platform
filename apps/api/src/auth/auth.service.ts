@@ -6,6 +6,7 @@ import type { User } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccessService } from '../access/access.service';
+import { AuditLogService } from '../audit/audit.service';
 import type { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
@@ -15,6 +16,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly access: AccessService,
+    private readonly audit: AuditLogService,
   ) {}
 
   async login(
@@ -28,18 +30,44 @@ export class AuthService {
     user: Pick<User, 'id' | 'email' | 'firstName' | 'lastName' | 'isSuperAdmin'>;
   }> {
     const user = await this.access.findActiveUserByEmail(email);
+
     if (!user) {
+      await this.audit.logAction({
+        action: 'login_failed',
+        entityType: 'auth',
+        ip: meta.ipAddress,
+        userAgent: meta.userAgent,
+        after: { reason: 'user_not_found' },
+      });
       throw new UnauthorizedException('Geçersiz kimlik bilgileri');
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) {
+      await this.audit.logAction({
+        userId: user.id,
+        action: 'login_failed',
+        entityType: 'auth',
+        entityId: user.id,
+        ip: meta.ipAddress,
+        userAgent: meta.userAgent,
+        after: { reason: 'invalid_password' },
+      });
       throw new UnauthorizedException('Geçersiz kimlik bilgileri');
     }
 
     const accessToken = await this.signAccessToken(user);
     const expiresIn = this.getAccessExpiresSeconds();
     const refreshToken = await this.issueRefreshToken(user.id, meta);
+
+    await this.audit.logAction({
+      userId: user.id,
+      action: 'login_success',
+      entityType: 'auth',
+      entityId: user.id,
+      ip: meta.ipAddress,
+      userAgent: meta.userAgent,
+    });
 
     return {
       accessToken,

@@ -30,7 +30,7 @@ export function LoginPage() {
   return (
     <div style={{ maxWidth: 420, margin: '48px auto', fontFamily: 'system-ui, sans-serif' }}>
       <h1 style={{ marginTop: 0 }}>CMS Admin Girişi</h1>
-      <p style={{ color: '#4b5563' }}>Sprint 1: yer tutucu giriş ekranı (API öncelikli).</p>
+      <p style={{ color: '#4b5563' }}>Yönetici hesabınızla giriş yapın.</p>
       <form onSubmit={onSubmit} style={{ display: 'grid', gap: 12 }}>
         <label style={{ display: 'grid', gap: 6 }}>
           <span>E-posta</span>

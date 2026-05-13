@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AccessModule } from './access/access.module';
+import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { TenantContextMiddleware } from './common/middleware/tenant-context.middleware';
 import { HealthModule } from './health/health.module';
@@ -15,6 +16,7 @@ import { TenantsModule } from './tenants/tenants.module';
       envFilePath: ['.env', '.env.local', '../../.env', '../../.env.local'],
     }),
     PrismaModule,
+    AuditModule,
     AccessModule,
     AuthModule,
     TenantsModule,
