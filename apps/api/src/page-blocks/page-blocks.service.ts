@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import type { PageBlock, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
+import { SearchIndexerService } from '../search/search-indexer.service';
 import { validateBlockData } from '../common/utils/block-data-validation';
 import type { CreatePageBlockDto } from './dto/create-page-block.dto';
 import type { UpdatePageBlockDto } from './dto/update-page-block.dto';
@@ -17,7 +18,12 @@ export class PageBlocksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly searchIndexer: SearchIndexerService,
   ) {}
+
+  private schedulePageSearchIndex(pageId: string): void {
+    void this.searchIndexer.syncPage(pageId).catch(() => undefined);
+  }
 
   async list(pageId: string, tenantId: string): Promise<PageBlock[]> {
     await this.assertPageExists(pageId, tenantId);
@@ -62,6 +68,7 @@ export class PageBlocksService {
       after: { pageId, type: block.type, sortOrder: block.sortOrder },
     });
 
+    this.schedulePageSearchIndex(pageId);
     return block;
   }
 
@@ -107,6 +114,7 @@ export class PageBlocksService {
       after: { type: block.type, sortOrder: block.sortOrder },
     });
 
+    this.schedulePageSearchIndex(pageId);
     return block;
   }
 
@@ -134,6 +142,8 @@ export class PageBlocksService {
       entityId: blockId,
       before: { type: existing.type, sortOrder: existing.sortOrder },
     });
+
+    this.schedulePageSearchIndex(pageId);
   }
 
   async reorder(
@@ -173,6 +183,8 @@ export class PageBlocksService {
       entityId: pageId,
       after: { blocks: dto.blocks },
     });
+
+    this.schedulePageSearchIndex(pageId);
 
     return this.prisma.pageBlock.findMany({
       where: { pageId, tenantId, deletedAt: null },

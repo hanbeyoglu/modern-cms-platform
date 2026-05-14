@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import type { ContentStatus, Event, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
+import { SearchIndexerService } from '../search/search-indexer.service';
 import { slugify } from '../common/utils/slugify';
 import {
   assertOptionalHttpUrl,
@@ -36,7 +37,12 @@ export class EventsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly searchIndexer: SearchIndexerService,
   ) {}
+
+  private scheduleEventIndex(eventId: string): void {
+    void this.searchIndexer.syncEvent(eventId).catch(() => undefined);
+  }
 
   async list(
     tenantId: string,
@@ -132,6 +138,7 @@ export class EventsService {
       after: { title: event.title, status: event.status, slug: event.slug },
     });
 
+    this.scheduleEventIndex(event.id);
     return event;
   }
 
@@ -239,6 +246,7 @@ export class EventsService {
       after: { title: event.title, status: event.status },
     });
 
+    this.scheduleEventIndex(event.id);
     return event;
   }
 
@@ -260,6 +268,8 @@ export class EventsService {
       entityId: id,
       before: { title: existing.title, status: existing.status },
     });
+
+    this.scheduleEventIndex(id);
   }
 
   async publish(id: string, user: User, tenantId: string, mallId: string | undefined): Promise<EventResponse> {
@@ -292,6 +302,7 @@ export class EventsService {
       after: { status: 'PUBLISHED', publishedAt: event.publishedAt },
     });
 
+    this.scheduleEventIndex(event.id);
     return event;
   }
 
@@ -316,6 +327,7 @@ export class EventsService {
       after: { status: 'ARCHIVED' },
     });
 
+    this.scheduleEventIndex(event.id);
     return event;
   }
 

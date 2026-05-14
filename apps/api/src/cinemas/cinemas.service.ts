@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import type { Cinema, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
+import { SearchIndexerService } from '../search/search-indexer.service';
 import { slugify } from '../common/utils/slugify';
 import { uniqueCinemaSlug } from '../common/utils/unique-content-slug';
 import type { CreateCinemaDto } from './dto/create-cinema.dto';
@@ -22,7 +23,12 @@ export class CinemasService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly searchIndexer: SearchIndexerService,
   ) {}
+
+  private scheduleCinemaIndex(id: string): void {
+    void this.searchIndexer.syncCinema(id).catch(() => undefined);
+  }
 
   async list(
     tenantId: string,
@@ -110,6 +116,7 @@ export class CinemasService {
       after: { name: cinema.name, slug: cinema.slug, status: cinema.status },
     });
 
+    this.scheduleCinemaIndex(cinema.id);
     return cinema;
   }
 
@@ -179,6 +186,7 @@ export class CinemasService {
       after: { name: cinema.name, status: cinema.status },
     });
 
+    this.scheduleCinemaIndex(id);
     return cinema;
   }
 
@@ -197,6 +205,8 @@ export class CinemasService {
       entityId: id,
       before: { name: existing.name, status: existing.status },
     });
+
+    this.scheduleCinemaIndex(id);
   }
 
   async getPublicCinemas(opts: { tenantId: string; mallId: string }): Promise<CinemaResponse[]> {

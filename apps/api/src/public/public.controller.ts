@@ -7,9 +7,11 @@ import {
   Param,
   Query,
 } from '@nestjs/common';
+import { Public } from '../common/decorators/public.decorator';
 import { PublicCacheService } from './cache/public-cache.service';
 import { PublicContentService } from './public-content.service';
 import { PublicContextService } from './public-context.service';
+import { PublicSearchService } from '../search/public-search.service';
 import type { PublicSiteConfig } from './public-response.types';
 
 // Cache TTLs in seconds
@@ -18,6 +20,7 @@ const TTL = {
   home: 120,
   list: 120,
   detail: 300,
+  search: 45,
 } as const;
 
 // Locale segment helper — keeps cache keys concise and consistent
@@ -25,12 +28,14 @@ function lseg(code: string | undefined | null): string {
   return code ? `:l:${code}` : ':l:none';
 }
 
+@Public()
 @Controller('public')
 export class PublicController {
   constructor(
     private readonly ctx: PublicContextService,
     private readonly content: PublicContentService,
     private readonly cache: PublicCacheService,
+    private readonly publicSearch: PublicSearchService,
   ) {}
 
   // ── Site Config ───────────────────────────────────────────────────────────
@@ -389,6 +394,37 @@ export class PublicController {
       localeId: context.locale?.id,
     });
     await this.cache.set(cacheKey, result, TTL.list);
+    return result;
+  }
+
+  @Get('search')
+  async search(
+    @Headers('x-tenant-id') tenantId: string | undefined,
+    @Headers('x-mall-id') mallId: string | undefined,
+    @Query('locale') locale: string | undefined,
+    @Query('q') q: string | undefined,
+    @Query('type') type: string | undefined,
+    @Query('limit') limitStr: string | undefined,
+  ) {
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
+    const limit = parseLimit(limitStr, 12, 50);
+    const qKey = (q ?? '').trim().slice(0, 120);
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:search:${qKey}:${type ?? ''}:${limit}` +
+      lseg(context.locale?.code);
+
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
+    const result = await this.publicSearch.search({
+      tenantId: context.tenantId,
+      mallId: context.mallId,
+      q,
+      type,
+      limit,
+      localeId: context.locale?.id ?? null,
+    });
+    await this.cache.set(cacheKey, result, TTL.search);
     return result;
   }
 }

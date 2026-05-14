@@ -6,6 +6,7 @@ import {
 import type { LocalizedContent, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
+import { SearchIndexerService } from '../search/search-indexer.service';
 import type { CreateTranslationDto } from './dto/create-translation.dto';
 import type { UpdateTranslationDto } from './dto/update-translation.dto';
 import type { ListTranslationsDto } from './dto/list-translations.dto';
@@ -15,6 +16,7 @@ export class TranslationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly searchIndexer: SearchIndexerService,
   ) {}
 
   async list(tenantId: string, query: ListTranslationsDto): Promise<LocalizedContent[]> {
@@ -74,6 +76,10 @@ export class TranslationsService {
         after: { value: updated.value },
       });
 
+      void this.searchIndexer
+        .touchByLocalizedEntity(tenantId, dto.entityType, dto.entityId)
+        .catch(() => undefined);
+
       return updated;
     }
 
@@ -102,6 +108,10 @@ export class TranslationsService {
       },
     });
 
+    void this.searchIndexer
+      .touchByLocalizedEntity(tenantId, dto.entityType, dto.entityId)
+      .catch(() => undefined);
+
     return translation;
   }
 
@@ -128,6 +138,10 @@ export class TranslationsService {
       after: { value: translation.value },
     });
 
+    void this.searchIndexer
+      .touchByLocalizedEntity(tenantId, existing.entityType, existing.entityId)
+      .catch(() => undefined);
+
     return translation;
   }
 
@@ -149,6 +163,10 @@ export class TranslationsService {
         field: existing.field,
       },
     });
+
+    void this.searchIndexer
+      .touchByLocalizedEntity(tenantId, existing.entityType, existing.entityId)
+      .catch(() => undefined);
   }
 
   private async resolveLocaleId(

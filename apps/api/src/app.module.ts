@@ -27,6 +27,7 @@ import { TranslationsModule } from './translations/translations.module';
 import { TranslationResolverModule } from './translation-resolver/translation-resolver.module';
 import { SchedulingModule } from './scheduling/scheduling.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     TranslationResolverModule,
     SchedulingModule,
     NotificationsModule,
+    SearchModule,
     HealthModule,
   ],
 })

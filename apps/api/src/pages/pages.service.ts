@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import type { Page, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
+import { SearchIndexerService } from '../search/search-indexer.service';
 import { assertPublishAtWhenScheduled, validateStartBeforeEnd } from '../common/utils/content-validation';
 import { slugify } from '../common/utils/slugify';
 import { uniquePageSlug } from '../common/utils/unique-content-slug';
@@ -38,7 +39,12 @@ export class PagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly searchIndexer: SearchIndexerService,
   ) {}
+
+  private schedulePageIndex(pageId: string): void {
+    void this.searchIndexer.syncPage(pageId).catch(() => undefined);
+  }
 
   async list(
     tenantId: string,
@@ -113,6 +119,7 @@ export class PagesService {
       after: { title: page.title, status: page.status, slug: page.slug, type: page.type },
     });
 
+    this.schedulePageIndex(page.id);
     return page;
   }
 
@@ -195,6 +202,7 @@ export class PagesService {
       after: { title: page.title, status: page.status },
     });
 
+    this.schedulePageIndex(page.id);
     return page;
   }
 
@@ -213,6 +221,8 @@ export class PagesService {
       entityId: id,
       before: { title: existing.title, status: existing.status },
     });
+
+    this.schedulePageIndex(id);
   }
 
   async publish(id: string, user: User, tenantId: string, mallId: string | undefined): Promise<PageResponse> {
@@ -246,6 +256,7 @@ export class PagesService {
       after: { status: 'PUBLISHED', publishedAt: page.publishedAt },
     });
 
+    this.schedulePageIndex(page.id);
     return page;
   }
 
@@ -270,6 +281,7 @@ export class PagesService {
       after: { status: 'ARCHIVED' },
     });
 
+    this.schedulePageIndex(page.id);
     return page;
   }
 

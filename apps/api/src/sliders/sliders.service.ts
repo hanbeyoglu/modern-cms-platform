@@ -7,6 +7,7 @@ import {
 import type { Prisma, Slider, SliderStatus, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
+import { SearchIndexerService } from '../search/search-indexer.service';
 import { assertStartAtWhenScheduled } from '../common/utils/content-validation';
 import type { CreateSliderDto } from './dto/create-slider.dto';
 import type { UpdateSliderDto } from './dto/update-slider.dto';
@@ -33,7 +34,12 @@ export class SlidersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly searchIndexer: SearchIndexerService,
   ) {}
+
+  private scheduleSliderIndex(id: string): void {
+    void this.searchIndexer.syncSlider(id).catch(() => undefined);
+  }
 
   async list(
     tenantId: string,
@@ -128,6 +134,7 @@ export class SlidersService {
       after: { title: slider.title, status: slider.status },
     });
 
+    this.scheduleSliderIndex(slider.id);
     return slider;
   }
 
@@ -190,6 +197,7 @@ export class SlidersService {
       after: { title: slider.title, status: slider.status },
     });
 
+    this.scheduleSliderIndex(slider.id);
     return slider;
   }
 
@@ -210,6 +218,8 @@ export class SlidersService {
       entityId: id,
       before: { title: existing.title, status: existing.status },
     });
+
+    this.scheduleSliderIndex(id);
   }
 
   async publish(id: string, user: User, tenantId: string): Promise<SliderResponse> {
@@ -238,6 +248,7 @@ export class SlidersService {
       after: { status: 'PUBLISHED' },
     });
 
+    this.scheduleSliderIndex(slider.id);
     return slider;
   }
 
@@ -261,6 +272,7 @@ export class SlidersService {
       after: { status: 'ARCHIVED' },
     });
 
+    this.scheduleSliderIndex(slider.id);
     return slider;
   }
 
@@ -306,6 +318,10 @@ export class SlidersService {
       entityType: 'slider',
       after: { itemCount: dto.items.length, ids },
     });
+
+    for (const sid of ids) {
+      this.scheduleSliderIndex(sid);
+    }
   }
 
   // ─── Public-facing service method (for future public website use) ─────────────

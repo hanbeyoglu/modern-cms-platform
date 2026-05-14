@@ -7,6 +7,7 @@ import {
 import { Prisma, type User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
+import { SearchIndexerService } from '../search/search-indexer.service';
 import { slugify } from '../common/utils/slugify';
 import type { CreateGlobalStoreDto } from './dto/create-global-store.dto';
 import type { UpdateGlobalStoreDto } from './dto/update-global-store.dto';
@@ -38,7 +39,12 @@ export class GlobalStoresService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly searchIndexer: SearchIndexerService,
   ) {}
+
+  private scheduleGlobalStoreIndex(id: string): void {
+    void this.searchIndexer.syncGlobalStore(id).catch(() => undefined);
+  }
 
   async list(query: ListGlobalStoresDto): Promise<{
     items: GlobalStoreResponse[];
@@ -119,6 +125,7 @@ export class GlobalStoresService {
       after: { name: row.name, slug: row.slug, status: row.status },
     });
 
+    this.scheduleGlobalStoreIndex(row.id);
     return row;
   }
 
@@ -176,6 +183,7 @@ export class GlobalStoresService {
       after: { name: row.name, slug: row.slug, status: row.status },
     });
 
+    this.scheduleGlobalStoreIndex(id);
     return row;
   }
 
@@ -200,6 +208,8 @@ export class GlobalStoresService {
       entityId: id,
       before: { name: existing.name, slug: existing.slug },
     });
+
+    this.scheduleGlobalStoreIndex(id);
   }
 
   private async assertCategoryExists(categoryId: string): Promise<void> {

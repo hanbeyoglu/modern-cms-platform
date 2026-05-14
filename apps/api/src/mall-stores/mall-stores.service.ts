@@ -9,6 +9,7 @@ import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import { AccessService } from '../access/access.service';
+import { SearchIndexerService } from '../search/search-indexer.service';
 import type { AssignMallStoreDto } from './dto/assign-mall-store.dto';
 import type { UpdateMallStoreDto } from './dto/update-mall-store.dto';
 import type { ListMallStoresDto } from './dto/list-mall-stores.dto';
@@ -70,7 +71,12 @@ export class MallStoresService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
     private readonly access: AccessService,
+    private readonly searchIndexer: SearchIndexerService,
   ) {}
+
+  private scheduleMallStoreIndex(id: string): void {
+    void this.searchIndexer.syncMallStore(id).catch(() => undefined);
+  }
 
   private resolveScope(req: Request): { tenantId: string; mallId: string } {
     const tenantId = req.tenantId;
@@ -205,6 +211,7 @@ export class MallStoresService {
       },
     });
 
+    this.scheduleMallStoreIndex(row.id);
     return row;
   }
 
@@ -268,6 +275,7 @@ export class MallStoresService {
       },
     });
 
+    this.scheduleMallStoreIndex(id);
     return row;
   }
 
@@ -297,6 +305,8 @@ export class MallStoresService {
       entityId: id,
       before: { globalStoreId: existing.globalStoreId, localName: existing.localName },
     });
+
+    this.scheduleMallStoreIndex(id);
   }
 
   async setFeatured(req: Request, user: User, id: string, featured: boolean): Promise<MallStoreResponse> {
@@ -325,6 +335,7 @@ export class MallStoresService {
       after: { isFeatured: featured },
     });
 
+    this.scheduleMallStoreIndex(id);
     return row;
   }
 

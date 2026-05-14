@@ -19,6 +19,7 @@ import { PageDetailPage } from '../pages/PageDetailPage';
 import { LocalesPage } from '../pages/LocalesPage';
 import { AnalyticsPage } from '../pages/AnalyticsPage';
 import { NotificationsPage } from '../pages/NotificationsPage';
+import { SearchPage } from '../pages/SearchPage';
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/analytics', element: <AnalyticsPage /> },
           { path: '/notifications', element: <NotificationsPage /> },
+          { path: '/search', element: <SearchPage /> },
           { path: '/media', element: <MediaPage /> },
           { path: '/sliders', element: <SlidersPage /> },
           { path: '/events', element: <EventsPage /> },

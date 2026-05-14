@@ -23,6 +23,13 @@ export const NAV_ITEMS: NavItem[] = [
     permission: 'notification:read',
   },
   {
+    id: 'search',
+    label: 'Genel arama',
+    icon: '⌕',
+    href: '/search',
+    permission: 'search:global',
+  },
+  {
     id: 'media',
     label: 'Medya Kütüphanesi',
     icon: '▤',

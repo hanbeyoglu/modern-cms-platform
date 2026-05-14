@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import type { Campaign, ContentStatus, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
+import { SearchIndexerService } from '../search/search-indexer.service';
 import { slugify } from '../common/utils/slugify';
 import { assertOptionalHttpUrl, assertStartAtWhenScheduled, validateStartBeforeEnd } from '../common/utils/content-validation';
 import { uniqueCampaignSlug } from '../common/utils/unique-content-slug';
@@ -42,7 +43,12 @@ export class CampaignsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly searchIndexer: SearchIndexerService,
   ) {}
+
+  private scheduleCampaignIndex(id: string): void {
+    void this.searchIndexer.syncCampaign(id).catch(() => undefined);
+  }
 
   async list(
     tenantId: string,
@@ -152,6 +158,7 @@ export class CampaignsService {
       after: { title: campaign.title, status: campaign.status, slug: campaign.slug },
     });
 
+    this.scheduleCampaignIndex(campaign.id);
     return campaign;
   }
 
@@ -263,6 +270,7 @@ export class CampaignsService {
       after: { title: campaign.title, status: campaign.status },
     });
 
+    this.scheduleCampaignIndex(campaign.id);
     return campaign;
   }
 
@@ -284,6 +292,8 @@ export class CampaignsService {
       entityId: id,
       before: { title: existing.title, status: existing.status },
     });
+
+    this.scheduleCampaignIndex(id);
   }
 
   async publish(id: string, user: User, tenantId: string, mallId: string | undefined): Promise<CampaignResponse> {
@@ -317,6 +327,7 @@ export class CampaignsService {
       after: { status: 'PUBLISHED', publishedAt: campaign.publishedAt },
     });
 
+    this.scheduleCampaignIndex(campaign.id);
     return campaign;
   }
 
@@ -341,6 +352,7 @@ export class CampaignsService {
       after: { status: 'ARCHIVED' },
     });
 
+    this.scheduleCampaignIndex(campaign.id);
     return campaign;
   }
 

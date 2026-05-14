@@ -37,6 +37,7 @@ export function usePermission() {
       'locale:read',
       'translation:read',
       'notification:read',
+      'search:global',
     ];
     if (readPermissions.includes(permission)) return true;
 

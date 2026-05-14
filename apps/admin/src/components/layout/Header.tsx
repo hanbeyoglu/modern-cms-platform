@@ -1,6 +1,7 @@
 import { UserMenu } from './UserMenu';
 import { TenantMallSelector } from '../TenantMallSelector';
 import { NotificationBell } from './NotificationBell';
+import { GlobalSearch } from './GlobalSearch';
 
 export function Header() {
   return (
@@ -19,8 +20,11 @@ export function Header() {
         zIndex: 10,
       }}
     >
-      <TenantMallSelector />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
+        <TenantMallSelector />
+        <GlobalSearch />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
         <NotificationBell />
         <UserMenu />
       </div>

@@ -86,6 +86,7 @@ const PERMISSIONS = [
   'notification:read',
   'notification:update',
   'notification:delete',
+  'search:global',
 ] as const;
 
 async function main(): Promise<void> {
@@ -128,6 +129,7 @@ async function main(): Promise<void> {
         'mall:switch',
         'user:read',
         'analytics:view',
+        'search:global',
         'content:read',
         'content:create',
         'content:update',
@@ -197,6 +199,7 @@ async function main(): Promise<void> {
         'mall:switch',
         'user:read',
         'content:read',
+        'search:global',
         'content:create',
         'content:update',
         'media:read',
@@ -258,6 +261,7 @@ async function main(): Promise<void> {
         'movie-session:read',
         'page:read',
         'page-block:read',
+        'search:global',
         'notification:read',
         'notification:update',
       ],

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import type { Movie, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
+import { SearchIndexerService } from '../search/search-indexer.service';
 import { slugify } from '../common/utils/slugify';
 import { assertOptionalHttpUrl } from '../common/utils/content-validation';
 import { uniqueMovieSlug } from '../common/utils/unique-content-slug';
@@ -23,7 +24,12 @@ export class MoviesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly searchIndexer: SearchIndexerService,
   ) {}
+
+  private scheduleMovieIndex(id: string): void {
+    void this.searchIndexer.syncMovie(id).catch(() => undefined);
+  }
 
   async list(
     tenantId: string,
@@ -109,6 +115,7 @@ export class MoviesService {
       after: { title: movie.title, slug: movie.slug, status: movie.status },
     });
 
+    this.scheduleMovieIndex(movie.id);
     return movie;
   }
 
@@ -170,6 +177,7 @@ export class MoviesService {
       after: { title: movie.title, status: movie.status },
     });
 
+    this.scheduleMovieIndex(id);
     return movie;
   }
 
@@ -187,6 +195,8 @@ export class MoviesService {
       entityId: id,
       before: { title: existing.title, status: existing.status },
     });
+
+    this.scheduleMovieIndex(id);
   }
 
   /** Filmler tenant genelinde; mallId ile o AVM'de seansı olan aktif filmler filtrelenir. */

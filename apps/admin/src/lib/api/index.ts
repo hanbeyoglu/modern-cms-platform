@@ -218,3 +218,11 @@ export type {
   NotificationSeverity,
   NotificationType,
 } from './notifications';
+
+export { apiGlobalSearch } from './search';
+export type {
+  GlobalSearchHit,
+  GlobalSearchParams,
+  GlobalSearchResponse,
+  SearchIndexEntityType,
+} from './search';
