@@ -336,6 +336,7 @@ export class SearchIndexerService {
       STORE: () => this.syncMallStore(entityId),
       MOVIE: () => this.syncMovie(entityId),
       CINEMA: () => this.syncCinema(entityId),
+      LOCATION: async () => { /* Location search sync reserved for future sprint */ },
     };
     const fn = map[entityType];
     if (!fn) return;

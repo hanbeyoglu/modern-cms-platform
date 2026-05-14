@@ -55,6 +55,7 @@ export class SearchResultMapperService {
       MOVIE: `/movies?focus=${encodeURIComponent(id)}`,
       CINEMA: `/cinemas?focus=${encodeURIComponent(id)}`,
       SLIDER: `/sliders?focus=${encodeURIComponent(id)}`,
+      LOCATION: `/locations/${id}`,
     };
     return map[entityType];
   }

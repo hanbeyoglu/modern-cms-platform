@@ -291,3 +291,36 @@ export type {
 } from './settings';
 
 export { apiUpdateProfile, apiChangePassword } from './account';
+
+export {
+  apiTenantsList,
+  apiTenantGet,
+  apiTenantCreate,
+  apiTenantUpdate,
+  apiTenantUpdateStatus,
+} from './tenants';
+export type {
+  TenantStatus,
+  CmsTenant,
+  TenantListResponse,
+  CreateTenantPayload,
+  UpdateTenantPayload,
+} from './tenants';
+
+export {
+  apiLocationsList,
+  apiLocationGet,
+  apiLocationCreate,
+  apiLocationUpdate,
+  apiLocationUpdateStatus,
+  apiLocationDelete,
+  LOCATION_TYPE_LABELS,
+} from './locations';
+export type {
+  LocationType,
+  LocationStatus,
+  CmsLocation,
+  LocationListResponse,
+  CreateLocationPayload,
+  UpdateLocationPayload,
+} from './locations';

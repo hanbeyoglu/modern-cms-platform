@@ -28,6 +28,27 @@ const PERMISSION_GROUPS: Record<string, string[]> = {
   tenants: ['tenant:read', 'mall:read', 'mall:switch'],
 };
 
+const SUPER_ADMIN_ROLE_CODE = 'SUPER_ADMIN';
+
+const CRITICAL_PLATFORM_PERMISSIONS = [
+  'role:read',
+  'role:create',
+  'role:update',
+  'role:delete',
+  'user:read',
+  'user:create',
+  'user:update',
+  'user:delete',
+  'tenant:read',
+  'tenant:create',
+  'tenant:update',
+  'tenant:delete',
+  'settings:read',
+  'settings:update',
+  'capability:read',
+  'capability:update',
+];
+
 @Injectable()
 export class RolesService {
   constructor(
@@ -123,14 +144,14 @@ export class RolesService {
 
   async update(actor: User, roleId: string, dto: UpdateRoleDto) {
     const role = await this.findOne(actor, roleId);
+    await this.assertCanManageRole(actor, role);
 
-    if (role.isSystem && (dto.name || dto.isActive === false)) {
-      throw new BadRequestException('Sistem rolleri değiştirilemez');
+    if (Object.prototype.hasOwnProperty.call(dto, 'code')) {
+      throw new BadRequestException('Rol kodu değiştirilemez');
     }
 
-    if (!actor.isSuperAdmin && role.tenantId) {
-      const actorTenantId = await this.resolveTenantId(actor);
-      if (role.tenantId !== actorTenantId) throw new ForbiddenException('Bu role erişim yok');
+    if (role.isSystem && dto.isActive === false) {
+      await this.assertSystemRoleCanBeDeactivated(role);
     }
 
     const before = { name: role.name, description: role.description, isActive: role.isActive };
@@ -157,14 +178,12 @@ export class RolesService {
 
   async updatePermissions(actor: User, roleId: string, dto: UpdateRolePermissionsDto) {
     const role = await this.findOne(actor, roleId);
-
-    if (role.isSystem) {
-      throw new BadRequestException('Sistem rollerinin izinleri değiştirilemez');
-    }
+    await this.assertCanManageRole(actor, role);
 
     const perms = await this.prisma.permission.findMany({
       where: { id: { in: dto.permissionIds } },
     });
+    await this.assertSuperAdminCriticalPermissions(role, perms.map((p) => p.code));
 
     await this.prisma.rolePermission.deleteMany({ where: { roleId } });
     await this.prisma.rolePermission.createMany({
@@ -228,9 +247,13 @@ export class RolesService {
 
   async remove(actor: User, roleId: string) {
     const role = await this.findOne(actor, roleId);
+    await this.assertCanManageRole(actor, role);
 
+    if (role.code === SUPER_ADMIN_ROLE_CODE) {
+      throw new BadRequestException('SUPER_ADMIN rolü silinemez');
+    }
     if (role.isSystem) {
-      throw new BadRequestException('Sistem rolleri silinemez');
+      throw new BadRequestException('Sistem rolleri silinemez; güvenliyse pasifleştirilebilir');
     }
 
     const usageCount = await this.prisma.tenantUser.count({
@@ -276,6 +299,68 @@ export class RolesService {
     });
     if (!tu) throw new ForbiddenException('Tenant üyeliği bulunamadı');
     return tu.tenantId;
+  }
+
+  private async assertCanManageRole(
+    actor: User,
+    role: { tenantId: string | null; isSystem: boolean },
+  ) {
+    if (actor.isSuperAdmin) return;
+    if (role.isSystem || !role.tenantId) {
+      throw new ForbiddenException('Sistem rollerini yalnızca Super Admin düzenleyebilir');
+    }
+
+    const actorTenantId = await this.resolveTenantId(actor);
+    if (role.tenantId !== actorTenantId) {
+      throw new ForbiddenException('Bu rol yalnızca kendi tenantı içinde düzenlenebilir');
+    }
+  }
+
+  private async assertSystemRoleCanBeDeactivated(role: { id: string; isSystem: boolean }) {
+    if (!role.isSystem) return;
+
+    const activeUsageCount = await this.prisma.tenantUser.count({
+      where: {
+        roleId: role.id,
+        deletedAt: null,
+        isActive: true,
+        user: { deletedAt: null, status: 'ACTIVE' },
+      },
+    });
+    if (activeUsageCount > 0) {
+      throw new BadRequestException(
+        `Bu sistem rolü ${activeUsageCount} aktif kullanıcı tarafından kullanılıyor; önce kullanıcıları başka role taşıyın`,
+      );
+    }
+  }
+
+  private async assertSuperAdminCriticalPermissions(
+    role: { code: string; isActive: boolean },
+    nextPermissionCodes: string[],
+  ) {
+    if (role.code !== SUPER_ADMIN_ROLE_CODE) return;
+    if (!(await this.isLastEffectiveSuperAdminRole(role))) return;
+
+    const next = new Set(nextPermissionCodes);
+    const missing = CRITICAL_PLATFORM_PERMISSIONS.filter((code) => !next.has(code));
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Son etkin SUPER_ADMIN rolünden kritik platform izinleri kaldırılamaz: ${missing.join(', ')}`,
+      );
+    }
+  }
+
+  private async isLastEffectiveSuperAdminRole(role: { code: string; isActive: boolean }) {
+    if (role.code !== SUPER_ADMIN_ROLE_CODE || !role.isActive) return false;
+
+    const effectiveSuperAdminRoles = await this.prisma.role.count({
+      where: {
+        code: SUPER_ADMIN_ROLE_CODE,
+        isActive: true,
+      },
+    });
+
+    return effectiveSuperAdminRoles === 1;
   }
 
   private formatRole(role: {

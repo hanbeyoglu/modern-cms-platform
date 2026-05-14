@@ -11,6 +11,7 @@ export const SEARCH_ENTITY_PERMISSION: Record<SearchIndexEntityType, string> = {
   MOVIE: 'movie:read',
   CINEMA: 'cinema:read',
   SLIDER: 'slider:read',
+  LOCATION: 'location:read',
 };
 
 export interface GlobalSearchHitDto {

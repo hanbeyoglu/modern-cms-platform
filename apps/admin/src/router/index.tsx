@@ -28,6 +28,10 @@ import { RoleDetailPage } from '../pages/RoleDetailPage';
 import { AccountPage } from '../pages/AccountPage';
 import { SettingsGeneralPage } from '../pages/SettingsGeneralPage';
 import { SettingsSecurityPage } from '../pages/SettingsSecurityPage';
+import { TenantsPage } from '../pages/TenantsPage';
+import { TenantDetailPage } from '../pages/TenantDetailPage';
+import { LocationsPage } from '../pages/LocationsPage';
+import { LocationDetailPage } from '../pages/LocationDetailPage';
 
 export const router = createBrowserRouter([
   {
@@ -70,6 +74,10 @@ export const router = createBrowserRouter([
           { path: '/settings/general', element: <SettingsGeneralPage /> },
           { path: '/settings/security', element: <SettingsSecurityPage /> },
           { path: '/account', element: <AccountPage /> },
+          { path: '/tenants', element: <TenantsPage /> },
+          { path: '/tenants/:id', element: <TenantDetailPage /> },
+          { path: '/locations', element: <LocationsPage /> },
+          { path: '/locations/:id', element: <LocationDetailPage /> },
         ],
       },
     ],

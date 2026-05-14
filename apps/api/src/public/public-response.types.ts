@@ -129,6 +129,31 @@ export interface PublicHomeResponse {
   todayMovieSessions: PublicMovieSession[];
 }
 
+export interface PublicLocationInfo {
+  id: string;
+  type: string;
+  name: string;
+  displayName: string | null;
+  slug: string;
+  websiteUrl: string | null;
+  phone: string | null;
+  supportEmail: string | null;
+  logo: { url: string } | null;
+  cover: { url: string } | null;
+  address: {
+    line1: string | null;
+    line2: string | null;
+    city: string | null;
+    district: string | null;
+    country: string | null;
+    postalCode: string | null;
+  } | null;
+  coordinates: { latitude: number; longitude: number } | null;
+  timezone: string | null;
+  workingHours: unknown;
+  socialLinks: unknown;
+}
+
 export interface PublicSiteConfig {
   tenantId: string;
   tenantName: string;
@@ -136,4 +161,5 @@ export interface PublicSiteConfig {
   mallId: string | null;
   mallName: string | null;
   mallSlug: string | null;
+  location: PublicLocationInfo | null;
 }

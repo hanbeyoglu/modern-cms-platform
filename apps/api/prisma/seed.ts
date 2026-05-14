@@ -56,8 +56,15 @@ const DEMO_TENANT_CAPABILITIES = [
 
 const PERMISSIONS = [
   'tenant:read',
+  'tenant:create',
+  'tenant:update',
+  'tenant:delete',
   'mall:read',
   'mall:switch',
+  'location:read',
+  'location:create',
+  'location:update',
+  'location:delete',
   'user:read',
   'user:create',
   'user:update',
@@ -177,7 +184,10 @@ async function main(): Promise<void> {
     {
       code: 'TENANT_ADMIN',
       name: 'Tenant Admin',
-      permissions: [...PERMISSIONS],
+      permissions: PERMISSIONS.filter((p) =>
+        // Tenant Admin cannot create/delete tenants or delete locations
+        !['tenant:create', 'tenant:delete'].includes(p)
+      ),
     },
     {
       code: 'MALL_MANAGER',
@@ -185,6 +195,7 @@ async function main(): Promise<void> {
       permissions: [
         'mall:read',
         'mall:switch',
+        'location:read',
         'user:read',
         'analytics:view',
         'search:global',
@@ -256,6 +267,7 @@ async function main(): Promise<void> {
       permissions: [
         'mall:read',
         'mall:switch',
+        'location:read',
         'user:read',
         'content:read',
         'search:global',
@@ -306,6 +318,7 @@ async function main(): Promise<void> {
       permissions: [
         'tenant:read',
         'mall:read',
+        'location:read',
         'analytics:view',
         'analytics:export',
         'media:read',

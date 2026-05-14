@@ -13,6 +13,7 @@ import { PublicContentService } from './public-content.service';
 import { PublicContextService } from './public-context.service';
 import { PublicSearchService } from '../search/public-search.service';
 import type { PublicSiteConfig } from './public-response.types';
+import { PrismaService } from '../prisma/prisma.service';
 
 // Cache TTLs in seconds
 const TTL = {
@@ -36,6 +37,7 @@ export class PublicController {
     private readonly content: PublicContentService,
     private readonly cache: PublicCacheService,
     private readonly publicSearch: PublicSearchService,
+    private readonly prisma: PrismaService,
   ) {}
 
   // ── Site Config ───────────────────────────────────────────────────────────
@@ -52,6 +54,49 @@ export class PublicController {
     const cached = await this.cache.get<PublicSiteConfig>(cacheKey);
     if (cached) return cached;
 
+    let location: PublicSiteConfig['location'] = null;
+    if (context.mallId) {
+      const mall = await this.prisma.mall.findFirst({
+        where: { id: context.mallId, deletedAt: null, isPublic: true },
+        include: {
+          logoMedia: { select: { publicUrl: true } },
+          coverMedia: { select: { publicUrl: true } },
+        },
+      });
+      if (mall) {
+        const hasAddress = mall.addressLine1 || mall.city || mall.country;
+        const hasCoords = mall.latitude != null && mall.longitude != null;
+        location = {
+          id: mall.id,
+          type: mall.type,
+          name: mall.name,
+          displayName: mall.displayName,
+          slug: mall.slug,
+          websiteUrl: mall.websiteUrl,
+          phone: mall.phone,
+          supportEmail: mall.supportEmail,
+          logo: mall.logoMedia ? { url: mall.logoMedia.publicUrl } : null,
+          cover: mall.coverMedia ? { url: mall.coverMedia.publicUrl } : null,
+          address: hasAddress
+            ? {
+                line1: mall.addressLine1,
+                line2: mall.addressLine2,
+                city: mall.city,
+                district: mall.district,
+                country: mall.country,
+                postalCode: mall.postalCode,
+              }
+            : null,
+          coordinates: hasCoords
+            ? { latitude: mall.latitude as number, longitude: mall.longitude as number }
+            : null,
+          timezone: mall.timezone,
+          workingHours: mall.workingHoursJson,
+          socialLinks: mall.socialLinksJson,
+        };
+      }
+    }
+
     const result: PublicSiteConfig = {
       tenantId: context.tenantId,
       tenantName: context.tenant.name,
@@ -59,6 +104,7 @@ export class PublicController {
       mallId: context.mallId ?? null,
       mallName: context.mall?.name ?? null,
       mallSlug: context.mall?.slug ?? null,
+      location,
     };
 
     await this.cache.set(cacheKey, result, TTL.siteConfig);

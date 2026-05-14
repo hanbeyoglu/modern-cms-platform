@@ -160,6 +160,23 @@ export const NAV_ITEMS: NavItem[] = [
     group: 'Platform',
   },
   {
+    id: 'tenants',
+    label: 'Müşteriler',
+    icon: '◑',
+    href: '/tenants',
+    permission: 'tenant:read',
+    superAdminOnly: true,
+    group: 'Yönetim',
+  },
+  {
+    id: 'locations',
+    label: 'Lokasyonlar',
+    icon: '◈',
+    href: '/locations',
+    permission: 'location:read',
+    group: 'Yönetim',
+  },
+  {
     id: 'users',
     label: 'Kullanıcılar',
     icon: '◉',
@@ -170,7 +187,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'roles',
     label: 'Roller',
-    icon: '◈',
+    icon: '◧',
     href: '/roles',
     permission: 'role:read',
     group: 'Yönetim',
