@@ -1,30 +1,36 @@
+# Production-oriented stack (single host / VM). Copy .env.production.example → .env.production and adjust secrets.
+# Usage: docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: cms
-      POSTGRES_PASSWORD: cms
-      POSTGRES_DB: cms
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB required}
+    expose:
+      - "5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - prod_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cms -d cms"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
       timeout: 5s
       retries: 10
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    expose:
+      - "6379"
+    volumes:
+      - prod_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
+      interval: 10s
+      timeout: 5s
       retries: 10
 
   api:
@@ -32,22 +38,22 @@ services:
       context: .
       dockerfile: infra/docker/Dockerfile.api
       args:
-        GIT_SHA: ${GIT_SHA:-local}
+        GIT_SHA: ${GIT_SHA:-unknown}
         BUILD_TIME: ${BUILD_TIME:-unknown}
         APP_VERSION: ${APP_VERSION:-0.0.0}
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      API_PORT: 4000
-      DATABASE_URL: postgresql://cms:cms@postgres:5432/cms?schema=public
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-dev-only-change-me-in-real-envs-32chars}
-      CORS_ORIGINS: http://localhost:8080,http://localhost:5173,http://admin
+      API_PORT: ${API_PORT:-4000}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET required}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
       APP_VERSION: ${APP_VERSION:-0.0.0}
-      APP_GIT_SHA: ${GIT_SHA:-local}
+      APP_GIT_SHA: ${GIT_SHA:-unknown}
       APP_BUILD_TIME: ${BUILD_TIME:-unknown}
     ports:
-      - "4000:4000"
+      - "${API_PUBLISH_PORT:-4000}:4000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,22 +65,22 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:4000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:'+(process.env.API_PORT||4000)+'/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
-      interval: 15s
+      interval: 20s
       timeout: 5s
       retries: 5
-      start_period: 50s
+      start_period: 60s
 
   admin:
     build:
       context: .
       dockerfile: infra/docker/Dockerfile.admin
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+        VITE_API_URL: ${VITE_API_URL:?VITE_API_URL required (browser-visible API URL)}
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "${ADMIN_PUBLISH_PORT:-8080}:80"
     depends_on:
       api:
         condition: service_healthy
@@ -83,24 +89,24 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 15s
+      start_period: 20s
 
   worker:
     build:
       context: .
       dockerfile: infra/docker/Dockerfile.worker
       args:
-        GIT_SHA: ${GIT_SHA:-local}
+        GIT_SHA: ${GIT_SHA:-unknown}
         BUILD_TIME: ${BUILD_TIME:-unknown}
         APP_VERSION: ${APP_VERSION:-0.0.0}
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://cms:cms@postgres:5432/cms?schema=public
-      REDIS_URL: redis://redis:6379
-      WORKER_POLL_INTERVAL_MS: "5000"
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL required}
+      WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-60000}
       APP_VERSION: ${APP_VERSION:-0.0.0}
-      APP_GIT_SHA: ${GIT_SHA:-local}
+      APP_GIT_SHA: ${GIT_SHA:-unknown}
       APP_BUILD_TIME: ${BUILD_TIME:-unknown}
     depends_on:
       postgres:
@@ -115,10 +121,11 @@ services:
           "-e",
           "const Redis=require('ioredis');const u=process.env.REDIS_URL;const r=new Redis(u,{maxRetriesPerRequest:1,connectTimeout:3000});r.get('worker:heartbeat').then(v=>r.quit().then(()=>process.exit(v?0:1))).catch(()=>process.exit(1)))",
         ]
-      interval: 30s
+      interval: 45s
       timeout: 10s
       retries: 5
-      start_period: 45s
+      start_period: 90s
 
 volumes:
-  postgres_data:
+  prod_postgres_data:
+  prod_redis_data:

@@ -29,6 +29,7 @@ import { SchedulingModule } from './scheduling/scheduling.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SearchModule } from './search/search.module';
 import { CapabilitiesModule } from './capabilities/capabilities.module';
+import { VersionModule } from './version/version.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { CapabilitiesModule } from './capabilities/capabilities.module';
     NotificationsModule,
     SearchModule,
     CapabilitiesModule,
+    VersionModule,
     HealthModule,
   ],
 })

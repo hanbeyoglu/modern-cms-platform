@@ -1,30 +1,37 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, HttpCode, Logger, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { Public } from '../common/decorators/public.decorator';
-import { PrismaService } from '../prisma/prisma.service';
+import { HealthService } from './health.service';
 
 @Controller('health')
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(HealthController.name);
 
+  constructor(private readonly health: HealthService) {}
+
+  /** Liveness + dependency snapshot (HTTP 200; use `status` field for orchestration logic). */
   @Public()
   @Get()
-  async getHealth(): Promise<{
-    status: string;
-    database: 'up' | 'down';
-    timestamp: string;
-  }> {
-    let database: 'up' | 'down' = 'down';
-    try {
-      await this.prisma.$queryRaw`SELECT 1`;
-      database = 'up';
-    } catch {
-      database = 'down';
+  @HttpCode(200)
+  async getHealth() {
+    const snapshot = await this.health.getSnapshot();
+    if (snapshot.status === 'down') {
+      this.logger.warn(`Health degraded: database=${snapshot.database}`);
+    } else if (snapshot.status === 'degraded') {
+      this.logger.warn(`Health degraded: redis=${snapshot.redis}`);
     }
+    return snapshot;
+  }
 
-    return {
-      status: database === 'up' ? 'ok' : 'degraded',
-      database,
-      timestamp: new Date().toISOString(),
-    };
+  /** Readiness: 503 unless database (and Redis when configured) are up. */
+  @Public()
+  @Get('ready')
+  async getReady(@Res({ passthrough: true }) res: Response) {
+    const { ok, snapshot } = await this.health.isReady();
+    if (!ok) {
+      res.status(503);
+      this.logger.warn(`Readiness failed db=${snapshot.database} redis=${snapshot.redis}`);
+    }
+    return snapshot;
   }
 }

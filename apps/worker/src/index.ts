@@ -9,6 +9,32 @@ const databaseUrl = process.env.DATABASE_URL;
 const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379';
 const pollMs = Number(process.env.WORKER_POLL_INTERVAL_MS ?? '60000');
 const batchSize = Number(process.env.SCHEDULING_BATCH_SIZE ?? '40');
+const appVersion = process.env.APP_VERSION ?? '0.0.0';
+const gitSha = process.env.APP_GIT_SHA ?? 'unknown';
+
+function maskDatabaseUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    if (u.password) u.password = '***';
+    return u.toString();
+  } catch {
+    return '(invalid DATABASE_URL)';
+  }
+}
+
+async function writeHeartbeat(redis: Redis): Promise<void> {
+  const ttl = Math.max(180, Math.floor(pollMs * 3));
+  await redis.set(
+    'worker:heartbeat',
+    JSON.stringify({
+      at: new Date().toISOString(),
+      version: appVersion,
+      gitSha,
+    }),
+    'EX',
+    ttl,
+  );
+}
 
 function cacheSegment(mallId: string | null): string {
   return mallId ?? 'none';
@@ -132,6 +158,7 @@ async function main(): Promise<void> {
   try {
     await prisma.$connect();
     await redis.ping();
+    await writeHeartbeat(redis);
   } catch (err) {
     console.error('[worker] connect failed', err);
     await prisma.$disconnect().catch(() => undefined);
@@ -139,7 +166,9 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  console.log(`[worker] ready poll=${pollMs}ms redis=${redisUrl}`);
+  console.log(
+    `[worker] ready poll=${pollMs}ms redis=${redisUrl} db=${maskDatabaseUrl(databaseUrl)} version=${appVersion} git=${gitSha}`,
+  );
 
   const tick = async (): Promise<void> => {
     try {
@@ -162,6 +191,8 @@ async function main(): Promise<void> {
     } catch (err) {
       console.error('[worker] scheduling tick failed', err);
       await writeSchedulingFailureNotification(prisma, err);
+    } finally {
+      await writeHeartbeat(redis).catch(() => undefined);
     }
   };
 
