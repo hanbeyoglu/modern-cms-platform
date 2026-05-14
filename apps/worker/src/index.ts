@@ -56,6 +56,65 @@ async function writeSystemAudit(
   }
 }
 
+async function writeSchedulingNotification(
+  prisma: PrismaClient,
+  t: ScheduleTransition,
+): Promise<void> {
+  const kindLabel: Record<ScheduleTransition['kind'], string> = {
+    slider: 'Slider',
+    event: 'Etkinlik',
+    campaign: 'Kampanya',
+    page: 'Sayfa',
+  };
+  const label = kindLabel[t.kind];
+  const isPublish = t.action === 'publish';
+  const title = isPublish ? `${label} otomatik yayımlandı` : `${label} otomatik arşivlendi`;
+  const message = isPublish
+    ? `Kayıt zamanlamaya göre yayımlandı (${t.previousStatus} → ${t.nextStatus}).`
+    : `Kayıt zamanlamaya göre arşivlendi (${t.previousStatus} → ${t.nextStatus}).`;
+  try {
+    await prisma.notification.create({
+      data: {
+        tenantId: t.tenantId,
+        mallId: t.mallId,
+        userId: null,
+        type: 'SCHEDULING',
+        severity: 'SUCCESS',
+        title,
+        message,
+        entityType: t.kind,
+        entityId: t.id,
+        metadataJson: { transition: t } as Prisma.InputJsonValue,
+      },
+    });
+  } catch (err) {
+    console.error('[worker] notification create failed', err);
+  }
+}
+
+async function writeSchedulingFailureNotification(
+  prisma: PrismaClient,
+  err: unknown,
+): Promise<void> {
+  const message = err instanceof Error ? err.message : String(err);
+  try {
+    await prisma.notification.create({
+      data: {
+        tenantId: null,
+        mallId: null,
+        userId: null,
+        type: 'SYSTEM',
+        severity: 'ERROR',
+        title: 'Zamanlama işi başarısız',
+        message: message.slice(0, 2000),
+        metadataJson: { workerFailure: true } as Prisma.InputJsonValue,
+      },
+    });
+  } catch (e) {
+    console.error('[worker] failure notification create failed', e);
+  }
+}
+
 async function main(): Promise<void> {
   if (!databaseUrl) {
     console.error('[worker] DATABASE_URL is required');
@@ -90,6 +149,7 @@ async function main(): Promise<void> {
       });
       for (const t of transitions) {
         await writeSystemAudit(prisma, t);
+        await writeSchedulingNotification(prisma, t);
         await invalidatePublicBranch(redis, t.tenantId, t.mallId);
       }
       if (transitions.length > 0) {
@@ -101,6 +161,7 @@ async function main(): Promise<void> {
       }
     } catch (err) {
       console.error('[worker] scheduling tick failed', err);
+      await writeSchedulingFailureNotification(prisma, err);
     }
   };
 

@@ -65,6 +65,7 @@ model User {
   updatedPages          Page[]          @relation("PageUpdater")
   createdPageBlocks     PageBlock[]     @relation("PageBlockCreator")
   updatedPageBlocks     PageBlock[]     @relation("PageBlockUpdater")
+  notifications         Notification[]  @relation("NotificationRecipient")
 }
 
 model Tenant {
@@ -93,6 +94,7 @@ model Tenant {
   analyticsEvents  AnalyticsEvent[]
   locales          Locale[]
   localizedContent LocalizedContent[]
+  notifications    Notification[]
 }
 
 model Mall {
@@ -119,6 +121,7 @@ model Mall {
   pages            Page[]
   pageBlocks       PageBlock[]
   analyticsEvents  AnalyticsEvent[]
+  notifications    Notification[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -836,4 +839,47 @@ model AnalyticsEvent {
   @@index([entityType, entityId])
   @@index([eventType])
   @@index([createdAt])
+}
+
+// ─── Notifications (Sprint 14) ──────────────────────────────────────────────
+
+enum NotificationType {
+  SYSTEM
+  CONTENT
+  SCHEDULING
+  ANALYTICS
+  SECURITY
+}
+
+enum NotificationSeverity {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+model Notification {
+  id           String               @id @default(cuid())
+  tenantId     String?
+  mallId       String?
+  userId       String?
+  type         NotificationType
+  title        String
+  message      String
+  entityType   String?
+  entityId     String?
+  severity     NotificationSeverity
+  readAt       DateTime?
+  createdAt    DateTime             @default(now())
+  metadataJson Json?
+  deletedAt    DateTime?
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  mall   Mall?   @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  user   User?   @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, mallId, createdAt])
+  @@index([userId, readAt, createdAt])
+  @@index([readAt, createdAt])
 }

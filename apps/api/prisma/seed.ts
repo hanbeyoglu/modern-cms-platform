@@ -83,6 +83,9 @@ const PERMISSIONS = [
   'translation:create',
   'translation:update',
   'translation:delete',
+  'notification:read',
+  'notification:update',
+  'notification:delete',
 ] as const;
 
 async function main(): Promise<void> {
@@ -182,6 +185,8 @@ async function main(): Promise<void> {
         'translation:read',
         'translation:create',
         'translation:update',
+        'notification:read',
+        'notification:update',
       ],
     },
     {
@@ -229,6 +234,8 @@ async function main(): Promise<void> {
         'translation:read',
         'translation:create',
         'translation:update',
+        'notification:read',
+        'notification:update',
       ],
     },
     {
@@ -251,6 +258,8 @@ async function main(): Promise<void> {
         'movie-session:read',
         'page:read',
         'page-block:read',
+        'notification:read',
+        'notification:update',
       ],
     },
   ];

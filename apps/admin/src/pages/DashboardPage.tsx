@@ -10,7 +10,9 @@ import {
   apiCampaignsList,
   apiGlobalStoresList,
   apiAnalyticsSummary,
+  apiNotificationsList,
 } from '../lib/api';
+import type { CmsNotification } from '../lib/api';
 
 type StatCard = {
   label: string;
@@ -63,6 +65,7 @@ function StatCard({ label, value, icon }: StatCard) {
 export function DashboardPage() {
   const { accessToken, activeTenantId, activeMallId, user, tenants, malls } = useAuth();
   const { can } = usePermission();
+  const canReadNotifications = can('notification:read');
   const activeTenant = tenants.find((t) => t.id === activeTenantId);
   const activeMall = malls.find((m) => m.id === activeMallId);
 
@@ -77,6 +80,8 @@ export function DashboardPage() {
     totalEvents: number | null;
     pageViews: number | null;
   }>({ totalEvents: null, pageViews: null });
+
+  const [opsNotifications, setOpsNotifications] = useState<CmsNotification[]>([]);
 
   useEffect(() => {
     if (!accessToken || !activeTenantId) return;
@@ -142,6 +147,25 @@ export function DashboardPage() {
     };
   }, [accessToken, activeTenantId, activeMallId, user]);
 
+  useEffect(() => {
+    if (!accessToken || !activeTenantId || !canReadNotifications) {
+      setOpsNotifications([]);
+      return;
+    }
+    const mallId = activeMallId ?? undefined;
+    let cancelled = false;
+    void apiNotificationsList(accessToken, activeTenantId, mallId, { limit: 5 })
+      .then((r) => {
+        if (!cancelled) setOpsNotifications(r.items);
+      })
+      .catch(() => {
+        if (!cancelled) setOpsNotifications([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, activeTenantId, activeMallId, canReadNotifications]);
+
   const contextLabel = [activeTenant?.name, activeMall?.name].filter(Boolean).join(' › ');
 
   return (
@@ -180,6 +204,47 @@ export function DashboardPage() {
             <StatCard label="Kampanya" value={stats.campaigns} icon="◈" href="/campaigns" />
             <StatCard label="Global Mağaza" value={stats.stores} icon="▣" href="/global-stores" />
           </div>
+
+          {canReadNotifications && (
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 10 }}>
+                Son operasyonel bildirimler
+              </div>
+              <div
+                style={{
+                  background: '#f9fafb',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 8,
+                  padding: '14px 18px',
+                  fontSize: 13,
+                }}
+              >
+                {opsNotifications.length === 0 ? (
+                  <div style={{ color: '#9ca3af' }}>Gösterilecek bildirim yok.</div>
+                ) : (
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 10 }}>
+                    {opsNotifications.map((n) => (
+                      <li key={n.id} style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: 8 }}>
+                        <div style={{ fontWeight: 600, color: '#111827' }}>{n.title}</div>
+                        <div style={{ color: '#6b7280', fontSize: 12, marginTop: 4 }}>{n.message}</div>
+                        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
+                          {new Date(n.createdAt).toLocaleString('tr-TR', {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          })}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p style={{ margin: '12px 0 0', fontSize: 12 }}>
+                  <Link to="/notifications" style={{ color: '#2563eb' }}>
+                    Tüm bildirimler
+                  </Link>
+                </p>
+              </div>
+            </div>
+          )}
 
           {can('analytics:view') && (
             <div style={{ marginBottom: 28 }}>

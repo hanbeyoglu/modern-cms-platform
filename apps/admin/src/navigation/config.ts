@@ -16,6 +16,13 @@ export const NAV_ITEMS: NavItem[] = [
     permission: null,
   },
   {
+    id: 'notifications',
+    label: 'Bildirimler',
+    icon: '✦',
+    href: '/notifications',
+    permission: 'notification:read',
+  },
+  {
     id: 'media',
     label: 'Medya Kütüphanesi',
     icon: '▤',

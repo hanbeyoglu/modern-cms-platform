@@ -1,5 +1,6 @@
 import { UserMenu } from './UserMenu';
 import { TenantMallSelector } from '../TenantMallSelector';
+import { NotificationBell } from './NotificationBell';
 
 export function Header() {
   return (
@@ -19,7 +20,10 @@ export function Header() {
       }}
     >
       <TenantMallSelector />
-      <UserMenu />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <NotificationBell />
+        <UserMenu />
+      </div>
     </header>
   );
 }

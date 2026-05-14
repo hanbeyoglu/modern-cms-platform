@@ -202,3 +202,19 @@ export type {
   AnalyticsTimeseriesRow,
   AnalyticsQueryParams,
 } from './analytics';
+
+export {
+  apiNotificationsList,
+  apiNotificationsUnreadCount,
+  apiNotificationMarkRead,
+  apiNotificationsMarkAllRead,
+  apiNotificationDelete,
+  notificationEntityHref,
+} from './notifications';
+export type {
+  CmsNotification,
+  NotificationListResponse,
+  ListNotificationsParams,
+  NotificationSeverity,
+  NotificationType,
+} from './notifications';
