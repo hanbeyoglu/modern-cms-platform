@@ -252,6 +252,8 @@ Added under **Yönetim** group:
 - Critical platform permissions cannot be removed from the last effective `SUPER_ADMIN` role.
 - `TENANT_ADMIN` can only edit tenant-owned custom roles.
 
+Migrations verified from a clean database.
+
 ### Permission Matrix
 
 Permissions are now displayed in **17 semantic groups**:

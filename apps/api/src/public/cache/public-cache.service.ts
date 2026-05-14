@@ -1,12 +1,13 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
 @Injectable()
-export class PublicCacheService implements OnModuleInit {
+export class PublicCacheService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PublicCacheService.name);
   private client: Redis | null = null;
   private available = false;
+  private closing = false;
 
   constructor(private readonly config: ConfigService) {}
 
@@ -17,7 +18,7 @@ export class PublicCacheService implements OnModuleInit {
         enableOfflineQueue: false,
         maxRetriesPerRequest: 0,
         connectTimeout: 2000,
-        retryStrategy: (times) => Math.min(times * 500, 10000),
+        retryStrategy: (times) => (this.closing ? null : Math.min(times * 500, 10000)),
       });
 
       this.client.on('connect', () => {
@@ -43,6 +44,15 @@ export class PublicCacheService implements OnModuleInit {
         `[service=api] [op=publicCache.init] Redis init failed: ${(err as Error).message} — running without cache`,
       );
     }
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    if (!this.client) return;
+    this.closing = true;
+    this.client.removeAllListeners();
+    this.client.disconnect(false);
+    this.client = null;
+    this.available = false;
   }
 
   async get<T>(key: string): Promise<T | null> {

@@ -8,7 +8,8 @@ CREATE TYPE "SearchIndexEntityType" AS ENUM (
   'MALL_STORE',
   'MOVIE',
   'CINEMA',
-  'SLIDER'
+  'SLIDER',
+  'LOCATION'
 );
 
 CREATE TABLE "SearchIndexEntry" (

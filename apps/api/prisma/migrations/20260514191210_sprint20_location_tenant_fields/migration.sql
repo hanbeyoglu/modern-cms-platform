@@ -2,10 +2,19 @@
 CREATE TYPE "LocationType" AS ENUM ('SHOPPING_MALL', 'STORE', 'MARKET', 'HOTEL', 'HOSPITAL', 'CAMPUS', 'OFFICE', 'RESTAURANT', 'MARINA', 'RESIDENCE', 'AIRPORT', 'CUSTOM');
 
 -- AlterEnum
-ALTER TYPE "LocalizedEntityType" ADD VALUE 'LOCATION';
+ALTER TYPE "LocalizedEntityType" ADD VALUE IF NOT EXISTS 'LOCATION';
 
 -- AlterEnum
-ALTER TYPE "SearchIndexEntityType" ADD VALUE 'LOCATION';
+-- SearchIndexEntityType is created by the Sprint 15 search migration, whose
+-- directory timestamp is later than this Sprint 20 migration. Fresh databases
+-- therefore do not have the type yet; existing databases may. Add LOCATION only
+-- when the type already exists, and keep the Sprint 15 CREATE TYPE in sync.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'SearchIndexEntityType') THEN
+    ALTER TYPE "SearchIndexEntityType" ADD VALUE IF NOT EXISTS 'LOCATION';
+  END IF;
+END $$;
 
 -- AlterTable
 ALTER TABLE "Mall" ADD COLUMN     "addressLine1" TEXT,
