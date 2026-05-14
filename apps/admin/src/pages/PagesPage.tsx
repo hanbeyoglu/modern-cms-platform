@@ -44,6 +44,8 @@ type FormState = {
   seoTitle: string;
   seoDescription: string;
   seoKeywords: string;
+  publishAt: string;
+  unpublishAt: string;
 };
 
 const EMPTY_FORM: FormState = {
@@ -54,6 +56,8 @@ const EMPTY_FORM: FormState = {
   seoTitle: '',
   seoDescription: '',
   seoKeywords: '',
+  publishAt: '',
+  unpublishAt: '',
 };
 
 export function PagesPage() {
@@ -117,6 +121,8 @@ export function PagesPage() {
         seoTitle: formState.seoTitle || undefined,
         seoDescription: formState.seoDescription || undefined,
         seoKeywords: formState.seoKeywords || undefined,
+        publishAt: formState.publishAt ? new Date(formState.publishAt).toISOString() : undefined,
+        unpublishAt: formState.unpublishAt ? new Date(formState.unpublishAt).toISOString() : undefined,
       };
       const created = await apiPageCreate(accessToken, activeTenantId, payload, activeMallId ?? undefined);
       toast.success('Sayfa oluşturuldu');
@@ -240,6 +246,14 @@ export function PagesPage() {
               </select>
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
+              <label style={labelStyle}>Yayın zamanı (publishAt)</label>
+              <input type="datetime-local" {...field('publishAt')} style={inputStyle({ width: '100%', maxWidth: 280 })} />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={labelStyle}>Yayından kalkma (unpublishAt)</label>
+              <input type="datetime-local" {...field('unpublishAt')} style={inputStyle({ width: '100%', maxWidth: 280 })} />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
               <label style={labelStyle}>SEO Başlığı</label>
               <input {...field('seoTitle')} style={inputStyle({ width: '100%' })} />
             </div>
@@ -309,6 +323,11 @@ export function PagesPage() {
                   <span style={badgeStyle(STATUS_COLORS[p.status] + '22', STATUS_COLORS[p.status])}>
                     {STATUS_LABELS[p.status]}
                   </span>
+                  {p.status === 'SCHEDULED' && p.publishAt && (
+                    <div style={{ fontSize: 10, color: '#92400e', marginTop: 4 }}>
+                      Yayın: {new Date(p.publishAt).toLocaleString('tr-TR')}
+                    </div>
+                  )}
                 </td>
                 <td style={tdStyle}>{p.blocks.length}</td>
                 <td style={{ ...tdStyle, color: '#6b7280' }}>{new Date(p.createdAt).toLocaleDateString('tr-TR')}</td>

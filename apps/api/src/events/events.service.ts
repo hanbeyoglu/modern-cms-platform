@@ -8,7 +8,11 @@ import type { ContentStatus, Event, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import { slugify } from '../common/utils/slugify';
-import { assertOptionalHttpUrl, validateStartBeforeEnd } from '../common/utils/content-validation';
+import {
+  assertOptionalHttpUrl,
+  assertStartAtWhenScheduled,
+  validateStartBeforeEnd,
+} from '../common/utils/content-validation';
 import { uniqueEventSlug } from '../common/utils/unique-content-slug';
 import type { CreateEventDto } from './dto/create-event.dto';
 import type { UpdateEventDto } from './dto/update-event.dto';
@@ -81,6 +85,7 @@ export class EventsService {
     assertOptionalHttpUrl(dto.linkUrl);
 
     const status = dto.status ?? 'DRAFT';
+    assertStartAtWhenScheduled(status, dto.startAt);
     if (dto.coverMediaId) {
       await this.assertCoverMediaInScope(tenantId, mallId ?? null, dto.coverMediaId);
     }
@@ -153,6 +158,7 @@ export class EventsService {
     const nextTitle = dto.title ?? existing.title;
     const nextCover = dto.coverMediaId !== undefined ? dto.coverMediaId : existing.coverMediaId;
     const nextStatus = dto.status ?? existing.status;
+    assertStartAtWhenScheduled(nextStatus, nextStart);
 
     const nextMallId = dto.mallId !== undefined ? dto.mallId : existing.mallId;
 

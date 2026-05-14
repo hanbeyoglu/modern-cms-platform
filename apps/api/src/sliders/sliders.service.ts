@@ -7,6 +7,7 @@ import {
 import type { Prisma, Slider, SliderStatus, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
+import { assertStartAtWhenScheduled } from '../common/utils/content-validation';
 import type { CreateSliderDto } from './dto/create-slider.dto';
 import type { UpdateSliderDto } from './dto/update-slider.dto';
 import type { ListSlidersDto } from './dto/list-sliders.dto';
@@ -86,6 +87,7 @@ export class SlidersService {
     this.validateDates(dto.startAt, dto.endAt);
 
     const status = dto.status ?? 'DRAFT';
+    assertStartAtWhenScheduled(status, dto.startAt);
     if (status === 'PUBLISHED') {
       this.assertHasMedia(dto.desktopMediaId, dto.mobileMediaId, dto.videoMediaId);
     }
@@ -139,10 +141,12 @@ export class SlidersService {
 
     this.validateDates(dto.startAt, dto.endAt);
 
+    const nextStatus = dto.status ?? existing.status;
+    const nextStartRaw = dto.startAt !== undefined ? dto.startAt : existing.startAt?.toISOString();
+    assertStartAtWhenScheduled(nextStatus, nextStartRaw);
     const nextDesktopMediaId = dto.desktopMediaId !== undefined ? dto.desktopMediaId : existing.desktopMediaId;
     const nextMobileMediaId = dto.mobileMediaId !== undefined ? dto.mobileMediaId : existing.mobileMediaId;
     const nextVideoMediaId = dto.videoMediaId !== undefined ? dto.videoMediaId : existing.videoMediaId;
-    const nextStatus = dto.status ?? existing.status;
     const nextLinkType = dto.linkType ?? existing.linkType;
     const nextLinkValue = dto.linkValue !== undefined ? dto.linkValue : existing.linkValue;
 

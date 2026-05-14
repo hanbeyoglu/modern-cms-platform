@@ -25,6 +25,7 @@ import { PublicModule } from './public/public.module';
 import { LocalesModule } from './locales/locales.module';
 import { TranslationsModule } from './translations/translations.module';
 import { TranslationResolverModule } from './translation-resolver/translation-resolver.module';
+import { SchedulingModule } from './scheduling/scheduling.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { TranslationResolverModule } from './translation-resolver/translation-re
     LocalesModule,
     TranslationsModule,
     TranslationResolverModule,
+    SchedulingModule,
     HealthModule,
   ],
 })

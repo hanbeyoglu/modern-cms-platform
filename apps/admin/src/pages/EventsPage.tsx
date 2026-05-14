@@ -485,6 +485,11 @@ export function EventsPage() {
               </td>
               <td style={{ padding: 8 }}>
                 <StatusBadge status={e.status} />
+                {e.status === 'SCHEDULED' && e.startAt && (
+                  <div style={{ fontSize: 10, color: '#92400e', marginTop: 4 }}>
+                    Yayın: {new Date(e.startAt).toLocaleString('tr-TR')}
+                  </div>
+                )}
               </td>
               <td style={{ padding: 8, color: '#6b7280' }}>
                 {e.startAt ? e.startAt.slice(0, 10) : '—'} → {e.endAt ? e.endAt.slice(0, 10) : '—'}

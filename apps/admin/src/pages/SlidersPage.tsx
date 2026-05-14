@@ -708,6 +708,11 @@ export function SlidersPage() {
                   </td>
                   <td style={{ padding: '10px 10px' }}>
                     <StatusBadge status={slider.status} />
+                    {slider.status === 'SCHEDULED' && slider.startAt && (
+                      <div style={{ fontSize: 10, color: '#92400e', marginTop: 4 }}>
+                        Yayın: {new Date(slider.startAt).toLocaleString('tr-TR')}
+                      </div>
+                    )}
                   </td>
                   <td style={{ padding: '10px 10px' }}>
                     <DeviceBadge device={slider.targetDevice} />

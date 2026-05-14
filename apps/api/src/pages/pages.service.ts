@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import type { Page, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
+import { assertPublishAtWhenScheduled, validateStartBeforeEnd } from '../common/utils/content-validation';
 import { slugify } from '../common/utils/slugify';
 import { uniquePageSlug } from '../common/utils/unique-content-slug';
 import type { CreatePageDto } from './dto/create-page.dto';
@@ -77,6 +78,8 @@ export class PagesService {
   ): Promise<PageResponse> {
     const effectiveMallId = mallId ?? null;
     const status = dto.status ?? 'DRAFT';
+    validateStartBeforeEnd(dto.publishAt, dto.unpublishAt);
+    assertPublishAtWhenScheduled(status, dto.publishAt);
 
     const baseSlug = dto.slug?.trim() ? slugify(dto.slug) : slugify(dto.title);
     const slug = await uniquePageSlug(this.prisma, tenantId, baseSlug);
@@ -92,6 +95,8 @@ export class PagesService {
         seoTitle: dto.seoTitle ?? null,
         seoDescription: dto.seoDescription ?? null,
         seoKeywords: dto.seoKeywords ?? null,
+        publishAt: dto.publishAt ? new Date(dto.publishAt) : null,
+        unpublishAt: dto.unpublishAt ? new Date(dto.unpublishAt) : null,
         createdBy: user.id,
         publishedAt: status === 'PUBLISHED' ? new Date() : null,
       },
@@ -130,7 +135,26 @@ export class PagesService {
       slug = candidate === existing.slug ? existing.slug : await uniquePageSlug(this.prisma, tenantId, candidate, id);
     }
 
+    const effectivePublish =
+      dto.publishAt !== undefined ? (dto.publishAt ? new Date(dto.publishAt) : null) : existing.publishAt;
+    const effectiveUnpublish =
+      dto.unpublishAt !== undefined
+        ? dto.unpublishAt
+          ? new Date(dto.unpublishAt)
+          : null
+        : existing.unpublishAt;
+
+    validateStartBeforeEnd(
+      effectivePublish ?? undefined,
+      effectiveUnpublish ?? undefined,
+    );
+
     const nextStatus = dto.status ?? existing.status;
+    assertPublishAtWhenScheduled(
+      nextStatus,
+      effectivePublish ? effectivePublish.toISOString() : undefined,
+    );
+
     const publishedPatch: { publishedAt?: Date | null } = {};
     if (nextStatus === 'PUBLISHED' && existing.status !== 'PUBLISHED') {
       publishedPatch.publishedAt = new Date();
@@ -148,6 +172,12 @@ export class PagesService {
         ...(dto.seoTitle !== undefined && { seoTitle: dto.seoTitle || null }),
         ...(dto.seoDescription !== undefined && { seoDescription: dto.seoDescription || null }),
         ...(dto.seoKeywords !== undefined && { seoKeywords: dto.seoKeywords || null }),
+        ...(dto.publishAt !== undefined && {
+          publishAt: dto.publishAt ? new Date(dto.publishAt) : null,
+        }),
+        ...(dto.unpublishAt !== undefined && {
+          unpublishAt: dto.unpublishAt ? new Date(dto.unpublishAt) : null,
+        }),
         updatedBy: user.id,
         ...publishedPatch,
       },
@@ -195,7 +225,13 @@ export class PagesService {
 
     const page = await this.prisma.page.update({
       where: { id },
-      data: { status: 'PUBLISHED', publishedAt: new Date(), updatedBy: user.id },
+      data: {
+        status: 'PUBLISHED',
+        publishedAt: new Date(),
+        publishAt: null,
+        unpublishAt: null,
+        updatedBy: user.id,
+      },
       include: PAGE_INCLUDE,
     });
 
@@ -244,6 +280,7 @@ export class PagesService {
     mallId?: string;
     slug: string;
   }): Promise<PageResponse | null> {
+    const now = new Date();
     const mallScope: Prisma.PageWhereInput =
       opts.mallId !== undefined
         ? { OR: [{ mallId: opts.mallId }, { mallId: null }] }
@@ -256,6 +293,10 @@ export class PagesService {
         status: 'PUBLISHED',
         deletedAt: null,
         ...mallScope,
+        AND: [
+          { OR: [{ publishAt: null }, { publishAt: { lte: now } }] },
+          { OR: [{ unpublishAt: null }, { unpublishAt: { gte: now } }] },
+        ],
       },
       include: {
         blocks: {
@@ -273,6 +314,7 @@ export class PagesService {
     mallId?: string;
     type?: string;
   }): Promise<PageResponse[]> {
+    const now = new Date();
     const mallScope: Prisma.PageWhereInput =
       opts.mallId !== undefined
         ? { OR: [{ mallId: opts.mallId }, { mallId: null }] }
@@ -284,6 +326,10 @@ export class PagesService {
         status: 'PUBLISHED',
         deletedAt: null,
         ...mallScope,
+        AND: [
+          { OR: [{ publishAt: null }, { publishAt: { lte: now } }] },
+          { OR: [{ unpublishAt: null }, { unpublishAt: { gte: now } }] },
+        ],
         ...(opts.type ? { type: opts.type as any } : {}),
       },
       include: {

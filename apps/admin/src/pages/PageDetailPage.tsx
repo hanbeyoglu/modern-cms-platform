@@ -96,6 +96,8 @@ type PageFormState = {
   seoTitle: string;
   seoDescription: string;
   seoKeywords: string;
+  publishAt: string;
+  unpublishAt: string;
 };
 
 type BlockFormState = {
@@ -153,6 +155,8 @@ export function PageDetailPage() {
         seoTitle: p.seoTitle ?? '',
         seoDescription: p.seoDescription ?? '',
         seoKeywords: p.seoKeywords ?? '',
+        publishAt: p.publishAt ? p.publishAt.slice(0, 16) : '',
+        unpublishAt: p.unpublishAt ? p.unpublishAt.slice(0, 16) : '',
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Yüklenemedi');
@@ -176,6 +180,8 @@ export function PageDetailPage() {
         seoTitle: pageForm.seoTitle || undefined,
         seoDescription: pageForm.seoDescription || undefined,
         seoKeywords: pageForm.seoKeywords || undefined,
+        publishAt: pageForm.publishAt ? new Date(pageForm.publishAt).toISOString() : undefined,
+        unpublishAt: pageForm.unpublishAt ? new Date(pageForm.unpublishAt).toISOString() : undefined,
       }, activeMallId ?? undefined);
       toast.success('Sayfa güncellendi');
       void loadPage();
@@ -337,6 +343,11 @@ export function PageDetailPage() {
         <span style={badgeStyle(STATUS_COLORS[page.status] + '22', STATUS_COLORS[page.status])}>
           {STATUS_LABELS[page.status]}
         </span>
+        {page.status === 'SCHEDULED' && page.publishAt && (
+          <span style={{ fontSize: 11, color: '#92400e', fontWeight: 600 }}>
+            Yayın: {new Date(page.publishAt).toLocaleString('tr-TR')}
+          </span>
+        )}
       </div>
 
       {/* Actions */}
@@ -393,6 +404,28 @@ export function PageDetailPage() {
                 <option key={s} value={s}>{STATUS_LABELS[s]}</option>
               ))}
             </select>
+          </div>
+
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={labelStyle}>Yayın zamanı (publishAt)</label>
+            <input
+              type="datetime-local"
+              value={pageForm.publishAt}
+              onChange={(e) => setPageForm((f) => f && { ...f, publishAt: e.target.value })}
+              style={inputStyle({ width: '100%', maxWidth: 280 })}
+            />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={labelStyle}>Yayından kalkma (unpublishAt)</label>
+            <input
+              type="datetime-local"
+              value={pageForm.unpublishAt}
+              onChange={(e) => setPageForm((f) => f && { ...f, unpublishAt: e.target.value })}
+              style={inputStyle({ width: '100%', maxWidth: 280 })}
+            />
+            <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+              Slider, etkinlik ve kampanyalarda yayın penceresi için başlangıç/bitiş alanları (startAt / endAt) kullanılır.
+            </div>
           </div>
 
           <div style={{ gridColumn: '1 / -1' }}>

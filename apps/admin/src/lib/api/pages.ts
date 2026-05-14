@@ -26,6 +26,8 @@ export type CmsPage = {
   seoTitle: string | null;
   seoDescription: string | null;
   seoKeywords: string | null;
+  publishAt: string | null;
+  unpublishAt: string | null;
   createdBy: string;
   updatedBy: string | null;
   publishedAt: string | null;
@@ -49,6 +51,8 @@ export type CreatePagePayload = {
   seoTitle?: string;
   seoDescription?: string;
   seoKeywords?: string;
+  publishAt?: string;
+  unpublishAt?: string;
 };
 
 export type CreatePageBlockPayload = {

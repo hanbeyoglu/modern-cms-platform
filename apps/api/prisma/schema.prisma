@@ -346,6 +346,8 @@ model Slider {
   @@index([tenantId, status])
   @@index([tenantId, mallId])
   @@index([tenantId, sortOrder])
+  @@index([status, startAt])
+  @@index([status, endAt])
 }
 
 // ─── Store Center (global pool + mall assignment) ─────────────────────────────
@@ -485,6 +487,8 @@ model Event {
   @@index([tenantId, mallId])
   @@index([tenantId, sortOrder])
   @@index([tenantId, startAt])
+  @@index([status, startAt])
+  @@index([status, endAt])
 }
 
 model Campaign {
@@ -525,6 +529,8 @@ model Campaign {
   @@index([tenantId, mallId])
   @@index([tenantId, storeId])
   @@index([tenantId, sortOrder])
+  @@index([status, startAt])
+  @@index([status, endAt])
 }
 
 // ─── Cinema & sessions (Sprint 8) ─────────────────────────────────────────────
@@ -679,6 +685,8 @@ model Page {
   seoTitle       String?
   seoDescription String?
   seoKeywords    String?
+  publishAt      DateTime?
+  unpublishAt    DateTime?
   createdBy      String
   updatedBy      String?
   publishedAt    DateTime?
@@ -696,6 +704,8 @@ model Page {
   @@index([tenantId, status])
   @@index([tenantId, mallId])
   @@index([tenantId, type])
+  @@index([status, publishAt])
+  @@index([status, unpublishAt])
 }
 
 model PageBlock {

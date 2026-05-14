@@ -520,6 +520,11 @@ export function CampaignsPage() {
               </td>
               <td style={{ padding: 8 }}>
                 <StatusBadge status={c.status} />
+                {c.status === 'SCHEDULED' && c.startAt && (
+                  <div style={{ fontSize: 10, color: '#92400e', marginTop: 4 }}>
+                    Yayın: {new Date(c.startAt).toLocaleString('tr-TR')}
+                  </div>
+                )}
               </td>
               <td style={{ padding: 8 }}>
                 <button type="button" onClick={() => openEdit(c)} style={{ marginRight: 6 }}>

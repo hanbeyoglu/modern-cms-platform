@@ -9,7 +9,7 @@ import type { Campaign, ContentStatus, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import { slugify } from '../common/utils/slugify';
-import { assertOptionalHttpUrl, validateStartBeforeEnd } from '../common/utils/content-validation';
+import { assertOptionalHttpUrl, assertStartAtWhenScheduled, validateStartBeforeEnd } from '../common/utils/content-validation';
 import { uniqueCampaignSlug } from '../common/utils/unique-content-slug';
 import type { CreateCampaignDto } from './dto/create-campaign.dto';
 import type { UpdateCampaignDto } from './dto/update-campaign.dto';
@@ -90,6 +90,7 @@ export class CampaignsService {
     assertOptionalHttpUrl(dto.linkUrl);
 
     const status = dto.status ?? 'DRAFT';
+    assertStartAtWhenScheduled(status, dto.startAt);
     const effectiveMallId = mallId ?? null;
 
     if (dto.storeId) {
@@ -174,6 +175,7 @@ export class CampaignsService {
     const nextTitle = dto.title ?? existing.title;
     const nextCover = dto.coverMediaId !== undefined ? dto.coverMediaId : existing.coverMediaId;
     const nextStatus = dto.status ?? existing.status;
+    assertStartAtWhenScheduled(nextStatus, nextStart);
     const nextMallId = dto.mallId !== undefined ? dto.mallId : existing.mallId;
     const nextStoreId = dto.storeId !== undefined ? dto.storeId : existing.storeId;
 

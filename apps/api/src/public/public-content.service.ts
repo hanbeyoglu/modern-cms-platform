@@ -105,7 +105,10 @@ export class PublicContentService {
         deletedAt: null,
         status: 'PUBLISHED',
         ...mallScope,
-        OR: [{ endAt: null }, { endAt: { gte: now } }],
+        AND: [
+          { OR: [{ startAt: null }, { startAt: { lte: now } }] },
+          { OR: [{ endAt: null }, { endAt: { gte: now } }] },
+        ],
         ...(opts.category ? { category: opts.category } : {}),
         ...(opts.search
           ? { title: { contains: opts.search, mode: 'insensitive' as const } }
@@ -141,6 +144,7 @@ export class PublicContentService {
     slug: string;
     localeId?: string;
   }): Promise<PublicEvent | null> {
+    const now = new Date();
     const mallScope: Prisma.EventWhereInput =
       opts.mallId !== undefined
         ? { OR: [{ mallId: opts.mallId }, { mallId: null }] }
@@ -153,6 +157,10 @@ export class PublicContentService {
         deletedAt: null,
         status: 'PUBLISHED',
         ...mallScope,
+        AND: [
+          { OR: [{ startAt: null }, { startAt: { lte: now } }] },
+          { OR: [{ endAt: null }, { endAt: { gte: now } }] },
+        ],
       },
       include: { coverMedia: { select: MEDIA_SELECT } },
     });
@@ -405,6 +413,7 @@ export class PublicContentService {
     slug: string;
     localeId?: string;
   }): Promise<PublicPage | null> {
+    const now = new Date();
     const mallScope: Prisma.PageWhereInput =
       opts.mallId !== undefined
         ? { OR: [{ mallId: opts.mallId }, { mallId: null }] }
@@ -417,6 +426,10 @@ export class PublicContentService {
         status: 'PUBLISHED',
         deletedAt: null,
         ...mallScope,
+        AND: [
+          { OR: [{ publishAt: null }, { publishAt: { lte: now } }] },
+          { OR: [{ unpublishAt: null }, { unpublishAt: { gte: now } }] },
+        ],
       },
       include: {
         blocks: {

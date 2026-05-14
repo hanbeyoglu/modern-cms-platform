@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, UnprocessableEntityException } from '@nestjs/common';
 
 export function validateStartBeforeEnd(
   startAt?: string | Date | null,
@@ -21,5 +21,27 @@ export function assertOptionalHttpUrl(linkUrl?: string | null): void {
     }
   } catch {
     throw new BadRequestException('linkUrl must be a valid URL');
+  }
+}
+
+/** Slider / Event / Campaign use `startAt` as the worker publish trigger when status is SCHEDULED. */
+export function assertStartAtWhenScheduled(
+  status: string,
+  startAt: string | Date | null | undefined,
+): void {
+  if (status !== 'SCHEDULED') return;
+  if (startAt === undefined || startAt === null || startAt === '') {
+    throw new UnprocessableEntityException('startAt is required when status is SCHEDULED');
+  }
+}
+
+/** Page model uses `publishAt` / `unpublishAt` instead of start/end. */
+export function assertPublishAtWhenScheduled(
+  status: string,
+  publishAt: string | Date | null | undefined,
+): void {
+  if (status !== 'SCHEDULED') return;
+  if (publishAt === undefined || publishAt === null || publishAt === '') {
+    throw new UnprocessableEntityException('publishAt is required when status is SCHEDULED');
   }
 }

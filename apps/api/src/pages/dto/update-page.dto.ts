@@ -1,5 +1,5 @@
 import { PageStatus, PageType } from '@prisma/client';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class UpdatePageDto {
   @IsOptional()
@@ -29,4 +29,12 @@ export class UpdatePageDto {
   @IsOptional()
   @IsString()
   seoKeywords?: string;
+
+  @IsOptional()
+  @IsDateString()
+  publishAt?: string;
+
+  @IsOptional()
+  @IsDateString()
+  unpublishAt?: string;
 }
