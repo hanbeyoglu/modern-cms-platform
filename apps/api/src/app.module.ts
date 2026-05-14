@@ -28,6 +28,7 @@ import { TranslationResolverModule } from './translation-resolver/translation-re
 import { SchedulingModule } from './scheduling/scheduling.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SearchModule } from './search/search.module';
+import { CapabilitiesModule } from './capabilities/capabilities.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { SearchModule } from './search/search.module';
     SchedulingModule,
     NotificationsModule,
     SearchModule,
+    CapabilitiesModule,
     HealthModule,
   ],
 })

@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccessService } from '../access/access.service';
 import { AuditLogService } from '../audit/audit.service';
+import { CapabilitiesService } from '../capabilities/capabilities.service';
 import type { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly access: AccessService,
     private readonly audit: AuditLogService,
+    private readonly capabilities: CapabilitiesService,
   ) {}
 
   async login(
@@ -133,6 +135,24 @@ export class AuthService {
             },
           });
 
+    const membershipResults = await Promise.all(
+      memberships.map(async (m) => {
+        const capSet = await this.capabilities.getEnabledCodesForTenant(m.tenantId);
+        return {
+          tenantId: m.tenantId,
+          tenantName: m.tenant.name,
+          role: { code: m.role.code, name: m.role.name },
+          permissions: m.role.rolePermissions.map((rp) => rp.permission.code),
+          capabilities: Array.from(capSet),
+          malls: m.mallAccess.map((a) => ({
+            id: a.mall.id,
+            name: a.mall.name,
+            slug: a.mall.slug,
+          })),
+        };
+      }),
+    );
+
     return {
       id: user.id,
       email: user.email,
@@ -141,17 +161,7 @@ export class AuthService {
       status: user.status,
       isSuperAdmin: user.isSuperAdmin,
       tenants: tenants.map((t) => ({ id: t.id, name: t.name, slug: t.slug, status: t.status })),
-      memberships: memberships.map((m) => ({
-        tenantId: m.tenantId,
-        tenantName: m.tenant.name,
-        role: { code: m.role.code, name: m.role.name },
-        permissions: m.role.rolePermissions.map((rp) => rp.permission.code),
-        malls: m.mallAccess.map((a) => ({
-          id: a.mall.id,
-          name: a.mall.name,
-          slug: a.mall.slug,
-        })),
-      })),
+      memberships: membershipResults,
     };
   }
 

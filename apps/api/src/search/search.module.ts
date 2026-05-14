@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AccessModule } from '../access/access.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { TranslationResolverModule } from '../translation-resolver/translation-resolver.module';
+import { CapabilitiesModule } from '../capabilities/capabilities.module';
 import { PublicSearchService } from './public-search.service';
 import { SearchController } from './search.controller';
 import { SearchIndexerService } from './search-indexer.service';
@@ -12,7 +13,7 @@ import { SearchResultMapperService } from './search-result-mapper.service';
 import { SearchService } from './search.service';
 
 @Module({
-  imports: [PrismaModule, AccessModule, TranslationResolverModule],
+  imports: [PrismaModule, AccessModule, TranslationResolverModule, CapabilitiesModule],
   controllers: [SearchController],
   providers: [
     SearchNormalizerService,

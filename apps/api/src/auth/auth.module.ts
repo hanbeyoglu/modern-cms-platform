@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AccessModule } from '../access/access.module';
 import { AuditModule } from '../audit/audit.module';
+import { CapabilitiesModule } from '../capabilities/capabilities.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -23,6 +24,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
     AccessModule,
     AuditModule,
+    CapabilitiesModule,
   ],
   controllers: [AuthController],
   providers: [

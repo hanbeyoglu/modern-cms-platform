@@ -3,6 +3,57 @@ import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
+type CapCat =
+  | 'CORE' | 'CONTENT' | 'OPERATIONS' | 'ANALYTICS'
+  | 'LOCALIZATION' | 'PUBLIC_DELIVERY' | 'SEARCH' | 'CDP' | 'AI' | 'INTEGRATION';
+
+const CAPABILITIES: Array<{
+  code: string;
+  name: string;
+  description: string;
+  category: CapCat;
+}> = [
+  // CORE
+  { code: 'cms_core', name: 'CMS Core', description: 'Temel CMS işlevleri', category: 'CORE' },
+  { code: 'media', name: 'Medya Kütüphanesi', description: 'Medya yönetimi', category: 'CORE' },
+  { code: 'public_api', name: 'Public API', description: 'Halka açık içerik API\'si', category: 'PUBLIC_DELIVERY' },
+  // CONTENT
+  { code: 'sliders', name: 'Slider Yönetimi', description: 'Slider ve banner yönetimi', category: 'CONTENT' },
+  { code: 'pages', name: 'Sayfa Oluşturucu', description: 'Dinamik sayfa oluşturucu', category: 'CONTENT' },
+  { code: 'stores', name: 'Mağaza Yönetimi', description: 'Mağaza ve kategori yönetimi', category: 'CONTENT' },
+  { code: 'events', name: 'Etkinlikler', description: 'Etkinlik yönetimi', category: 'CONTENT' },
+  { code: 'campaigns', name: 'Kampanyalar', description: 'Kampanya yönetimi', category: 'CONTENT' },
+  { code: 'cinema', name: 'Sinema', description: 'Sinema ve film yönetimi', category: 'CONTENT' },
+  // OPERATIONS
+  { code: 'scheduling', name: 'Zamanlama', description: 'İçerik zamanlama ve otomasyonu', category: 'OPERATIONS' },
+  { code: 'notifications', name: 'Bildirimler', description: 'In-app bildirim sistemi', category: 'OPERATIONS' },
+  // ANALYTICS
+  { code: 'analytics', name: 'Analitik & Raporlar', description: 'İçerik ve kullanıcı analitikleri', category: 'ANALYTICS' },
+  // LOCALIZATION
+  { code: 'localization', name: 'Çoklu Dil', description: 'İçerik lokalizasyonu ve çeviri yönetimi', category: 'LOCALIZATION' },
+  // SEARCH
+  { code: 'search', name: 'Genel Arama', description: 'Full-text içerik araması', category: 'SEARCH' },
+  // CDP (future — not enabled by default)
+  { code: 'cdp_basic', name: 'CDP Temel', description: 'Temel müşteri veri platformu', category: 'CDP' },
+  { code: 'cdp_advanced', name: 'CDP Gelişmiş', description: 'Gelişmiş müşteri segmentasyonu', category: 'CDP' },
+  { code: 'segments', name: 'Segmentler', description: 'Müşteri segment yönetimi', category: 'CDP' },
+  { code: 'journeys', name: 'Müşteri Yolculukları', description: 'Otomatik müşteri yolculukları', category: 'CDP' },
+  { code: 'personalization', name: 'Kişiselleştirme', description: 'İçerik kişiselleştirme motoru', category: 'CDP' },
+  // AI (future)
+  { code: 'ai_assistant', name: 'AI Asistan', description: 'AI destekli içerik önerileri', category: 'AI' },
+  // INTEGRATIONS (future)
+  { code: 'external_cinema_provider', name: 'Harici Sinema Sağlayıcı', description: 'Sinema API/XML feed entegrasyonu', category: 'INTEGRATION' },
+  { code: 'signage', name: 'Dijital Tabela', description: 'Dijital tabela entegrasyonu', category: 'INTEGRATION' },
+  { code: 'mobile_app_api', name: 'Mobil Uygulama API', description: 'Mobil uygulama API erişimi', category: 'INTEGRATION' },
+];
+
+// Capabilities enabled for all demo tenants
+const DEMO_TENANT_CAPABILITIES = [
+  'cms_core', 'media', 'public_api',
+  'sliders', 'pages', 'stores', 'events', 'campaigns', 'cinema',
+  'scheduling', 'notifications', 'analytics', 'localization', 'search',
+];
+
 const PERMISSIONS = [
   'tenant:read',
   'mall:read',
@@ -470,6 +521,66 @@ async function main(): Promise<void> {
     });
   }
 
+  // ─── Capabilities ─────────────────────────────────────────────────────────────
+  const capRows = await Promise.all(
+    CAPABILITIES.map((cap) =>
+      prisma.capability.upsert({
+        where: { code: cap.code },
+        update: { name: cap.name, description: cap.description, category: cap.category },
+        create: { code: cap.code, name: cap.name, description: cap.description, category: cap.category, isSystem: true },
+      }),
+    ),
+  );
+  const capByCode = Object.fromEntries(capRows.map((c) => [c.code, c]));
+
+  // Enable current capabilities for demo tenants
+  const now = new Date();
+  for (const tenant of [tenantEmaar, tenantMallGroup]) {
+    for (const code of DEMO_TENANT_CAPABILITIES) {
+      const cap = capByCode[code];
+      if (!cap) continue;
+      await prisma.tenantCapability.upsert({
+        where: { tenantId_capabilityId: { tenantId: tenant.id, capabilityId: cap.id } },
+        update: { enabled: true, enabledAt: now },
+        create: { tenantId: tenant.id, capabilityId: cap.id, enabled: true, enabledAt: now },
+      });
+    }
+  }
+
+  // ─── Permissions — add capability permissions ─────────────────────────────────
+  const capabilityPerms = ['capability:read', 'capability:update'] as const;
+  const capabilityPermRows = await Promise.all(
+    capabilityPerms.map((code) =>
+      prisma.permission.upsert({
+        where: { code },
+        update: {},
+        create: { code, description: code },
+      }),
+    ),
+  );
+  const capPermByCode = Object.fromEntries(capabilityPermRows.map((p) => [p.code, p]));
+
+  // SUPER_ADMIN and TENANT_ADMIN get capability:read; only SUPER_ADMIN gets capability:update
+  const superAdminRole = await prisma.role.findUnique({ where: { code: 'SUPER_ADMIN' } });
+  const tenantAdminRole = await prisma.role.findUnique({ where: { code: 'TENANT_ADMIN' } });
+
+  if (superAdminRole) {
+    for (const code of capabilityPerms) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: superAdminRole.id, permissionId: capPermByCode[code].id } },
+        update: {},
+        create: { roleId: superAdminRole.id, permissionId: capPermByCode[code].id },
+      });
+    }
+  }
+  if (tenantAdminRole) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: tenantAdminRole.id, permissionId: capPermByCode['capability:read'].id } },
+      update: {},
+      create: { roleId: tenantAdminRole.id, permissionId: capPermByCode['capability:read'].id },
+    });
+  }
+
   // ─── Default locales for demo tenants ────────────────────────────────────────
   const defaultLocales: Array<{ tenantId: string; code: string; name: string; nativeName: string; isDefault: boolean }> = [
     { tenantId: tenantEmaar.id, code: 'tr', name: 'Turkish', nativeName: 'Türkçe', isDefault: true },
@@ -490,7 +601,9 @@ async function main(): Promise<void> {
     tenants: [tenantEmaar.slug, tenantMallGroup.slug],
     malls: [mallEmaar.slug, mallIstanbul.slug, mallBursa.slug],
     users: [superAdmin.email, groupAdmin.email, mallManager.email],
-    permissions: PERMISSIONS.length,
+    permissions: PERMISSIONS.length + capabilityPerms.length,
+    capabilities: CAPABILITIES.length,
+    demoEnabledCapabilities: DEMO_TENANT_CAPABILITIES.length,
   });
 }
 

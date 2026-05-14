@@ -17,8 +17,8 @@ export type MeMembership = {
   tenantId: string;
   tenantName: string;
   role: { code: string; name: string };
-  /** RBAC izin kodları (tenant bağlamında). */
   permissions?: string[];
+  capabilities?: string[];
   malls: Array<{ id: string; name: string; slug: string }>;
 };
 

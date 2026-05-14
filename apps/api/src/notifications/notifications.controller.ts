@@ -7,12 +7,15 @@ import { RequireTenantContext } from '../common/decorators/require-tenant.decora
 import { TenantAccessGuard } from '../access/guards/tenant-access.guard';
 import { MallAccessGuard } from '../access/guards/mall-access.guard';
 import { PermissionsGuard } from '../access/guards/permissions.guard';
+import { CapabilityGuard } from '../capabilities/guards/capability.guard';
+import { RequireCapability } from '../capabilities/decorators/require-capability.decorator';
 import { NotificationsService } from './notifications.service';
 import { ListNotificationsDto } from './dto/list-notifications.dto';
 
 @Controller('notifications')
 @RequireTenantContext()
-@UseGuards(TenantAccessGuard, MallAccessGuard, PermissionsGuard)
+@UseGuards(TenantAccessGuard, MallAccessGuard, PermissionsGuard, CapabilityGuard)
+@RequireCapability('notifications')
 export class NotificationsController {
   constructor(private readonly notifications: NotificationsService) {}
 

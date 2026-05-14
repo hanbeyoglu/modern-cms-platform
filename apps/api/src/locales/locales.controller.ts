@@ -18,6 +18,8 @@ import { RequirePermission } from '../common/decorators/require-permission.decor
 import { RequireTenantContext } from '../common/decorators/require-tenant.decorator';
 import { TenantAccessGuard } from '../access/guards/tenant-access.guard';
 import { PermissionsGuard } from '../access/guards/permissions.guard';
+import { CapabilityGuard } from '../capabilities/guards/capability.guard';
+import { RequireCapability } from '../capabilities/decorators/require-capability.decorator';
 import { LocalesService } from './locales.service';
 import { CreateLocaleDto } from './dto/create-locale.dto';
 import { UpdateLocaleDto } from './dto/update-locale.dto';
@@ -25,7 +27,8 @@ import { ListLocalesDto } from './dto/list-locales.dto';
 
 @Controller('locales')
 @RequireTenantContext()
-@UseGuards(TenantAccessGuard, PermissionsGuard)
+@UseGuards(TenantAccessGuard, PermissionsGuard, CapabilityGuard)
+@RequireCapability('localization')
 export class LocalesController {
   constructor(private readonly locales: LocalesService) {}
 

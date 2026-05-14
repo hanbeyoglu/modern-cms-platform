@@ -226,3 +226,16 @@ export type {
   GlobalSearchResponse,
   SearchIndexEntityType,
 } from './search';
+
+export {
+  apiCapabilitiesList,
+  apiTenantCapabilitiesList,
+  apiTenantCapabilitiesUpdate,
+} from './capabilities';
+export type {
+  CapabilityCategory,
+  Capability,
+  TenantCapabilityRow,
+  CapabilityListResponse,
+  TenantCapabilityListResponse,
+} from './capabilities';

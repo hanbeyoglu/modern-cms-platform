@@ -18,6 +18,8 @@ import { RequirePermission } from '../common/decorators/require-permission.decor
 import { RequireTenantContext } from '../common/decorators/require-tenant.decorator';
 import { TenantAccessGuard } from '../access/guards/tenant-access.guard';
 import { PermissionsGuard } from '../access/guards/permissions.guard';
+import { CapabilityGuard } from '../capabilities/guards/capability.guard';
+import { RequireCapability } from '../capabilities/decorators/require-capability.decorator';
 import { TranslationsService } from './translations.service';
 import { CreateTranslationDto } from './dto/create-translation.dto';
 import { UpdateTranslationDto } from './dto/update-translation.dto';
@@ -25,7 +27,8 @@ import { ListTranslationsDto } from './dto/list-translations.dto';
 
 @Controller('translations')
 @RequireTenantContext()
-@UseGuards(TenantAccessGuard, PermissionsGuard)
+@UseGuards(TenantAccessGuard, PermissionsGuard, CapabilityGuard)
+@RequireCapability('localization')
 export class TranslationsController {
   constructor(private readonly translations: TranslationsService) {}
 

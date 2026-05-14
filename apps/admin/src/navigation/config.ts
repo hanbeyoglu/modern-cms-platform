@@ -4,6 +4,10 @@ export type NavItem = {
   icon: string;
   href: string;
   permission: string | null;
+  /** If set, the tenant must have this capability enabled for the item to appear. */
+  capability?: string;
+  /** If true, only Super Admins see this item (no tenant context needed). */
+  superAdminOnly?: boolean;
   group?: string;
 };
 
@@ -21,13 +25,15 @@ export const NAV_ITEMS: NavItem[] = [
     icon: '✦',
     href: '/notifications',
     permission: 'notification:read',
+    capability: 'notifications',
   },
   {
     id: 'search',
-    label: 'Genel arama',
+    label: 'Genel Arama',
     icon: '⌕',
     href: '/search',
     permission: 'search:global',
+    capability: 'search',
   },
   {
     id: 'media',
@@ -35,6 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: '▤',
     href: '/media',
     permission: 'media:read',
+    capability: 'media',
   },
   {
     id: 'sliders',
@@ -42,14 +49,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: '▦',
     href: '/sliders',
     permission: 'slider:read',
-  },
-  {
-    id: 'events',
-    label: 'Etkinlikler',
-    icon: '◷',
-    href: '/events',
-    permission: 'event:read',
-    group: 'İçerik',
+    capability: 'sliders',
   },
   {
     id: 'analytics',
@@ -57,46 +57,16 @@ export const NAV_ITEMS: NavItem[] = [
     icon: '∑',
     href: '/analytics',
     permission: 'analytics:view',
+    capability: 'analytics',
     group: 'Analitik',
   },
   {
-    id: 'cinemas',
-    label: 'Sinemalar',
-    icon: '▶',
-    href: '/cinemas',
-    permission: 'cinema:read',
-    group: 'İçerik',
-  },
-  {
-    id: 'movies',
-    label: 'Filmler',
-    icon: '◐',
-    href: '/movies',
-    permission: 'movie:read',
-    group: 'İçerik',
-  },
-  {
-    id: 'movie-sessions',
-    label: 'Seanslar',
+    id: 'events',
+    label: 'Etkinlikler',
     icon: '◷',
-    href: '/movie-sessions',
-    permission: 'movie-session:read',
-    group: 'İçerik',
-  },
-  {
-    id: 'pages',
-    label: 'Sayfalar',
-    icon: '◧',
-    href: '/pages',
-    permission: 'page:read',
-    group: 'İçerik',
-  },
-  {
-    id: 'locales',
-    label: 'Diller',
-    icon: '◌',
-    href: '/locales',
-    permission: 'locale:read',
+    href: '/events',
+    permission: 'event:read',
+    capability: 'events',
     group: 'İçerik',
   },
   {
@@ -105,6 +75,52 @@ export const NAV_ITEMS: NavItem[] = [
     icon: '◈',
     href: '/campaigns',
     permission: 'campaign:read',
+    capability: 'campaigns',
+    group: 'İçerik',
+  },
+  {
+    id: 'pages',
+    label: 'Sayfalar',
+    icon: '◧',
+    href: '/pages',
+    permission: 'page:read',
+    capability: 'pages',
+    group: 'İçerik',
+  },
+  {
+    id: 'locales',
+    label: 'Diller',
+    icon: '◌',
+    href: '/locales',
+    permission: 'locale:read',
+    capability: 'localization',
+    group: 'İçerik',
+  },
+  {
+    id: 'cinemas',
+    label: 'Sinemalar',
+    icon: '▶',
+    href: '/cinemas',
+    permission: 'cinema:read',
+    capability: 'cinema',
+    group: 'İçerik',
+  },
+  {
+    id: 'movies',
+    label: 'Filmler',
+    icon: '◐',
+    href: '/movies',
+    permission: 'movie:read',
+    capability: 'cinema',
+    group: 'İçerik',
+  },
+  {
+    id: 'movie-sessions',
+    label: 'Seanslar',
+    icon: '◷',
+    href: '/movie-sessions',
+    permission: 'movie-session:read',
+    capability: 'cinema',
     group: 'İçerik',
   },
   {
@@ -113,6 +129,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: '◫',
     href: '/store-categories',
     permission: 'store-category:read',
+    capability: 'stores',
     group: 'Mağazalar',
   },
   {
@@ -121,6 +138,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: '▣',
     href: '/global-stores',
     permission: 'global-store:read',
+    capability: 'stores',
     group: 'Mağazalar',
   },
   {
@@ -129,8 +147,18 @@ export const NAV_ITEMS: NavItem[] = [
     icon: '▩',
     href: '/mall-stores',
     permission: 'mall-store:read',
+    capability: 'stores',
     group: 'Mağazalar',
+  },
+  {
+    id: 'capabilities',
+    label: 'Yetenekler',
+    icon: '◎',
+    href: '/capabilities',
+    permission: 'capability:read',
+    superAdminOnly: true,
+    group: 'Platform',
   },
 ];
 
-export const NAV_GROUPS = ['Analitik', 'İçerik', 'Mağazalar'] as const;
+export const NAV_GROUPS = ['Analitik', 'İçerik', 'Mağazalar', 'Platform'] as const;

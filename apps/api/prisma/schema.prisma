@@ -91,11 +91,12 @@ model Tenant {
   movieSessions MovieSession[]
   pages         Page[]
   pageBlocks    PageBlock[]
-  analyticsEvents  AnalyticsEvent[]
-  locales          Locale[]
-  localizedContent LocalizedContent[]
-  notifications    Notification[]
+  analyticsEvents    AnalyticsEvent[]
+  locales            Locale[]
+  localizedContent   LocalizedContent[]
+  notifications      Notification[]
   searchIndexEntries SearchIndexEntry[]
+  capabilities       TenantCapability[]
 }
 
 model Mall {
@@ -877,6 +878,52 @@ model AnalyticsEvent {
   @@index([entityType, entityId])
   @@index([eventType])
   @@index([createdAt])
+}
+
+// ─── Capability & Package System (Sprint 16) ─────────────────────────────────
+
+enum CapabilityCategory {
+  CORE
+  CONTENT
+  OPERATIONS
+  ANALYTICS
+  LOCALIZATION
+  PUBLIC_DELIVERY
+  SEARCH
+  CDP
+  AI
+  INTEGRATION
+}
+
+model Capability {
+  id          String             @id @default(cuid())
+  code        String             @unique
+  name        String
+  description String?
+  category    CapabilityCategory
+  isSystem    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  tenantCapabilities TenantCapability[]
+}
+
+model TenantCapability {
+  id             String      @id @default(cuid())
+  tenantId       String
+  capabilityId   String
+  enabled        Boolean     @default(true)
+  enabledAt      DateTime?
+  disabledAt     DateTime?
+  metadataJson   Json?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  capability Capability @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, capabilityId])
+  @@index([tenantId])
 }
 
 // ─── Notifications (Sprint 14) ──────────────────────────────────────────────

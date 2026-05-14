@@ -1,15 +1,22 @@
 import { NavLink } from 'react-router-dom';
 import { NAV_ITEMS, NAV_GROUPS } from '../../navigation/config';
 import { usePermission } from '../../hooks/usePermission';
+import { useCapability } from '../../hooks/useCapability';
+import { useAuth } from '../../auth/useAuth';
 
 const SIDEBAR_WIDTH = 220;
 
 export function Sidebar() {
   const { can } = usePermission();
+  const { has } = useCapability();
+  const { user } = useAuth();
 
-  const visibleItems = NAV_ITEMS.filter(
-    (item) => item.permission === null || can(item.permission),
-  );
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.superAdminOnly && !user?.isSuperAdmin) return false;
+    if (item.permission !== null && !can(item.permission)) return false;
+    if (item.capability && !user?.isSuperAdmin && !has(item.capability)) return false;
+    return true;
+  });
 
   const ungrouped = visibleItems.filter((item) => !item.group);
   const grouped = NAV_GROUPS.map((group) => ({

@@ -20,6 +20,7 @@ import { LocalesPage } from '../pages/LocalesPage';
 import { AnalyticsPage } from '../pages/AnalyticsPage';
 import { NotificationsPage } from '../pages/NotificationsPage';
 import { SearchPage } from '../pages/SearchPage';
+import { CapabilitiesPage } from '../pages/CapabilitiesPage';
 
 export const router = createBrowserRouter([
   {
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
           { path: '/store-categories', element: <StoreCategoriesPage /> },
           { path: '/global-stores', element: <GlobalStoresPage /> },
           { path: '/mall-stores', element: <MallStoresPage /> },
+          { path: '/capabilities', element: <CapabilitiesPage /> },
         ],
       },
     ],

@@ -6,12 +6,15 @@ import { RequirePermission } from '../common/decorators/require-permission.decor
 import { RequireTenantContext } from '../common/decorators/require-tenant.decorator';
 import { TenantAccessGuard } from '../access/guards/tenant-access.guard';
 import { PermissionsGuard } from '../access/guards/permissions.guard';
+import { CapabilityGuard } from '../capabilities/guards/capability.guard';
+import { RequireCapability } from '../capabilities/decorators/require-capability.decorator';
 import { SearchService } from './search.service';
 import { GlobalSearchQueryDto } from './dto/global-search-query.dto';
 
 @Controller('search')
 @RequireTenantContext()
-@UseGuards(TenantAccessGuard, PermissionsGuard)
+@UseGuards(TenantAccessGuard, PermissionsGuard, CapabilityGuard)
+@RequireCapability('search')
 export class SearchController {
   constructor(private readonly search: SearchService) {}
 
