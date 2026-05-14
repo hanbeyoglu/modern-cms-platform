@@ -18,6 +18,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "clean": "turbo clean && rm -rf node_modules",
+    "db:generate": "pnpm --filter @modern-cms/api exec prisma generate",
     "db:migrate": "pnpm --filter @modern-cms/api exec prisma migrate dev",
     "db:migrate:deploy": "pnpm --filter @modern-cms/api exec prisma migrate deploy",
     "db:seed": "pnpm --filter @modern-cms/api exec prisma db seed",

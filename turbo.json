@@ -1,8 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
+    "db:generate": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$"]
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["@modern-cms/api#db:generate", "^build"],
       "outputs": ["dist/**", "build/**"]
     },
     "dev": {
@@ -10,10 +14,10 @@
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["@modern-cms/api#db:generate", "^build"]
     },
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["@modern-cms/api#db:generate", "^build"]
     },
     "clean": {
       "cache": false

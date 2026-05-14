@@ -12,15 +12,15 @@
   },
   "scripts": {
     "prebuild": "prisma generate --schema ../../apps/api/prisma/schema.prisma",
+    "pretypecheck": "prisma generate --schema ../../apps/api/prisma/schema.prisma",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "clean": "rm -rf dist"
   },
-  "peerDependencies": {
+  "dependencies": {
     "@prisma/client": "^6.1.0"
   },
   "devDependencies": {
-    "@prisma/client": "^6.1.0",
     "prisma": "^6.19.3",
     "typescript": "^5.7.2"
   }

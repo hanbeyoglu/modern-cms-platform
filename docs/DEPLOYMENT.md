@@ -15,9 +15,10 @@ Bu belge Sprint 17–18 ile güncellenmiştir. Amaç: tek VM / tek host üzerind
 ## Yerel geliştirme
 
 1. `pnpm install`
-2. `pnpm dev:services` (Postgres + Redis)
-3. `pnpm db:migrate` ve isteğe bağlı `pnpm db:seed`
-4. `pnpm dev`
+2. `pnpm db:generate` (Prisma Client; `turbo typecheck` da bunu tetikler, ancak tek başına paket çalıştırırken gerekli olabilir)
+3. `pnpm dev:services` (Postgres + Redis)
+4. `pnpm db:migrate` ve isteğe bağlı `pnpm db:seed`
+5. `pnpm dev`
 
 Ortam değişkenleri için kök `.env.example` ve `apps/*/.env.example` dosyalarına bakın.
 
@@ -114,7 +115,9 @@ Her iki workflow’da **concurrency** vardır: aynı dal/ref için yeni commit g
 - **Sürüm etiketi** (`v1.0.0` gibi): `git tag` + `git push origin v1.0.0` ile **Docker images** çalışır; imaj derlemesi ve compose doğrulaması burada yapılır.
 - **Manuel deneme:** Actions sekmesinden **Docker images** → *Run workflow*.
 
-`ci.yml` içeriği: `infra/scripts/*.sh` için `bash -n` + çalıştırılabilir izin; ardından `pnpm install`, `prisma validate`, `migrate deploy` (CI Postgres), `typecheck`, `pnpm build`, açıkça `pnpm --filter @modern-cms/api build`, Nest DI smoke (`pnpm --filter @modern-cms/api run smoke:di:dist`, derlenmiş `dist/smoke-di.js` — `tsx` yok), Compose config doğrulaması.
+`ci.yml` içeriği: `infra/scripts/*.sh` için `bash -n` + çalıştırılabilir izin; ardından `pnpm install`, **`pnpm db:generate`** (Prisma Client — `apps/api/prisma/schema.prisma` kaynağı; `typecheck` / `build` öncesi zorunlu), `prisma validate`, `migrate deploy` (CI Postgres), `typecheck`, `pnpm build`, açıkça `pnpm --filter @modern-cms/api build`, Nest DI smoke (`pnpm --filter @modern-cms/api run smoke:di:dist`, derlenmiş `dist/smoke-di.js` — `tsx` yok), Compose config doğrulaması.
+
+**Prisma Client ve CI:** `@prisma/client` içindeki `PrismaClient` tipleri `prisma generate` sonrası oluşur. Turbo pipeline’da tüm `typecheck` / `build` / `lint` görevleri `@modern-cms/api#db:generate` sonrasına bağlıdır; yine de CI’da `pnpm install` hemen ardından açıkça `pnpm db:generate` çalıştırılır (önbellek veya sıra farklarına karşı).
 
 ## Geri alma (rollback)
 

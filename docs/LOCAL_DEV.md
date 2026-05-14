@@ -37,6 +37,7 @@ pnpm dev
 | `pnpm dev:services` | `docker compose` ile yalnızca `postgres` ve `redis` servislerini detached modda ayağa kaldırır. |
 | `pnpm dev` | Turbo ile eşzamanlı: API (`nest start --watch`), admin (`vite`), worker (`tsx watch`). |
 | `pnpm dev:full` | Önce `dev:services`, ardından `pnpm dev`. |
+| `pnpm db:generate` | `apps/api/prisma/schema.prisma` için Prisma Client üretir; `typecheck` / `build` öncesi CI ve yerel kullanım. |
 | `pnpm dev:api` | Yalnızca Nest API. |
 | `pnpm dev:admin` | Yalnızca Vite admin (varsayılan: http://localhost:5173). |
 | `pnpm dev:worker` | Yalnızca Redis worker. |
@@ -53,6 +54,23 @@ pnpm db:seed
 ```
 
 `pnpm dev:api` her başlangıçta `prisma generate` çalıştırır; client şemanızla uyumlu kalır.
+
+### Prisma Client ve typecheck / build
+
+Şema tek kaynak olarak `apps/api/prisma/schema.prisma` dosyasındadır. `@prisma/client` paketindeki `PrismaClient` export’u **yalnızca** `prisma generate` sonrası oluşur; bu yüzden:
+
+- Kök dizinde: `pnpm db:generate` (`@modern-cms/api` içinde `prisma generate`) — CI ve yerelde `pnpm typecheck` / `pnpm build` öncesi kullanın.
+- Turbo, `typecheck` / `build` / `lint` görevlerini `@modern-cms/api#db:generate` tamamlandıktan sonra çalıştıracak şekilde yapılandırılmıştır.
+
+Temiz deneme (gerekirse):
+
+```bash
+rm -rf node_modules/.prisma node_modules/@prisma/client
+pnpm install
+pnpm db:generate
+pnpm typecheck
+pnpm build
+```
 
 ## Ortam değişkenleri
 

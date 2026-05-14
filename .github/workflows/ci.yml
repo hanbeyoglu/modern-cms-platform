@@ -72,6 +72,9 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Prisma Client generate (monorepo)
+        run: pnpm db:generate
+
       - name: Prisma validate
         run: pnpm --filter @modern-cms/api exec prisma validate
 
