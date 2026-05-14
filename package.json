@@ -6,7 +6,12 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "turbo dev --filter=@modern-cms/api --filter=@modern-cms/admin --filter=@modern-cms/worker",
+    "dev:api": "pnpm --filter @modern-cms/api dev",
+    "dev:admin": "pnpm --filter @modern-cms/admin dev",
+    "dev:worker": "pnpm --filter @modern-cms/worker dev",
+    "dev:services": "docker compose -f docker-compose.yml up -d postgres redis",
+    "dev:full": "pnpm dev:services && pnpm dev",
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",

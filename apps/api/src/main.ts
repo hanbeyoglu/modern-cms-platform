@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { join } from 'node:path';
 import { mkdirSync, existsSync } from 'node:fs';
 import { ValidationPipe } from '@nestjs/common';
