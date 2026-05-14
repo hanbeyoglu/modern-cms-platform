@@ -21,6 +21,13 @@ import { AnalyticsPage } from '../pages/AnalyticsPage';
 import { NotificationsPage } from '../pages/NotificationsPage';
 import { SearchPage } from '../pages/SearchPage';
 import { CapabilitiesPage } from '../pages/CapabilitiesPage';
+import { UsersPage } from '../pages/UsersPage';
+import { UserDetailPage } from '../pages/UserDetailPage';
+import { RolesPage } from '../pages/RolesPage';
+import { RoleDetailPage } from '../pages/RoleDetailPage';
+import { AccountPage } from '../pages/AccountPage';
+import { SettingsGeneralPage } from '../pages/SettingsGeneralPage';
+import { SettingsSecurityPage } from '../pages/SettingsSecurityPage';
 
 export const router = createBrowserRouter([
   {
@@ -56,6 +63,13 @@ export const router = createBrowserRouter([
           { path: '/global-stores', element: <GlobalStoresPage /> },
           { path: '/mall-stores', element: <MallStoresPage /> },
           { path: '/capabilities', element: <CapabilitiesPage /> },
+          { path: '/users', element: <UsersPage /> },
+          { path: '/users/:id', element: <UserDetailPage /> },
+          { path: '/roles', element: <RolesPage /> },
+          { path: '/roles/:id', element: <RoleDetailPage /> },
+          { path: '/settings/general', element: <SettingsGeneralPage /> },
+          { path: '/settings/security', element: <SettingsSecurityPage /> },
+          { path: '/account', element: <AccountPage /> },
         ],
       },
     ],

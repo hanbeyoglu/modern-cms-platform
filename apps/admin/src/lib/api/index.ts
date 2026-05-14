@@ -239,3 +239,55 @@ export type {
   CapabilityListResponse,
   TenantCapabilityListResponse,
 } from './capabilities';
+
+export {
+  apiUsersList,
+  apiUserGet,
+  apiUserCreate,
+  apiUserUpdate,
+  apiUserUpdateStatus,
+  apiUserAddMembership,
+  apiUserUpdateMembership,
+  apiUserRemoveMembership,
+  apiUserResetPassword,
+} from './users';
+export type {
+  UserStatus,
+  UserMembership,
+  CmsUser,
+  UserListResponse,
+  CreateUserPayload,
+  CreateMembershipPayload,
+  UpdateMembershipPayload,
+} from './users';
+
+export {
+  apiRolesList,
+  apiRoleGet,
+  apiRoleCreate,
+  apiRoleUpdate,
+  apiRoleUpdatePermissions,
+  apiRoleClone,
+  apiRoleDelete,
+  apiPermissionsList,
+} from './roles';
+export type {
+  RolePermission,
+  CmsRole,
+  RoleListResponse,
+  PermissionGroup,
+  PermissionsResponse,
+} from './roles';
+
+export {
+  apiSettingsGet,
+  apiSettingsUpdateGeneral,
+  apiSettingsUpdateSecurity,
+} from './settings';
+export type {
+  GeneralSettings,
+  SecuritySettings,
+  TenantSettings,
+} from './settings';
+
+export { apiUpdateProfile, apiChangePassword } from './account';

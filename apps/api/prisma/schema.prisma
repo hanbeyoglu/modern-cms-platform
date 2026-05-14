@@ -79,6 +79,7 @@ model Tenant {
 
   malls        Mall[]
   tenantUsers  TenantUser[]
+  roles        Role[]
   auditLogs    AuditLog[]
   mediaFolders MediaFolder[]
   mediaAssets  MediaAsset[]
@@ -97,6 +98,7 @@ model Tenant {
   notifications      Notification[]
   searchIndexEntries SearchIndexEntry[]
   capabilities       TenantCapability[]
+  settings           TenantSetting[]
 }
 
 model Mall {
@@ -132,15 +134,20 @@ model Mall {
 
 model Role {
   id          String   @id @default(cuid())
+  tenantId    String?
   code        String   @unique
   name        String
   description String?
   isSystem    Boolean  @default(true)
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  tenant          Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   tenantUsers     TenantUser[]
   rolePermissions RolePermission[]
+
+  @@index([tenantId])
 }
 
 model Permission {
@@ -168,6 +175,7 @@ model TenantUser {
   tenantId  String
   userId    String
   roleId    String
+  isActive  Boolean   @default(true)
   tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   role      Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
@@ -923,6 +931,22 @@ model TenantCapability {
   capability Capability @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, capabilityId])
+  @@index([tenantId])
+}
+
+// ─── Tenant Settings (Sprint 19) ─────────────────────────────────────────────
+
+model TenantSetting {
+  id        String   @id @default(cuid())
+  tenantId  String
+  key       String
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
   @@index([tenantId])
 }
 

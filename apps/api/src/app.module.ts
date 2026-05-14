@@ -29,6 +29,9 @@ import { SchedulingModule } from './scheduling/scheduling.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SearchModule } from './search/search.module';
 import { CapabilitiesModule } from './capabilities/capabilities.module';
+import { UsersModule } from './users/users.module';
+import { RolesModule } from './roles/roles.module';
+import { SettingsModule } from './settings/settings.module';
 import { VersionModule } from './version/version.module';
 
 @Module({
@@ -64,6 +67,9 @@ import { VersionModule } from './version/version.module';
     NotificationsModule,
     SearchModule,
     CapabilitiesModule,
+    UsersModule,
+    RolesModule,
+    SettingsModule,
     VersionModule,
     HealthModule,
   ],

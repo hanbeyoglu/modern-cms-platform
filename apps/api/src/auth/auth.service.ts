@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
@@ -9,6 +9,8 @@ import { AccessService } from '../access/access.service';
 import { AuditLogService } from '../audit/audit.service';
 import { CapabilitiesService } from '../capabilities/capabilities.service';
 import type { JwtPayload } from './strategies/jwt.strategy';
+import type { UpdateProfileDto } from './dto/update-profile.dto';
+import type { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -163,6 +165,48 @@ export class AuthService {
       tenants: tenants.map((t) => ({ id: t.id, name: t.name, slug: t.slug, status: t.status })),
       memberships: membershipResults,
     };
+  }
+
+  async updateProfile(user: User, dto: UpdateProfileDto) {
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { firstName: dto.firstName, lastName: dto.lastName },
+    });
+
+    await this.audit.logAction({
+      userId: user.id,
+      action: 'profile_updated',
+      entityType: 'user',
+      entityId: user.id,
+      before: { firstName: user.firstName, lastName: user.lastName },
+      after: { ...dto },
+    });
+
+    const updated = await this.prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    return this.me(updated);
+  }
+
+  async changePassword(user: User, dto: ChangePasswordDto) {
+    const ok = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!ok) throw new BadRequestException('Mevcut şifre yanlış');
+
+    const newHash = await bcrypt.hash(dto.newPassword, 12);
+    await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash: newHash } });
+
+    // Revoke all refresh tokens so existing sessions are invalidated
+    await this.prisma.refreshToken.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    await this.audit.logAction({
+      userId: user.id,
+      action: 'password_changed',
+      entityType: 'user',
+      entityId: user.id,
+    });
+
+    return { success: true };
   }
 
   private async signAccessToken(user: User): Promise<string> {

@@ -159,6 +159,46 @@ export const NAV_ITEMS: NavItem[] = [
     superAdminOnly: true,
     group: 'Platform',
   },
+  {
+    id: 'users',
+    label: 'Kullanıcılar',
+    icon: '◉',
+    href: '/users',
+    permission: 'user:read',
+    group: 'Yönetim',
+  },
+  {
+    id: 'roles',
+    label: 'Roller',
+    icon: '◈',
+    href: '/roles',
+    permission: 'role:read',
+    group: 'Yönetim',
+  },
+  {
+    id: 'settings-general',
+    label: 'Genel Ayarlar',
+    icon: '◧',
+    href: '/settings/general',
+    permission: 'settings:read',
+    group: 'Ayarlar',
+  },
+  {
+    id: 'settings-security',
+    label: 'Güvenlik',
+    icon: '◫',
+    href: '/settings/security',
+    permission: 'settings:read',
+    group: 'Ayarlar',
+  },
+  {
+    id: 'account',
+    label: 'Hesabım',
+    icon: '◌',
+    href: '/account',
+    permission: null,
+    group: 'Ayarlar',
+  },
 ];
 
-export const NAV_GROUPS = ['Analitik', 'İçerik', 'Mağazalar', 'Platform'] as const;
+export const NAV_GROUPS = ['Analitik', 'İçerik', 'Mağazalar', 'Platform', 'Yönetim', 'Ayarlar'] as const;
