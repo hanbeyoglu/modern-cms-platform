@@ -45,7 +45,9 @@ export class HealthService implements OnModuleDestroy {
         enableOfflineQueue: false,
       });
       this.redis.on('error', (err: Error) => {
-        this.logger.warn(`Health Redis client error: ${err.message}`);
+        this.logger.warn(
+          `[service=api] [op=health.redis] Health Redis client error: ${err.message}`,
+        );
       });
     }
     return this.redis;

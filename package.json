@@ -22,7 +22,10 @@
     "db:migrate:deploy": "pnpm --filter @modern-cms/api exec prisma migrate deploy",
     "db:seed": "pnpm --filter @modern-cms/api exec prisma db seed",
     "compose:config": "docker compose -f docker-compose.yml config >/dev/null && docker compose --env-file .env.production.example -f docker-compose.prod.yml config >/dev/null",
-    "smoke:prod": "bash infra/scripts/smoke-prod.sh"
+    "smoke:prod": "bash infra/scripts/smoke-prod.sh",
+    "backup:postgres": "bash infra/scripts/backup-postgres.sh",
+    "restore:postgres": "bash infra/scripts/restore-postgres.sh",
+    "backup:prune": "bash infra/scripts/prune-backups.sh"
   },
   "devDependencies": {
     "prettier": "^3.4.2",

@@ -83,9 +83,9 @@ async function bootstrap() {
   await app.listen(port);
 
   logger.log(
-    `API listening on port ${port} (NODE_ENV=${config.get<string>('NODE_ENV') ?? 'development'}, version=${version}, git=${gitSha}, buildTime=${buildTime})`,
+    `[service=api] listening port=${port} nodeEnv=${config.get<string>('NODE_ENV') ?? 'development'} version=${version} gitSha=${gitSha} buildTime=${buildTime}`,
   );
-  logger.log('Routes: GET /health, GET /health/ready, GET /version');
+  logger.log('[service=api] routes: GET /health, GET /health/ready, GET /version');
 }
 
 bootstrap().catch((err) => {

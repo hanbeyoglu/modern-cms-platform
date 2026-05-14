@@ -29,7 +29,9 @@ export class PublicCacheService implements OnModuleInit {
       });
       this.client.on('error', (err: Error) => {
         if (this.available) {
-          this.logger.warn(`Redis unavailable: ${err.message} — public cache bypassed`);
+          this.logger.warn(
+            `[service=api] [op=publicCache.redis] Redis unavailable: ${err.message} — public cache bypassed`,
+          );
         }
         this.available = false;
       });
@@ -37,7 +39,9 @@ export class PublicCacheService implements OnModuleInit {
         this.logger.debug('Redis reconnecting...');
       });
     } catch (err: unknown) {
-      this.logger.warn(`Redis init failed: ${(err as Error).message} — running without cache`);
+      this.logger.warn(
+        `[service=api] [op=publicCache.init] Redis init failed: ${(err as Error).message} — running without cache`,
+      );
     }
   }
 

@@ -1,5 +1,5 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from '@nestjs/common';
-import type { Response } from 'express';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
+import type { Request, Response } from 'express';
 
 type ErrorCode =
   | 'UNAUTHORIZED'
@@ -21,8 +21,11 @@ const HTTP_STATUS_TO_CODE: Record<number, ErrorCode> = {
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: HttpException, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
+    const req = ctx.getRequest<Request>();
     const res = ctx.getResponse<Response>();
     const status = exception.getStatus();
     const raw = exception.getResponse();
@@ -38,6 +41,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     const code: ErrorCode = HTTP_STATUS_TO_CODE[status] ?? 'INTERNAL_SERVER_ERROR';
+
+    if (status >= 500) {
+      const version = process.env.APP_VERSION ?? '0.0.0';
+      const gitSha = process.env.APP_GIT_SHA ?? 'unknown';
+      const tenantId = req.tenantId ?? req.header('x-tenant-id')?.trim();
+      const mallId = req.mallId ?? req.header('x-mall-id')?.trim();
+      const op = `${req.method} ${req.path}`;
+      this.logger.error(
+        `[service=api] [version=${version}] [gitSha=${gitSha}] [op=${op}] [tenantId=${tenantId ?? 'n/a'}] [mallId=${mallId ?? 'n/a'}] status=${status} code=${code} message=${message}`,
+      );
+    }
 
     res.status(status).json({
       success: false,

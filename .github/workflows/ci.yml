@@ -39,6 +39,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Shell script validation
+        run: |
+          set -e
+          for f in infra/scripts/*.sh; do
+            [[ -f "$f" ]] || continue
+            chmod +x "$f"
+            bash -n "$f"
+          done
+          if command -v shellcheck >/dev/null 2>&1; then
+            shellcheck infra/scripts/*.sh
+          fi
+
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.0

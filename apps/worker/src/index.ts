@@ -52,7 +52,7 @@ async function invalidatePublicBranch(
       await redis.del(...keys);
     }
   } catch (err) {
-    console.error('[worker] cache invalidate failed', err);
+    console.error('[service=worker] cache invalidate failed', err);
   }
 }
 
@@ -78,7 +78,7 @@ async function writeSystemAudit(
       },
     });
   } catch (err) {
-    console.error('[worker] audit log failed', err);
+    console.error('[service=worker] audit log failed', err);
   }
 }
 
@@ -114,7 +114,7 @@ async function writeSchedulingNotification(
       },
     });
   } catch (err) {
-    console.error('[worker] notification create failed', err);
+    console.error('[service=worker] notification create failed', err);
   }
 }
 
@@ -137,13 +137,13 @@ async function writeSchedulingFailureNotification(
       },
     });
   } catch (e) {
-    console.error('[worker] failure notification create failed', e);
+    console.error('[service=worker] failure notification create failed', e);
   }
 }
 
 async function main(): Promise<void> {
   if (!databaseUrl) {
-    console.error('[worker] DATABASE_URL is required');
+    console.error('[service=worker] DATABASE_URL is required');
     process.exit(1);
   }
 
@@ -153,21 +153,21 @@ async function main(): Promise<void> {
     enableOfflineQueue: false,
   });
 
-  redis.on('error', (err: Error) => console.error('[worker] redis error', err));
+  redis.on('error', (err: Error) => console.error('[service=worker] redis error', err));
 
   try {
     await prisma.$connect();
     await redis.ping();
     await writeHeartbeat(redis);
   } catch (err) {
-    console.error('[worker] connect failed', err);
+    console.error('[service=worker] connect failed', err);
     await prisma.$disconnect().catch(() => undefined);
     await redis.quit().catch(() => undefined);
     process.exit(1);
   }
 
   console.log(
-    `[worker] ready poll=${pollMs}ms redis=${redisUrl} db=${maskDatabaseUrl(databaseUrl)} version=${appVersion} git=${gitSha}`,
+    `[service=worker] ready poll=${pollMs}ms redis=${redisUrl} db=${maskDatabaseUrl(databaseUrl)} version=${appVersion} gitSha=${gitSha}`,
   );
 
   const tick = async (): Promise<void> => {
@@ -183,13 +183,13 @@ async function main(): Promise<void> {
       }
       if (transitions.length > 0) {
         console.log(
-          `[worker] scheduling tick at=${new Date().toISOString()} transitions=${transitions.length}`,
+          `[service=worker] schedulingTick at=${new Date().toISOString()} transitions=${transitions.length}`,
         );
       } else {
-        console.log(`[worker] tick ok at=${new Date().toISOString()}`);
+        console.log(`[service=worker] tickOk at=${new Date().toISOString()}`);
       }
     } catch (err) {
-      console.error('[worker] scheduling tick failed', err);
+      console.error('[service=worker] scheduling tick failed', err);
       await writeSchedulingFailureNotification(prisma, err);
     } finally {
       await writeHeartbeat(redis).catch(() => undefined);
@@ -211,6 +211,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error('[worker] fatal', err);
+  console.error('[service=worker] fatal', err);
   process.exit(1);
 });
