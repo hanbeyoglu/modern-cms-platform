@@ -3,6 +3,10 @@
  * dependency-injection and module wiring errors at process start.
  *
  * Requires DATABASE_URL and a reachable DB (PrismaService connects on init).
+ *
+ * Run compiled output only (`emitDecoratorMetadata` + `reflect-metadata`):
+ *   pnpm --filter @modern-cms/api build && pnpm --filter @modern-cms/api smoke:di:dist
+ * Do not use `tsx` on this entry — Nest constructor DI metadata is unreliable without `tsc`.
  */
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';

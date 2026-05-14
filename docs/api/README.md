@@ -15,6 +15,6 @@ Bu aşamada yalnızca sağlık uç noktası vardır:
 3. `pnpm --filter @modern-cms/api start`
 4. `curl -sS http://localhost:4000/health`
 
-Nest DI doğrulaması (DB gerekli): `pnpm --filter @modern-cms/api smoke:di` (kaynak, `tsx`) veya derleme sonrası `pnpm --filter @modern-cms/api smoke:di:dist` (`node dist/smoke-di.js`, prod imajlarında `tsx` gerekmez).
+Nest DI doğrulaması (DB gerekli, derlenmiş çıktı): `pnpm --filter @modern-cms/api build` ardından `pnpm --filter @modern-cms/api smoke:di` veya `smoke:di:dist` (ikisi de `node dist/smoke-di.js`). `tsx` ile `src/smoke-di.ts` çalıştırmayın — decorator metadata güvenilir değildir. Prisma seed için `tsx` kullanımı `package.json` içinde kalır.
 
 Detaylı modül incelemesi, curl script ve sınırlamalar: [SPRINT7_5.md](../SPRINT7_5.md).

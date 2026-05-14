@@ -84,8 +84,11 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: API build (Nest DI smoke prerequisite)
+        run: pnpm --filter @modern-cms/api build
+
       - name: Smoke (Nest DI + DB)
-        run: pnpm --filter @modern-cms/api exec tsx src/smoke-di.ts
+        run: pnpm --filter @modern-cms/api run smoke:di:dist
 
       - name: Docker Compose config (dev)
         run: docker compose -f docker-compose.yml config >/dev/null

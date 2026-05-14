@@ -114,7 +114,7 @@ Her iki workflow’da **concurrency** vardır: aynı dal/ref için yeni commit g
 - **Sürüm etiketi** (`v1.0.0` gibi): `git tag` + `git push origin v1.0.0` ile **Docker images** çalışır; imaj derlemesi ve compose doğrulaması burada yapılır.
 - **Manuel deneme:** Actions sekmesinden **Docker images** → *Run workflow*.
 
-`ci.yml` içeriği: `infra/scripts/*.sh` için `bash -n` + çalıştırılabilir izin; ardından `pnpm install`, `prisma validate`, `migrate deploy` (CI Postgres), `typecheck`, `build`, Nest DI smoke, Compose config doğrulaması.
+`ci.yml` içeriği: `infra/scripts/*.sh` için `bash -n` + çalıştırılabilir izin; ardından `pnpm install`, `prisma validate`, `migrate deploy` (CI Postgres), `typecheck`, `pnpm build`, açıkça `pnpm --filter @modern-cms/api build`, Nest DI smoke (`pnpm --filter @modern-cms/api run smoke:di:dist`, derlenmiş `dist/smoke-di.js` — `tsx` yok), Compose config doğrulaması.
 
 ## Geri alma (rollback)
 

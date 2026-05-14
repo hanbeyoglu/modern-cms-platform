@@ -41,7 +41,7 @@ flowchart LR
 2. `prisma validate`
 3. `prisma migrate deploy` (hizmet konteyneri Postgres)
 4. `pnpm typecheck` → `pnpm build`
-5. `tsx src/smoke-di.ts` (Nest modül grafiği + Prisma bağlantısı)
+5. `pnpm --filter @modern-cms/api build` ve `pnpm --filter @modern-cms/api run smoke:di:dist` (`node dist/smoke-di.js` — Nest DI metadata için `tsx` kullanılmaz)
 6. `docker compose … config` (dev + prod örnek env ile sözdizimi)
 
 ## Docker workflow (`.github/workflows/docker.yml`)

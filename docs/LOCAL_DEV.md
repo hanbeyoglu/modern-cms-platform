@@ -71,4 +71,4 @@ Redis:
 - **Port çakışması:** Postgres 5432, Redis 6379, API 4000, Vite 5173 kullanır; bu portların boş olduğundan emin olun.
 - **Docker servisleri:** `docker compose ps` ile durumu kontrol edin; durdurmak için `docker compose stop postgres redis` kullanabilirsiniz.
 - **`Cannot find module` / eksik `dist`:** `pnpm dev` zaten `tsconfig*.tsbuildinfo` siliyor; hâlâ sorun varsa `apps/api` içinde `rm -rf dist` deyip `pnpm --filter @modern-cms/api dev` ile yeniden deneyin.
-- **Constructor’da `undefined` (ör. `ConfigService`):** API’yi `tsx` ile `src/main.ts` üzerinden çalıştırmayın; yerel için yalnızca `nest start --watch` kullanın (yukarıdaki komut).
+- **Constructor’da `undefined` (ör. `ConfigService`):** API’yi `tsx` ile `src/main.ts` üzerinden çalıştırmayın; yerel için yalnızca `nest start --watch` kullanın (yukarıdaki komut). Nest DI duman testi (`smoke-di`) için de **`tsx` kullanmayın**; önce `pnpm --filter @modern-cms/api build`, ardından `pnpm --filter @modern-cms/api smoke:di:dist` (`node dist/smoke-di.js`).

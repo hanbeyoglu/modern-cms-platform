@@ -67,23 +67,21 @@ Ortam değişkenleri: `API_BASE_URL`, `SMOKE_EMAIL`, `SMOKE_PASSWORD`.
 Veritabanına bağlanır (`PrismaService.$connect`); **çalışan Postgres** ve geçerli `DATABASE_URL` gerekir.
 
 ```bash
-# apps/api içinden
-pnpm smoke:di
+# apps/api içinden (önce build)
 pnpm run build && pnpm smoke:di:dist
 
 # monorepo kökünden
-pnpm --filter @modern-cms/api smoke:di
 pnpm --filter @modern-cms/api build && pnpm --filter @modern-cms/api smoke:di:dist
 ```
 
-Nest `createApplicationContext` ile HTTP dinlemeden tüm modül grafiği oluşturulur; eksik provider / import hataları burada patlar.
+Nest `createApplicationContext` ile HTTP dinlemeden tüm modül grafiği oluşturulur; eksik provider / import hataları burada patlar. **`tsx` ile `src/smoke-di.ts` çalıştırmayın** — Nest decorator metadata güvenilir değildir (`JwtStrategy` vb. `undefined`).
 
 ## `package.json` scriptleri (`@modern-cms/api`)
 
 | Script | Açıklama |
 |--------|----------|
-| `smoke:di` | `tsx src/smoke-di.ts` — kaynaktan DI + modül bootstrap |
-| `smoke:di:dist` | `node dist/smoke-di.js` — `build` sonrası; `tsx` gerekmez |
+| `smoke:di` | `node dist/smoke-di.js` — önce `pnpm run build` (Nest `tsc` metadata) |
+| `smoke:di:dist` | `node dist/smoke-di.js` — `build` sonrası; CI’da kullanılır |
 | `smoke:start` | `node dist/main.js` — derleme sonrası gerçek süreç (Ctrl+C ile durdurun) |
 
 ## Bilinen sınırlamalar
@@ -100,4 +98,4 @@ pnpm --filter @modern-cms/api build
 pnpm --filter @modern-cms/api smoke:di:dist
 ```
 
-CI’da `smoke:di` için Postgres servis adımı eklenmelidir.
+CI’da Postgres servis adımı ve `pnpm --filter @modern-cms/api build` sonrası `smoke:di:dist` kullanılır (`.github/workflows/ci.yml`).
