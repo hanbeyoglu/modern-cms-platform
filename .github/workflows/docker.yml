@@ -1,15 +1,14 @@
-name: Docker
+name: Docker images
 
 on:
   workflow_dispatch:
   push:
-    branches: [main]
-    paths:
-      - "infra/docker/**"
-      - "docker-compose*.yml"
-      - "apps/**"
-      - "packages/**"
-      - "pnpm-lock.yaml"
+    tags:
+      - "v*"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-images:

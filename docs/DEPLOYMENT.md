@@ -99,9 +99,22 @@ Harici izleme veya cron ile önerilen koşullar: `/health/ready` ≠ 200; DB vey
 - Runbook: `docs/RUNBOOK.md`.
 - Log kuralları ve ileride Sentry: `docs/LOGGING.md`.
 
-## CI
+## CI ve Docker (GitHub Actions)
 
-GitHub Actions `ci.yml`: shell script `bash -n` + çalıştırılabilir izin; PATH’te `shellcheck` varsa ek doğrulama; ardından kurulum, `prisma validate`, `migrate deploy` (CI Postgres), `typecheck`, `build`, Nest DI smoke, Compose config doğrulaması.
+| Workflow dosyası | Görünen ad | Ne zaman çalışır |
+|------------------|------------|------------------|
+| `.github/workflows/ci.yml` | **Build and test** | `main` dalına **push**; tüm **pull request**’ler |
+| `.github/workflows/docker.yml` | **Docker images** | **Elle** (`workflow_dispatch`); `v*` biçiminde **sürüm etiketi** push’u (örn. `v1.2.0`) |
+
+Her iki workflow’da **concurrency** vardır: aynı dal/ref için yeni commit gelince önceki çalışma iptal edilir; gereksiz e-posta ve kuyruk gürültüsü azalır.
+
+### Sürüm / imaj akışı
+
+- **Normal commit:** `main` dışındaki dallara doğrudan **push** CI başlatmaz. **Pull request** açıldığında veya güncellendiğinde **Build and test** çalışır. `main`’e merge sonrası push yalnızca `main` için CI tetiklenir. **Docker images** bu akışta çalışmaz.
+- **Sürüm etiketi** (`v1.0.0` gibi): `git tag` + `git push origin v1.0.0` ile **Docker images** çalışır; imaj derlemesi ve compose doğrulaması burada yapılır.
+- **Manuel deneme:** Actions sekmesinden **Docker images** → *Run workflow*.
+
+`ci.yml` içeriği: `infra/scripts/*.sh` için `bash -n` + çalıştırılabilir izin; ardından `pnpm install`, `prisma validate`, `migrate deploy` (CI Postgres), `typecheck`, `build`, Nest DI smoke, Compose config doğrulaması.
 
 ## Geri alma (rollback)
 

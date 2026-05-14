@@ -1,8 +1,14 @@
-name: CI
+name: Build and test
 
 on:
-  push:
   pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-smoke:
@@ -41,15 +47,17 @@ jobs:
 
       - name: Shell script validation
         run: |
-          set -e
-          for f in infra/scripts/*.sh; do
-            [[ -f "$f" ]] || continue
+          set -euo pipefail
+          shopt -s nullglob
+          scripts=(infra/scripts/*.sh)
+          if [[ ${#scripts[@]} -eq 0 ]]; then
+            echo "No shell scripts under infra/scripts/"
+            exit 1
+          fi
+          for f in "${scripts[@]}"; do
             chmod +x "$f"
             bash -n "$f"
           done
-          if command -v shellcheck >/dev/null 2>&1; then
-            shellcheck infra/scripts/*.sh
-          fi
 
       - uses: pnpm/action-setup@v4
         with:

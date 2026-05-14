@@ -48,7 +48,7 @@ flowchart LR
 
 - API, admin, worker imajlarını **push etmeden** derler.
 - Compose dosyalarını doğrular.
-- `main` ve `infra/docker/**` yollarında tetiklenir (ayrıca `workflow_dispatch`).
+- Tetikleme: **`workflow_dispatch`** ve **`v*`** sürüm etiketi push’u (güncel davranış için `docs/DEPLOYMENT.md`).
 
 ## Ortam stratejisi
 
