@@ -1,4 +1,4 @@
-import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class UpdateRoleDto {
   @IsOptional()
@@ -25,5 +25,3 @@ export class CloneRoleDto {
   @IsString()
   name!: string;
 }
-
-import { IsNotEmpty } from 'class-validator';
