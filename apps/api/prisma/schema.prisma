@@ -828,6 +828,10 @@ model Locale {
   nativeName String
   isDefault  Boolean  @default(false)
   isActive   Boolean  @default(true)
+  /// Display / form tab order within the tenant (Sprint 21).
+  sortOrder  Int      @default(0)
+  /// Right-to-left UI for this locale (e.g. Arabic).
+  rtl        Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -836,6 +840,7 @@ model Locale {
 
   @@unique([tenantId, code])
   @@index([tenantId])
+  @@index([tenantId, sortOrder])
 }
 
 model LocalizedContent {
@@ -936,6 +941,8 @@ model AnalyticsEvent {
   userAgent     String?
   deviceType    String?
   ipHash        String?
+  /// BCP-47-ish language tag when the client reports locale (Sprint 21).
+  locale        String?
   metadataJson  Json?
   createdAt     DateTime             @default(now())
 
@@ -946,6 +953,7 @@ model AnalyticsEvent {
   @@index([entityType, entityId])
   @@index([eventType])
   @@index([createdAt])
+  @@index([tenantId, locale])
 }
 
 // ─── Capability & Package System (Sprint 16) ─────────────────────────────────

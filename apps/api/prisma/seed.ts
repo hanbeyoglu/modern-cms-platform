@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { OFFICIAL_SUPPORTED_LANGUAGES } from '../src/locales/supported-languages';
 
 const prisma = new PrismaClient();
 
@@ -602,20 +603,34 @@ async function main(): Promise<void> {
     });
   }
 
-  // ─── Default locales for demo tenants ────────────────────────────────────────
-  const defaultLocales: Array<{ tenantId: string; code: string; name: string; nativeName: string; isDefault: boolean }> = [
-    { tenantId: tenantEmaar.id, code: 'tr', name: 'Turkish', nativeName: 'Türkçe', isDefault: true },
-    { tenantId: tenantEmaar.id, code: 'en', name: 'English', nativeName: 'English', isDefault: false },
-    { tenantId: tenantMallGroup.id, code: 'tr', name: 'Turkish', nativeName: 'Türkçe', isDefault: true },
-    { tenantId: tenantMallGroup.id, code: 'en', name: 'English', nativeName: 'English', isDefault: false },
-  ];
-
-  for (const loc of defaultLocales) {
-    await prisma.locale.upsert({
-      where: { tenantId_code: { tenantId: loc.tenantId, code: loc.code } },
-      update: { name: loc.name, nativeName: loc.nativeName, isDefault: loc.isDefault, isActive: true },
-      create: { tenantId: loc.tenantId, code: loc.code, name: loc.name, nativeName: loc.nativeName, isDefault: loc.isDefault, isActive: true },
-    });
+  // ─── Official locale catalog per demo tenant (Sprint 21) ───────────────────
+  for (const tenant of [tenantEmaar, tenantMallGroup]) {
+    for (let i = 0; i < OFFICIAL_SUPPORTED_LANGUAGES.length; i++) {
+      const row = OFFICIAL_SUPPORTED_LANGUAGES[i]!;
+      const isActive = row.code === 'tr' || row.code === 'en';
+      const isDefault = row.code === 'tr';
+      await prisma.locale.upsert({
+        where: { tenantId_code: { tenantId: tenant.id, code: row.code } },
+        update: {
+          name: row.name,
+          nativeName: row.nativeName,
+          rtl: row.rtl,
+          sortOrder: i,
+          isDefault,
+          isActive,
+        },
+        create: {
+          tenantId: tenant.id,
+          code: row.code,
+          name: row.name,
+          nativeName: row.nativeName,
+          isDefault,
+          isActive,
+          rtl: row.rtl,
+          sortOrder: i,
+        },
+      });
+    }
   }
 
   console.log('Seed complete.', {

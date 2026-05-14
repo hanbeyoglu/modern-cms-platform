@@ -62,6 +62,7 @@ export type {
   CmsEvent,
   EventListResponse,
   CreateEventPayload,
+  EventPublishResponse,
 } from './events';
 
 export {
@@ -176,6 +177,7 @@ export {
   apiLocaleUpdate,
   apiLocaleDeactivate,
   apiLocaleSetDefault,
+  apiLocalesReorder,
 } from './locales';
 export type { CmsLocale, CreateLocalePayload, UpdateLocalePayload } from './locales';
 

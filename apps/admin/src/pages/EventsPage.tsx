@@ -7,7 +7,7 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
-import { TranslationPanel } from '../components/TranslationPanel';
+import { MultilingualContentFields, EVENT_I18N_FIELDS } from '../components/MultilingualContentFields';
 import { Button } from '../components/ui/Button';
 import {
   apiEventArchive,
@@ -17,11 +17,18 @@ import {
   apiEventUpdate,
   apiEventsList,
   apiMediaList,
+  apiLocalesList,
+  apiTranslationUpsert,
+  apiTranslationDelete,
+  apiTranslationsList,
+  type CmsLocale,
   type CmsEvent,
   type ContentStatus,
   type CreateEventPayload,
   type MediaAsset,
 } from '../lib/api';
+
+import { usePermission } from '../hooks/usePermission';
 
 const STATUS_STYLE: Record<ContentStatus, { bg: string; color: string; label: string }> = {
   DRAFT: { bg: '#f3f4f6', color: '#374151', label: 'Taslak' },
@@ -121,6 +128,7 @@ function formToPayload(f: FormState): CreateEventPayload {
 
 export function EventsPage() {
   const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { can } = usePermission();
   const [events, setEvents] = useState<CmsEvent[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -133,6 +141,11 @@ export function EventsPage() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
+  const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
+  const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
+  const [i18nDirty, setI18nDirty] = useState(false);
+  const [eventFormDirty, setEventFormDirty] = useState(false);
 
   const tenantId = activeTenantId;
   const mallId = activeMallId ?? undefined;
@@ -175,10 +188,66 @@ export function EventsPage() {
     void loadMedia();
   }, [loadMedia]);
 
+  useEffect(() => {
+    if (!showForm || !accessToken || !tenantId) {
+      setTenantLocales([]);
+      setContentLocaleTab(null);
+      setLocaleDrafts({});
+      return;
+    }
+    void (async () => {
+      try {
+        const locs = await apiLocalesList(accessToken, tenantId);
+        setTenantLocales(locs);
+        const act = locs.filter((l) => l.isActive);
+        const def = locs.find((l) => l.isDefault);
+        setContentLocaleTab((prev) => {
+          if (prev && act.some((l) => l.id === prev)) return prev;
+          return def?.id ?? act[0]?.id ?? null;
+        });
+        if (editing) {
+          const tr = await apiTranslationsList(accessToken, tenantId, {
+            entityType: 'EVENT',
+            entityId: editing.id,
+          });
+          const drafts: Record<string, Record<string, string>> = {};
+          for (const loc of act) {
+            if (loc.id === def?.id) continue;
+            drafts[loc.id] = { title: '', shortDescription: '', description: '', buttonText: '' };
+            for (const f of EVENT_I18N_FIELDS) {
+              drafts[loc.id][f] =
+                tr.find((row) => row.localeId === loc.id && row.field === f)?.value ?? '';
+            }
+          }
+          setLocaleDrafts(drafts);
+          setI18nDirty(false);
+        } else {
+          setLocaleDrafts({});
+          setI18nDirty(false);
+        }
+      } catch {
+        setTenantLocales([]);
+        setLocaleDrafts({});
+      }
+    })();
+  }, [showForm, editing?.id, accessToken, tenantId]);
+
+  useEffect(() => {
+    if (!showForm || (!i18nDirty && !eventFormDirty)) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [showForm, i18nDirty, eventFormDirty]);
+
   function openCreate() {
     setEditing(null);
     setForm(EMPTY);
     setFormError(null);
+    setLocaleDrafts({});
+    setI18nDirty(false);
+    setEventFormDirty(false);
     setShowForm(true);
   }
 
@@ -186,6 +255,7 @@ export function EventsPage() {
     setEditing(e);
     setForm(evToForm(e));
     setFormError(null);
+    setEventFormDirty(false);
     setShowForm(true);
   }
 
@@ -193,7 +263,46 @@ export function EventsPage() {
     setShowForm(false);
     setEditing(null);
     setFormError(null);
+    setLocaleDrafts({});
+    setTenantLocales([]);
+    setContentLocaleTab(null);
+    setI18nDirty(false);
+    setEventFormDirty(false);
   }
+
+  const flushEventTranslations = useCallback(
+    async (eventId: string) => {
+      if (!accessToken || !tenantId || !can('translation:create')) return;
+      const def = tenantLocales.find((l) => l.isDefault);
+      const tr = await apiTranslationsList(accessToken, tenantId, {
+        entityType: 'EVENT',
+        entityId: eventId,
+      });
+      const idByKey = new Map(tr.map((t) => [`${t.localeId}:${t.field}`, t.id] as const));
+      for (const loc of tenantLocales.filter((l) => l.isActive)) {
+        if (!def || loc.id === def.id) continue;
+        const slice = localeDrafts[loc.id] ?? {};
+        for (const field of EVENT_I18N_FIELDS) {
+          const value = (slice[field] ?? '').trim();
+          const prevId = idByKey.get(`${loc.id}:${field}`);
+          if (!value) {
+            if (prevId && can('translation:delete')) {
+              await apiTranslationDelete(accessToken, tenantId, prevId);
+            }
+            continue;
+          }
+          await apiTranslationUpsert(accessToken, tenantId, {
+            localeCode: loc.code,
+            entityType: 'EVENT',
+            entityId: eventId,
+            field,
+            value,
+          });
+        }
+      }
+    },
+    [accessToken, tenantId, tenantLocales, localeDrafts, can],
+  );
 
   async function handleSubmit() {
     if (!accessToken || !tenantId || !form.title.trim()) {
@@ -219,14 +328,19 @@ export function EventsPage() {
     setFormError(null);
     try {
       const payload: CreateEventPayload = { ...formToPayload(form), dynamicFieldsJson };
+      let eventId: string;
       if (editing) {
         const updated = await apiEventUpdate(accessToken, tenantId, editing.id, payload, mallId);
+        eventId = updated.id;
         setEvents((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+        await flushEventTranslations(eventId);
         toast.success('Etkinlik güncellendi');
       } else {
         const created = await apiEventCreate(accessToken, tenantId, payload, mallId);
+        eventId = created.id;
         setEvents((prev) => [created, ...prev]);
         setTotal((t) => t + 1);
+        await flushEventTranslations(eventId);
         toast.success('Etkinlik oluşturuldu');
       }
       cancelForm();
@@ -253,9 +367,19 @@ export function EventsPage() {
   async function handlePublish(id: string) {
     if (!accessToken || !tenantId) return;
     try {
-      const updated = await apiEventPublish(accessToken, tenantId, id, mallId);
+      const { event: updated, localizationWarnings } = await apiEventPublish(
+        accessToken,
+        tenantId,
+        id,
+        mallId,
+      );
       setEvents((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
       toast.success('Etkinlik yayınlandı');
+      if (localizationWarnings.length > 0) {
+        toast.message('Yerelleştirme uyarıları (yayın engellenmedi)', {
+          description: localizationWarnings.slice(0, 6).join('\n'),
+        });
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Yayınlanamadı');
     }
@@ -347,19 +471,25 @@ export function EventsPage() {
           {formError && <p style={{ color: '#b91c1c' }}>{formError}</p>}
           <div style={{ display: 'grid', gap: 10, maxWidth: 520 }}>
             <div>
-              <label style={labelStyle}>Başlık *</label>
-              <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-            </div>
-            <div>
               <label style={labelStyle}>Slug (boşsa başlıktan üretilir)</label>
-              <input style={inputStyle} value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
+              <input
+                style={inputStyle}
+                value={form.slug}
+                onChange={(e) => {
+                  setForm({ ...form, slug: e.target.value });
+                  setEventFormDirty(true);
+                }}
+              />
             </div>
             <div>
               <label style={labelStyle}>Kapak medya</label>
               <select
                 style={inputStyle}
                 value={form.coverMediaId}
-                onChange={(e) => setForm({ ...form, coverMediaId: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, coverMediaId: e.target.value });
+                  setEventFormDirty(true);
+                }}
               >
                 <option value="">—</option>
                 {mediaAssets.map((a) => (
@@ -376,7 +506,10 @@ export function EventsPage() {
                   type="datetime-local"
                   style={inputStyle}
                   value={form.startAt}
-                  onChange={(e) => setForm({ ...form, startAt: e.target.value })}
+                  onChange={(e) => {
+                    setForm({ ...form, startAt: e.target.value });
+                    setEventFormDirty(true);
+                  }}
                 />
               </div>
               <div style={{ flex: 1 }}>
@@ -385,52 +518,154 @@ export function EventsPage() {
                   type="datetime-local"
                   style={inputStyle}
                   value={form.endAt}
-                  onChange={(e) => setForm({ ...form, endAt: e.target.value })}
+                  onChange={(e) => {
+                    setForm({ ...form, endAt: e.target.value });
+                    setEventFormDirty(true);
+                  }}
                 />
               </div>
             </div>
             <div>
               <label style={labelStyle}>Konum</label>
-              <input style={inputStyle} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+              <input
+                style={inputStyle}
+                value={form.location}
+                onChange={(e) => {
+                  setForm({ ...form, location: e.target.value });
+                  setEventFormDirty(true);
+                }}
+              />
             </div>
             <div>
               <label style={labelStyle}>Kategori</label>
-              <input style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
-            </div>
-            <div>
-              <label style={labelStyle}>Kısa açıklama</label>
               <input
                 style={inputStyle}
-                value={form.shortDescription}
-                onChange={(e) => setForm({ ...form, shortDescription: e.target.value })}
+                value={form.category}
+                onChange={(e) => {
+                  setForm({ ...form, category: e.target.value });
+                  setEventFormDirty(true);
+                }}
               />
             </div>
-            <div>
-              <label style={labelStyle}>Açıklama</label>
-              <textarea
-                style={{ ...inputStyle, minHeight: 72 }}
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+            {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
+              <MultilingualContentFields
+                locales={tenantLocales}
+                activeLocaleId={contentLocaleTab}
+                onTabChange={(id) => setContentLocaleTab(id)}
+                defaultLocaleId={tenantLocales.find((l) => l.isDefault)?.id}
+                getValue={(localeId, field) => {
+                  const defId = tenantLocales.find((l) => l.isDefault)?.id;
+                  if (defId && localeId === defId) {
+                    return String(form[field as keyof FormState] ?? '');
+                  }
+                  return localeDrafts[localeId]?.[field] ?? '';
+                }}
+                setValue={(localeId, field, v) => {
+                  const defId = tenantLocales.find((l) => l.isDefault)?.id;
+                  if (defId && localeId === defId) {
+                    setForm((prev) => ({ ...prev, [field]: v }));
+                    setEventFormDirty(true);
+                    return;
+                  }
+                  setLocaleDrafts((d) => ({
+                    ...d,
+                    [localeId]: { ...d[localeId], [field]: v },
+                  }));
+                  setI18nDirty(true);
+                }}
+                onCopyFromDefault={(targetId) => {
+                  setLocaleDrafts((d) => ({
+                    ...d,
+                    [targetId]: {
+                      title: form.title,
+                      shortDescription: form.shortDescription,
+                      description: form.description,
+                      buttonText: form.buttonText,
+                    },
+                  }));
+                  setI18nDirty(true);
+                }}
+                disabled={saving}
               />
-            </div>
-            <div>
-              <label style={labelStyle}>Buton metni</label>
-              <input style={inputStyle} value={form.buttonText} onChange={(e) => setForm({ ...form, buttonText: e.target.value })} />
-            </div>
+            ) : (
+              <>
+                <div>
+                  <label style={labelStyle}>Başlık *</label>
+                  <input
+                    style={inputStyle}
+                    value={form.title}
+                    onChange={(e) => {
+                      setForm({ ...form, title: e.target.value });
+                      setEventFormDirty(true);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Kısa açıklama</label>
+                  <input
+                    style={inputStyle}
+                    value={form.shortDescription}
+                    onChange={(e) => {
+                      setForm({ ...form, shortDescription: e.target.value });
+                      setEventFormDirty(true);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Açıklama</label>
+                  <textarea
+                    style={{ ...inputStyle, minHeight: 72 }}
+                    value={form.description}
+                    onChange={(e) => {
+                      setForm({ ...form, description: e.target.value });
+                      setEventFormDirty(true);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Buton metni</label>
+                  <input
+                    style={inputStyle}
+                    value={form.buttonText}
+                    onChange={(e) => {
+                      setForm({ ...form, buttonText: e.target.value });
+                      setEventFormDirty(true);
+                    }}
+                  />
+                </div>
+              </>
+            )}
             <div>
               <label style={labelStyle}>Link URL</label>
-              <input style={inputStyle} value={form.linkUrl} onChange={(e) => setForm({ ...form, linkUrl: e.target.value })} />
+              <input
+                style={inputStyle}
+                value={form.linkUrl}
+                onChange={(e) => {
+                  setForm({ ...form, linkUrl: e.target.value });
+                  setEventFormDirty(true);
+                }}
+              />
             </div>
             <div>
               <label style={labelStyle}>Sıra</label>
-              <input style={inputStyle} value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: e.target.value })} />
+              <input
+                style={inputStyle}
+                value={form.sortOrder}
+                onChange={(e) => {
+                  setForm({ ...form, sortOrder: e.target.value });
+                  setEventFormDirty(true);
+                }}
+              />
             </div>
             <div>
               <label style={labelStyle}>Durum</label>
               <select
                 style={inputStyle}
                 value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value as ContentStatus })}
+                onChange={(e) => {
+                  setForm({ ...form, status: e.target.value as ContentStatus });
+                  setEventFormDirty(true);
+                }}
               >
                 <option value="DRAFT">Taslak</option>
                 <option value="SCHEDULED">Zamanlanmış</option>
@@ -443,7 +678,10 @@ export function EventsPage() {
               <textarea
                 style={{ ...inputStyle, minHeight: 100, fontFamily: 'monospace' }}
                 value={form.dynamicJson}
-                onChange={(e) => setForm({ ...form, dynamicJson: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, dynamicJson: e.target.value });
+                  setEventFormDirty(true);
+                }}
                 placeholder='{"sponsor":"..."}'
               />
             </div>
@@ -456,14 +694,6 @@ export function EventsPage() {
               İptal
             </button>
           </div>
-          {editing && (
-            <TranslationPanel
-              entityType="EVENT"
-              entityId={editing.id}
-              fields={['title', 'shortDescription', 'description', 'buttonText']}
-              title="Çeviriler"
-            />
-          )}
         </div>
       )}
 

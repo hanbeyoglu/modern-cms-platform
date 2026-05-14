@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Mall, Tenant } from '@prisma/client';
+import type { Locale, Mall, Tenant } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TranslationResolverService } from '../translation-resolver/translation-resolver.service';
 
@@ -9,8 +9,8 @@ export interface PublicContext {
   tenant: Pick<Tenant, 'id' | 'name' | 'slug' | 'status'>;
   mall: Pick<Mall, 'id' | 'name' | 'slug' | 'status'> | undefined;
   // null when the tenant has no active locale configured
-  locale: { id: string; code: string } | null;
-  defaultLocale: { id: string; code: string } | null;
+  locale: { id: string; code: string; rtl: boolean } | null;
+  defaultLocale: { id: string; code: string; rtl: boolean } | null;
 }
 
 @Injectable()
@@ -62,13 +62,15 @@ export class PublicContextService {
         ? resolved
         : await this.resolver.getDefaultLocale(tenant.id);
 
+    const toCtx = (l: Locale | null) => (l ? { id: l.id, code: l.code, rtl: l.rtl } : null);
+
     return {
       tenantId: tenant.id,
       mallId: mall?.id,
       tenant,
       mall,
-      locale: resolved ? { id: resolved.id, code: resolved.code } : null,
-      defaultLocale: defaultLocale ? { id: defaultLocale.id, code: defaultLocale.code } : null,
+      locale: toCtx(resolved),
+      defaultLocale: toCtx(defaultLocale),
     };
   }
 }

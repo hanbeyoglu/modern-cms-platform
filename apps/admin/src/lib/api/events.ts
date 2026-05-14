@@ -148,13 +148,18 @@ export async function apiEventDelete(
   });
 }
 
+export type EventPublishResponse = {
+  event: CmsEvent;
+  localizationWarnings: string[];
+};
+
 export async function apiEventPublish(
   token: string,
   tenantId: string,
   id: string,
   mallId?: string,
-): Promise<CmsEvent> {
-  return request<CmsEvent>(`/events/${id}/publish`, {
+): Promise<EventPublishResponse> {
+  return request<EventPublishResponse>(`/events/${id}/publish`, {
     method: 'POST',
     token,
     tenantId,

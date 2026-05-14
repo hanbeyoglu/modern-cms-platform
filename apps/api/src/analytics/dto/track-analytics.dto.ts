@@ -36,6 +36,11 @@ export class TrackAnalyticsDto {
   deviceType?: string | null;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(16)
+  locale?: string | null;
+
+  @IsOptional()
   @IsObject()
   metadataJson?: Record<string, unknown> | null;
 }

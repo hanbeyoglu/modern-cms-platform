@@ -88,15 +88,6 @@ export const NAV_ITEMS: NavItem[] = [
     group: 'İçerik',
   },
   {
-    id: 'locales',
-    label: 'Diller',
-    icon: '◌',
-    href: '/locales',
-    permission: 'locale:read',
-    capability: 'localization',
-    group: 'İçerik',
-  },
-  {
     id: 'cinemas',
     label: 'Sinemalar',
     icon: '▶',
@@ -206,6 +197,15 @@ export const NAV_ITEMS: NavItem[] = [
     icon: '◫',
     href: '/settings/security',
     permission: 'settings:read',
+    group: 'Ayarlar',
+  },
+  {
+    id: 'settings-localization',
+    label: 'Yerelleştirme',
+    icon: '◌',
+    href: '/settings/localization',
+    permission: 'locale:read',
+    capability: 'localization',
     group: 'Ayarlar',
   },
   {

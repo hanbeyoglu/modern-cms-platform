@@ -154,6 +154,12 @@ export interface PublicLocationInfo {
   socialLinks: unknown;
 }
 
+export interface PublicSiteSupportedLocale {
+  code: string;
+  name: string;
+  rtl: boolean;
+}
+
 export interface PublicSiteConfig {
   tenantId: string;
   tenantName: string;
@@ -162,4 +168,9 @@ export interface PublicSiteConfig {
   mallName: string | null;
   mallSlug: string | null;
   location: PublicLocationInfo | null;
+  /** Enabled tenant locales for public language switchers (Sprint 21). */
+  supportedLocales: PublicSiteSupportedLocale[];
+  defaultLocale: string | null;
+  activeLocale: string | null;
+  rtl: boolean;
 }

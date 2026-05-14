@@ -47,12 +47,20 @@ export class PublicController {
   async getSiteConfig(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
+    @Query('locale') locale: string | undefined,
   ): Promise<PublicSiteConfig> {
-    const context = await this.ctx.resolve(tenantId, mallId);
-    const cacheKey = `public:${context.tenantId}:${context.mallId ?? 'none'}:site-config`;
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:site-config` + lseg(context.locale?.code);
 
     const cached = await this.cache.get<PublicSiteConfig>(cacheKey);
     if (cached) return cached;
+
+    const supportedLocalesRows = await this.prisma.locale.findMany({
+      where: { tenantId: context.tenantId, isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
+      select: { code: true, name: true, nativeName: true, rtl: true },
+    });
 
     let location: PublicSiteConfig['location'] = null;
     if (context.mallId) {
@@ -105,6 +113,14 @@ export class PublicController {
       mallName: context.mall?.name ?? null,
       mallSlug: context.mall?.slug ?? null,
       location,
+      supportedLocales: supportedLocalesRows.map((l) => ({
+        code: l.code,
+        name: l.nativeName,
+        rtl: l.rtl,
+      })),
+      defaultLocale: context.defaultLocale?.code ?? null,
+      activeLocale: context.locale?.code ?? context.defaultLocale?.code ?? null,
+      rtl: context.locale?.rtl ?? false,
     };
 
     await this.cache.set(cacheKey, result, TTL.siteConfig);

@@ -92,6 +92,7 @@ export class AnalyticsService {
         userAgent: ua,
         deviceType: dto.deviceType ?? null,
         ipHash,
+        locale: dto.locale?.trim() ? dto.locale.trim().toLowerCase().slice(0, 16) : null,
         metadataJson:
           dto.metadataJson === undefined || dto.metadataJson === null
             ? Prisma.JsonNull

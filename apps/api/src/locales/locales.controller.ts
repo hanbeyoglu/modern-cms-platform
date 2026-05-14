@@ -24,6 +24,7 @@ import { LocalesService } from './locales.service';
 import { CreateLocaleDto } from './dto/create-locale.dto';
 import { UpdateLocaleDto } from './dto/update-locale.dto';
 import { ListLocalesDto } from './dto/list-locales.dto';
+import { ReorderLocalesDto } from './dto/reorder-locales.dto';
 
 @Controller('locales')
 @RequireTenantContext()
@@ -42,6 +43,12 @@ export class LocalesController {
   @RequirePermission('locale:create')
   create(@Body() dto: CreateLocaleDto, @CurrentUser() user: User, @Req() req: Request) {
     return this.locales.create(dto, user, req.tenantId!);
+  }
+
+  @Patch('reorder')
+  @RequirePermission('locale:update')
+  reorder(@Body() dto: ReorderLocalesDto, @CurrentUser() user: User, @Req() req: Request) {
+    return this.locales.reorder(dto.orderedIds, user, req.tenantId!);
   }
 
   @Patch(':id')

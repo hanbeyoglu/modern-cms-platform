@@ -15,6 +15,7 @@ import {
   apiLocaleSetDefault,
   apiLocaleUpdate,
   apiLocalesList,
+  apiLocalesReorder,
   type CmsLocale,
   type CreateLocalePayload,
 } from '../lib/api';
@@ -57,6 +58,7 @@ export function LocalesPage() {
   const [editing, setEditing] = useState<CmsLocale | null>(null);
   const [editForm, setEditForm] = useState({ name: '', nativeName: '', isActive: true });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   const tenantId = activeTenantId;
 
@@ -145,6 +147,30 @@ export function LocalesPage() {
     }
   }
 
+  async function handleMove(loc: CmsLocale, delta: number) {
+    if (!accessToken || !tenantId) return;
+    const sorted = [...items].sort((a, b) => a.sortOrder - b.sortOrder || a.code.localeCompare(b.code));
+    const idx = sorted.findIndex((x) => x.id === loc.id);
+    const j = idx + delta;
+    if (idx < 0 || j < 0 || j >= sorted.length) return;
+    const next = [...sorted];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setReordering(true);
+    try {
+      const updated = await apiLocalesReorder(
+        accessToken,
+        tenantId,
+        next.map((x) => x.id),
+      );
+      setItems(updated);
+      toast.success('Sıra güncellendi');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Sıra güncellenemedi');
+    } finally {
+      setReordering(false);
+    }
+  }
+
   async function handleSetDefault(loc: CmsLocale) {
     if (!accessToken || !tenantId) return;
     try {
@@ -159,7 +185,7 @@ export function LocalesPage() {
   if (!tenantId) {
     return (
       <PageContainer>
-        <PageHeader title="Diller" />
+        <PageHeader title="Yerelleştirme" />
         <EmptyState title="Tenant seçilmedi" description="Dil yönetimi için üstten bir tenant seçin." />
       </PageContainer>
     );
@@ -168,7 +194,7 @@ export function LocalesPage() {
   if (!can('locale:read')) {
     return (
       <PageContainer>
-        <PageHeader title="Diller" />
+        <PageHeader title="Yerelleştirme" />
         <EmptyState title="Erişim yok" description="Bu sayfa için locale:read yetkisi gerekir." />
       </PageContainer>
     );
@@ -177,8 +203,8 @@ export function LocalesPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Diller"
-        meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{items.length} dil</span>}
+        title="Yerelleştirme"
+        meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{items.length} dil tanımı</span>}
         action={
           can('locale:create') ? (
             <Button variant="primary" onClick={() => setShowCreate((v) => !v)}>
@@ -261,19 +287,50 @@ export function LocalesPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}>
+                <th style={{ padding: 8 }}>Sıra</th>
                 <th style={{ padding: 8 }}>Kod</th>
                 <th style={{ padding: 8 }}>Ad</th>
                 <th style={{ padding: 8 }}>Yerel ad</th>
+                <th style={{ padding: 8 }}>RTL</th>
                 <th style={{ padding: 8 }}>Durum</th>
                 <th style={{ padding: 8 }}>İşlemler</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((loc) => (
+              {[...items]
+                .sort((a, b) => a.sortOrder - b.sortOrder || a.code.localeCompare(b.code))
+                .map((loc) => (
                 <tr key={loc.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <td style={{ padding: 8 }}>
+                    {can('locale:update') ? (
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button
+                          type="button"
+                          disabled={reordering}
+                          title="Yukarı"
+                          onClick={() => void handleMove(loc, -1)}
+                          style={{ padding: '2px 6px', fontSize: 11 }}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          disabled={reordering}
+                          title="Aşağı"
+                          onClick={() => void handleMove(loc, 1)}
+                          style={{ padding: '2px 6px', fontSize: 11 }}
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    ) : (
+                      <span style={{ color: '#9ca3af' }}>{loc.sortOrder}</span>
+                    )}
+                  </td>
                   <td style={{ padding: 8, fontWeight: 600 }}>{loc.code}</td>
                   <td style={{ padding: 8 }}>{loc.name}</td>
                   <td style={{ padding: 8, color: '#6b7280' }}>{loc.nativeName}</td>
+                  <td style={{ padding: 8 }}>{loc.rtl ? <Badge variant="blue">RTL</Badge> : '—'}</td>
                   <td style={{ padding: 8 }}>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {loc.isActive ? <Badge variant="green">Aktif</Badge> : <Badge variant="gray">Pasif</Badge>}

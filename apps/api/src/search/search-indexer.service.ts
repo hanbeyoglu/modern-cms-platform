@@ -30,8 +30,15 @@ export class SearchIndexerService {
     localizedType: LocalizedEntityType,
     entityId: string,
   ): Promise<string> {
+    const activeLocaleIds = await this.prisma.locale.findMany({
+      where: { tenantId, isActive: true },
+      select: { id: true },
+    });
+    const idSet = new Set(activeLocaleIds.map((l) => l.id));
+    if (idSet.size === 0) return '';
+
     const rows = await this.prisma.localizedContent.findMany({
-      where: { tenantId, entityType: localizedType, entityId },
+      where: { tenantId, entityType: localizedType, entityId, localeId: { in: [...idSet] } },
       select: { field: true, value: true },
     });
     if (rows.length === 0) return '';

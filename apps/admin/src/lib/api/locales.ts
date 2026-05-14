@@ -8,6 +8,8 @@ export type CmsLocale = {
   nativeName: string;
   isDefault: boolean;
   isActive: boolean;
+  sortOrder: number;
+  rtl: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -25,6 +27,8 @@ export type UpdateLocalePayload = {
   name?: string;
   nativeName?: string;
   isActive?: boolean;
+  sortOrder?: number;
+  rtl?: boolean;
 };
 
 export async function apiLocalesList(
@@ -84,5 +88,18 @@ export async function apiLocaleSetDefault(token: string, tenantId: string, id: s
     token,
     tenantId,
     body: JSON.stringify({}),
+  });
+}
+
+export async function apiLocalesReorder(
+  token: string,
+  tenantId: string,
+  orderedIds: string[],
+): Promise<CmsLocale[]> {
+  return request<CmsLocale[]>('/locales/reorder', {
+    method: 'PATCH',
+    token,
+    tenantId,
+    body: JSON.stringify({ orderedIds }),
   });
 }

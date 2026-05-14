@@ -13,13 +13,22 @@ export class TranslationResolverService {
   // Returns the locale to use for a given request.
   // Falls back to the tenant default when the requested code is unknown or inactive.
   async resolveLocale(tenantId: string, requestedLocaleCode?: string): Promise<Locale | null> {
-    if (requestedLocaleCode) {
+    const normalized = this.normalizeLocaleCode(requestedLocaleCode);
+    if (normalized) {
       const locale = await this.prisma.locale.findUnique({
-        where: { tenantId_code: { tenantId, code: requestedLocaleCode.toLowerCase() } },
+        where: { tenantId_code: { tenantId, code: normalized } },
       });
       if (locale?.isActive) return locale;
     }
     return this.getDefaultLocale(tenantId);
+  }
+
+  /** Safe for untrusted query/header values (no throw). */
+  normalizeLocaleCode(requestedLocaleCode?: string): string | undefined {
+    if (!requestedLocaleCode || typeof requestedLocaleCode !== 'string') return undefined;
+    const t = requestedLocaleCode.trim().toLowerCase();
+    if (!t) return undefined;
+    return t.slice(0, 32);
   }
 
   async getDefaultLocale(tenantId: string): Promise<Locale | null> {
@@ -59,6 +68,66 @@ export class TranslationResolverService {
       result[row.entityId][row.field] = row.value;
     }
     return result;
+  }
+
+  /** Active locales for forms and public language switchers (Sprint 21). */
+  async getActiveLocalesOrdered(tenantId: string): Promise<Locale[]> {
+    return this.prisma.locale.findMany({
+      where: { tenantId, isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
+    });
+  }
+
+  /**
+   * Non-blocking hints when default (canonical) fields are filled but an enabled
+   * locale is missing matching LocalizedContent rows.
+   */
+  async getI18nGapWarnings(
+    tenantId: string,
+    entityType: LocalizedEntityType,
+    entityId: string,
+    fields: string[],
+    baseValues: Record<string, string | null | undefined>,
+  ): Promise<string[]> {
+    const locales = await this.getActiveLocalesOrdered(tenantId);
+    const def = locales.find((l) => l.isDefault);
+    if (!def || locales.length < 2) return [];
+
+    const rows = await this.prisma.localizedContent.findMany({
+      where: { tenantId, entityType, entityId },
+      select: { localeId: true, field: true, value: true },
+    });
+    const map = new Map<string, string>();
+    for (const r of rows) {
+      map.set(`${r.localeId}:${r.field}`, r.value);
+    }
+
+    const fieldLabel: Record<string, string> = {
+      title: 'başlık',
+      shortDescription: 'kısa açıklama',
+      description: 'açıklama',
+      buttonText: 'buton metni',
+      terms: 'şartlar',
+      subtitle: 'alt başlık',
+      seoTitle: 'SEO başlığı',
+      seoDescription: 'SEO açıklaması',
+    };
+
+    const warnings: string[] = [];
+    for (const loc of locales) {
+      if (loc.id === def.id) continue;
+      for (const field of fields) {
+        const base = (baseValues[field] ?? '').trim();
+        if (!base) continue;
+        const tr = (map.get(`${loc.id}:${field}`) ?? '').trim();
+        if (!tr) {
+          warnings.push(
+            `"${loc.nativeName}" (${loc.code}) için ${fieldLabel[field] ?? field} çevirisi yok`,
+          );
+        }
+      }
+    }
+    return warnings;
   }
 
   // Overlays translated field values onto a base object.

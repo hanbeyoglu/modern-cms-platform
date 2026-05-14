@@ -8,6 +8,7 @@ import type { ContentStatus, Event, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import { SearchIndexerService } from '../search/search-indexer.service';
+import { TranslationResolverService } from '../translation-resolver/translation-resolver.service';
 import { slugify } from '../common/utils/slugify';
 import {
   assertOptionalHttpUrl,
@@ -32,12 +33,18 @@ const EVENT_INCLUDE = {
 
 export type EventResponse = Prisma.EventGetPayload<{ include: typeof EVENT_INCLUDE }>;
 
+export type EventPublishResult = {
+  event: EventResponse;
+  localizationWarnings: string[];
+};
+
 @Injectable()
 export class EventsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
     private readonly searchIndexer: SearchIndexerService,
+    private readonly i18n: TranslationResolverService,
   ) {}
 
   private scheduleEventIndex(eventId: string): void {
@@ -272,7 +279,7 @@ export class EventsService {
     this.scheduleEventIndex(id);
   }
 
-  async publish(id: string, user: User, tenantId: string, mallId: string | undefined): Promise<EventResponse> {
+  async publish(id: string, user: User, tenantId: string, mallId: string | undefined): Promise<EventPublishResult> {
     const existing = await this.assertExists(id, tenantId);
     this.assertMallVisibility(existing, mallId);
 
@@ -283,6 +290,19 @@ export class EventsService {
       existing.mallId,
       existing.startAt?.toISOString(),
       existing.endAt?.toISOString(),
+    );
+
+    const localizationWarnings = await this.i18n.getI18nGapWarnings(
+      tenantId,
+      'EVENT',
+      id,
+      ['title', 'shortDescription', 'description', 'buttonText'],
+      {
+        title: existing.title,
+        shortDescription: existing.shortDescription,
+        description: existing.description,
+        buttonText: existing.buttonText,
+      },
     );
 
     const event = await this.prisma.event.update({
@@ -303,7 +323,7 @@ export class EventsService {
     });
 
     this.scheduleEventIndex(event.id);
-    return event;
+    return { event, localizationWarnings };
   }
 
   async archive(id: string, user: User, tenantId: string, mallId: string | undefined): Promise<EventResponse> {
