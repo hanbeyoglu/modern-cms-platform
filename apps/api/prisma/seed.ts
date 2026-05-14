@@ -74,6 +74,15 @@ const PERMISSIONS = [
   'page-block:update',
   'page-block:delete',
   'page-block:reorder',
+  'locale:read',
+  'locale:create',
+  'locale:update',
+  'locale:delete',
+  'locale:set-default',
+  'translation:read',
+  'translation:create',
+  'translation:update',
+  'translation:delete',
 ] as const;
 
 async function main(): Promise<void> {
@@ -169,6 +178,10 @@ async function main(): Promise<void> {
         'page-block:update',
         'page-block:delete',
         'page-block:reorder',
+        'locale:read',
+        'translation:read',
+        'translation:create',
+        'translation:update',
       ],
     },
     {
@@ -212,6 +225,10 @@ async function main(): Promise<void> {
         'page-block:create',
         'page-block:update',
         'page-block:reorder',
+        'locale:read',
+        'translation:read',
+        'translation:create',
+        'translation:update',
       ],
     },
     {
@@ -437,6 +454,22 @@ async function main(): Promise<void> {
         sortOrder: 5,
         createdBy: superAdmin.id,
       },
+    });
+  }
+
+  // ─── Default locales for demo tenants ────────────────────────────────────────
+  const defaultLocales: Array<{ tenantId: string; code: string; name: string; nativeName: string; isDefault: boolean }> = [
+    { tenantId: tenantEmaar.id, code: 'tr', name: 'Turkish', nativeName: 'Türkçe', isDefault: true },
+    { tenantId: tenantEmaar.id, code: 'en', name: 'English', nativeName: 'English', isDefault: false },
+    { tenantId: tenantMallGroup.id, code: 'tr', name: 'Turkish', nativeName: 'Türkçe', isDefault: true },
+    { tenantId: tenantMallGroup.id, code: 'en', name: 'English', nativeName: 'English', isDefault: false },
+  ];
+
+  for (const loc of defaultLocales) {
+    await prisma.locale.upsert({
+      where: { tenantId_code: { tenantId: loc.tenantId, code: loc.code } },
+      update: { name: loc.name, nativeName: loc.nativeName, isDefault: loc.isDefault, isActive: true },
+      create: { tenantId: loc.tenantId, code: loc.code, name: loc.name, nativeName: loc.nativeName, isDefault: loc.isDefault, isActive: true },
     });
   }
 

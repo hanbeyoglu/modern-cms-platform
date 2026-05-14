@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { TranslationPanel } from '../components/TranslationPanel';
 import { useAuth } from '../auth/useAuth';
 import {
   apiPageGet,
@@ -427,6 +428,13 @@ export function PageDetailPage() {
           {savingPage ? 'Kaydediliyor…' : 'Kaydet'}
         </button>
       </div>
+
+      <TranslationPanel
+        entityType="PAGE"
+        entityId={page.id}
+        fields={['title', 'seoTitle', 'seoDescription']}
+        title="Çok dilli alanlar"
+      />
 
       {/* Blocks section */}
       <div style={cardStyle()}>

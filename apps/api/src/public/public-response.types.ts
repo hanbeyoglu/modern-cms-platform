@@ -120,6 +120,8 @@ export interface PublicMovieSession {
 }
 
 export interface PublicHomeResponse {
+  locale: string | null;
+  defaultLocale: string | null;
   sliders: PublicSlider[];
   featuredStores: PublicStore[];
   upcomingEvents: PublicEvent[];

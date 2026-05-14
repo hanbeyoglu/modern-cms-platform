@@ -78,6 +78,14 @@ export const NAV_ITEMS: NavItem[] = [
     group: 'İçerik',
   },
   {
+    id: 'locales',
+    label: 'Diller',
+    icon: '◌',
+    href: '/locales',
+    permission: 'locale:read',
+    group: 'İçerik',
+  },
+  {
     id: 'campaigns',
     label: 'Kampanyalar',
     icon: '◈',

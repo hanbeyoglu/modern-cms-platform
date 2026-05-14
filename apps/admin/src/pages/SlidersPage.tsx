@@ -6,6 +6,7 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { TranslationPanel } from '../components/TranslationPanel';
 import { Button } from '../components/ui/Button';
 import {
   apiMediaList,
@@ -630,6 +631,14 @@ export function SlidersPage() {
           onSubmit={() => void handleSubmit()}
           onCancel={cancelForm}
           isEdit={!!editingSlider}
+        />
+      )}
+      {showForm && editingSlider && (
+        <TranslationPanel
+          entityType="SLIDER"
+          entityId={editingSlider.id}
+          fields={['title', 'subtitle', 'description', 'buttonText']}
+          title="Çeviriler"
         />
       )}
 

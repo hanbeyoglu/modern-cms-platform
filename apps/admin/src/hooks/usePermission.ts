@@ -34,6 +34,8 @@ export function usePermission() {
       'page:read',
       'page-block:read',
       'analytics:view',
+      'locale:read',
+      'translation:read',
     ];
     if (readPermissions.includes(permission)) return true;
 

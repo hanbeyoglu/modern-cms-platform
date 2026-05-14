@@ -90,7 +90,9 @@ model Tenant {
   movieSessions MovieSession[]
   pages         Page[]
   pageBlocks    PageBlock[]
-  analyticsEvents AnalyticsEvent[]
+  analyticsEvents  AnalyticsEvent[]
+  locales          Locale[]
+  localizedContent LocalizedContent[]
 }
 
 model Mall {
@@ -720,6 +722,56 @@ model PageBlock {
 
   @@index([pageId, sortOrder])
   @@index([tenantId, pageId])
+}
+
+// ─── Localization (Sprint 12A) ────────────────────────────────────────────────
+
+enum LocalizedEntityType {
+  PAGE
+  PAGE_BLOCK
+  SLIDER
+  EVENT
+  CAMPAIGN
+  STORE
+  MOVIE
+  CINEMA
+}
+
+model Locale {
+  id         String   @id @default(cuid())
+  tenantId   String
+  code       String
+  name       String
+  nativeName String
+  isDefault  Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  translations LocalizedContent[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model LocalizedContent {
+  id         String              @id @default(cuid())
+  tenantId   String
+  localeId   String
+  entityType LocalizedEntityType
+  entityId   String
+  field      String
+  value      String
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  locale Locale @relation(fields: [localeId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, localeId, entityType, entityId, field])
+  @@index([tenantId, localeId])
+  @@index([entityType, entityId])
 }
 
 enum AnalyticsEntityType {

@@ -1,21 +1,29 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Mall, Tenant } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TranslationResolverService } from '../translation-resolver/translation-resolver.service';
 
 export interface PublicContext {
   tenantId: string;
   mallId: string | undefined;
   tenant: Pick<Tenant, 'id' | 'name' | 'slug' | 'status'>;
   mall: Pick<Mall, 'id' | 'name' | 'slug' | 'status'> | undefined;
+  // null when the tenant has no active locale configured
+  locale: { id: string; code: string } | null;
+  defaultLocale: { id: string; code: string } | null;
 }
 
 @Injectable()
 export class PublicContextService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly resolver: TranslationResolverService,
+  ) {}
 
   async resolve(
     tenantId: string | undefined,
     mallId: string | undefined,
+    localeCode?: string,
   ): Promise<PublicContext> {
     if (!tenantId?.trim()) {
       throw new BadRequestException('x-tenant-id header is required');
@@ -45,6 +53,22 @@ export class PublicContextService {
       mall = mallRow;
     }
 
-    return { tenantId: tenant.id, mallId: mall?.id, tenant, mall };
+    // Resolve locale: requested code → active locale or fall back to tenant default
+    const resolved = await this.resolver.resolveLocale(tenant.id, localeCode);
+
+    // Fetch default locale only when the resolved locale is not already the default
+    const defaultLocale =
+      resolved?.isDefault === true
+        ? resolved
+        : await this.resolver.getDefaultLocale(tenant.id);
+
+    return {
+      tenantId: tenant.id,
+      mallId: mall?.id,
+      tenant,
+      mall,
+      locale: resolved ? { id: resolved.id, code: resolved.code } : null,
+      defaultLocale: defaultLocale ? { id: defaultLocale.id, code: defaultLocale.code } : null,
+    };
   }
 }

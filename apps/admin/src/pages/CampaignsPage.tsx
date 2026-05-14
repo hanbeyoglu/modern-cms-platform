@@ -7,6 +7,7 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { TranslationPanel } from '../components/TranslationPanel';
 import { Button } from '../components/ui/Button';
 import {
   apiCampaignArchive,
@@ -487,6 +488,14 @@ export function CampaignsPage() {
               İptal
             </button>
           </div>
+          {editing && (
+            <TranslationPanel
+              entityType="CAMPAIGN"
+              entityId={editing.id}
+              fields={['title', 'shortDescription', 'description', 'terms', 'buttonText']}
+              title="Çeviriler"
+            />
+          )}
         </div>
       )}
 

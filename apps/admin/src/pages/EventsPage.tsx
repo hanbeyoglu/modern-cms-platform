@@ -7,6 +7,7 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { TranslationPanel } from '../components/TranslationPanel';
 import { Button } from '../components/ui/Button';
 import {
   apiEventArchive,
@@ -455,6 +456,14 @@ export function EventsPage() {
               İptal
             </button>
           </div>
+          {editing && (
+            <TranslationPanel
+              entityType="EVENT"
+              entityId={editing.id}
+              fields={['title', 'shortDescription', 'description', 'buttonText']}
+              title="Çeviriler"
+            />
+          )}
         </div>
       )}
 

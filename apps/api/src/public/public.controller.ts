@@ -20,6 +20,11 @@ const TTL = {
   detail: 300,
 } as const;
 
+// Locale segment helper — keeps cache keys concise and consistent
+function lseg(code: string | undefined | null): string {
+  return code ? `:l:${code}` : ':l:none';
+}
+
 @Controller('public')
 export class PublicController {
   constructor(
@@ -29,6 +34,7 @@ export class PublicController {
   ) {}
 
   // ── Site Config ───────────────────────────────────────────────────────────
+  // Site config is locale-independent; no locale param here.
 
   @Get('site-config')
   async getSiteConfig(
@@ -60,9 +66,11 @@ export class PublicController {
   async getHome(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
+    @Query('locale') locale: string | undefined,
   ) {
-    const context = await this.ctx.resolve(tenantId, mallId);
-    const cacheKey = `public:${context.tenantId}:${context.mallId ?? 'none'}:home`;
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:home` + lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
@@ -70,6 +78,9 @@ export class PublicController {
     const result = await this.content.getHome({
       tenantId: context.tenantId,
       mallId: context.mallId,
+      localeId: context.locale?.id,
+      localeCode: context.locale?.code,
+      defaultLocaleCode: context.defaultLocale?.code,
     });
     await this.cache.set(cacheKey, result, TTL.home);
     return result;
@@ -82,9 +93,12 @@ export class PublicController {
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
     @Query('targetDevice') targetDevice: string | undefined,
+    @Query('locale') locale: string | undefined,
   ) {
-    const context = await this.ctx.resolve(tenantId, mallId);
-    const cacheKey = `public:${context.tenantId}:${context.mallId ?? 'none'}:sliders:${targetDevice ?? 'all'}`;
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:sliders:${targetDevice ?? 'all'}` +
+      lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
@@ -93,6 +107,7 @@ export class PublicController {
       tenantId: context.tenantId,
       mallId: context.mallId,
       targetDevice,
+      localeId: context.locale?.id,
     });
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
@@ -107,10 +122,13 @@ export class PublicController {
     @Query('category') category: string | undefined,
     @Query('search') search: string | undefined,
     @Query('limit') limitStr: string | undefined,
+    @Query('locale') locale: string | undefined,
   ) {
-    const context = await this.ctx.resolve(tenantId, mallId);
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
     const limit = parseLimit(limitStr, 20, 50);
-    const cacheKey = `public:${context.tenantId}:${context.mallId ?? 'none'}:events:${category ?? ''}:${search ?? ''}:${limit}`;
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:events:${category ?? ''}:${search ?? ''}:${limit}` +
+      lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
@@ -121,6 +139,7 @@ export class PublicController {
       category,
       search,
       limit,
+      localeId: context.locale?.id,
     });
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
@@ -131,9 +150,12 @@ export class PublicController {
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
     @Param('slug') slug: string,
+    @Query('locale') locale: string | undefined,
   ) {
-    const context = await this.ctx.resolve(tenantId, mallId);
-    const cacheKey = `public:${context.tenantId}:${context.mallId ?? 'none'}:event:${slug}`;
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:event:${slug}` +
+      lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
@@ -142,6 +164,7 @@ export class PublicController {
       tenantId: context.tenantId,
       mallId: context.mallId,
       slug,
+      localeId: context.locale?.id,
     });
     if (!result) throw new NotFoundException('Event not found');
 
@@ -158,10 +181,13 @@ export class PublicController {
     @Query('storeId') storeId: string | undefined,
     @Query('search') search: string | undefined,
     @Query('limit') limitStr: string | undefined,
+    @Query('locale') locale: string | undefined,
   ) {
-    const context = await this.ctx.resolve(tenantId, mallId);
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
     const limit = parseLimit(limitStr, 20, 50);
-    const cacheKey = `public:${context.tenantId}:${context.mallId ?? 'none'}:campaigns:${storeId ?? ''}:${search ?? ''}:${limit}`;
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:campaigns:${storeId ?? ''}:${search ?? ''}:${limit}` +
+      lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
@@ -172,6 +198,7 @@ export class PublicController {
       storeId,
       search,
       limit,
+      localeId: context.locale?.id,
     });
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
@@ -182,9 +209,12 @@ export class PublicController {
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
     @Param('slug') slug: string,
+    @Query('locale') locale: string | undefined,
   ) {
-    const context = await this.ctx.resolve(tenantId, mallId);
-    const cacheKey = `public:${context.tenantId}:${context.mallId ?? 'none'}:campaign:${slug}`;
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:campaign:${slug}` +
+      lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
@@ -193,6 +223,7 @@ export class PublicController {
       tenantId: context.tenantId,
       mallId: context.mallId,
       slug,
+      localeId: context.locale?.id,
     });
     if (!result) throw new NotFoundException('Campaign not found');
 
@@ -210,14 +241,17 @@ export class PublicController {
     @Query('search') search: string | undefined,
     @Query('featuredOnly') featuredOnlyStr: string | undefined,
     @Query('limit') limitStr: string | undefined,
+    @Query('locale') locale: string | undefined,
   ) {
-    const context = await this.ctx.resolve(tenantId, mallId);
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
     if (!context.mallId) {
       throw new BadRequestException('x-mall-id header is required for the stores endpoint');
     }
     const limit = parseLimit(limitStr, 50, 100);
     const featuredOnly = featuredOnlyStr === 'true';
-    const cacheKey = `public:${context.tenantId}:${context.mallId}:stores:${categoryId ?? ''}:${search ?? ''}:${featuredOnly}:${limit}`;
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId}:stores:${categoryId ?? ''}:${search ?? ''}:${featuredOnly}:${limit}` +
+      lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
@@ -229,6 +263,7 @@ export class PublicController {
       search,
       featuredOnly,
       limit,
+      localeId: context.locale?.id,
     });
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
@@ -239,12 +274,15 @@ export class PublicController {
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
     @Param('slug') slug: string,
+    @Query('locale') locale: string | undefined,
   ) {
-    const context = await this.ctx.resolve(tenantId, mallId);
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
     if (!context.mallId) {
       throw new BadRequestException('x-mall-id header is required for the stores endpoint');
     }
-    const cacheKey = `public:${context.tenantId}:${context.mallId}:store:${slug}`;
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId}:store:${slug}` +
+      lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
@@ -253,6 +291,7 @@ export class PublicController {
       tenantId: context.tenantId,
       mallId: context.mallId,
       slug,
+      localeId: context.locale?.id,
     });
     if (!result) throw new NotFoundException('Store not found');
 
@@ -267,9 +306,12 @@ export class PublicController {
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
     @Param('slug') slug: string,
+    @Query('locale') locale: string | undefined,
   ) {
-    const context = await this.ctx.resolve(tenantId, mallId);
-    const cacheKey = `public:${context.tenantId}:${context.mallId ?? 'none'}:page:${slug}`;
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:page:${slug}` +
+      lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
@@ -278,6 +320,7 @@ export class PublicController {
       tenantId: context.tenantId,
       mallId: context.mallId,
       slug,
+      localeId: context.locale?.id,
     });
     if (!result) throw new NotFoundException('Page not found');
 
@@ -291,12 +334,14 @@ export class PublicController {
   async getCinemas(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
+    @Query('locale') locale: string | undefined,
   ) {
-    const context = await this.ctx.resolve(tenantId, mallId);
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
     if (!context.mallId) {
       throw new BadRequestException('x-mall-id header is required for the cinema endpoint');
     }
-    const cacheKey = `public:${context.tenantId}:${context.mallId}:cinema`;
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId}:cinema` + lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
@@ -304,6 +349,7 @@ export class PublicController {
     const result = await this.content.getCinemas({
       tenantId: context.tenantId,
       mallId: context.mallId,
+      localeId: context.locale?.id,
     });
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
@@ -319,13 +365,16 @@ export class PublicController {
     @Query('cinemaId') cinemaId: string | undefined,
     @Query('movieId') movieId: string | undefined,
     @Query('limit') limitStr: string | undefined,
+    @Query('locale') locale: string | undefined,
   ) {
-    const context = await this.ctx.resolve(tenantId, mallId);
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
     if (!context.mallId) {
       throw new BadRequestException('x-mall-id header is required for the movie-sessions endpoint');
     }
     const limit = parseLimit(limitStr, 50, 200);
-    const cacheKey = `public:${context.tenantId}:${context.mallId}:movie-sessions:${date ?? ''}:${cinemaId ?? ''}:${movieId ?? ''}:${limit}`;
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId}:movie-sessions:${date ?? ''}:${cinemaId ?? ''}:${movieId ?? ''}:${limit}` +
+      lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
@@ -337,6 +386,7 @@ export class PublicController {
       cinemaId,
       movieId,
       limit,
+      localeId: context.locale?.id,
     });
     await this.cache.set(cacheKey, result, TTL.list);
     return result;

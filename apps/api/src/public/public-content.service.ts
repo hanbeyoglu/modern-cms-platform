@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  TranslationResolverService,
+  type EntityTranslationMap,
+} from '../translation-resolver/translation-resolver.service';
 import type {
   PublicCampaign,
   PublicCinema,
@@ -8,6 +12,7 @@ import type {
   PublicHomeResponse,
   PublicMovieSession,
   PublicPage,
+  PublicPageBlock,
   PublicSlider,
   PublicStore,
 } from './public-response.types';
@@ -26,7 +31,10 @@ const MEDIA_URL_ONLY = { id: true, publicUrl: true } as const;
 
 @Injectable()
 export class PublicContentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly resolver: TranslationResolverService,
+  ) {}
 
   // ── Sliders ──────────────────────────────────────────────────────────────
 
@@ -35,6 +43,7 @@ export class PublicContentService {
     mallId?: string;
     targetDevice?: string;
     limit?: number;
+    localeId?: string;
   }): Promise<PublicSlider[]> {
     const now = new Date();
     const rows = await this.prisma.slider.findMany({
@@ -59,7 +68,19 @@ export class PublicContentService {
       orderBy: { sortOrder: 'asc' },
       take: opts.limit ?? 10,
     });
-    return rows.map(mapSlider);
+
+    const sliders = rows.map(mapSlider);
+    if (!opts.localeId || sliders.length === 0) return sliders;
+
+    const tMap = await this.resolver.getTranslationsForEntities(
+      opts.tenantId,
+      opts.localeId,
+      'SLIDER',
+      sliders.map((s) => s.id),
+    );
+    return sliders.map((s) =>
+      this.applyFromMap(s, tMap, s.id, ['title', 'subtitle', 'description', 'buttonText']),
+    );
   }
 
   // ── Events ───────────────────────────────────────────────────────────────
@@ -70,6 +91,7 @@ export class PublicContentService {
     category?: string;
     search?: string;
     limit?: number;
+    localeId?: string;
   }): Promise<PublicEvent[]> {
     const now = new Date();
     const mallScope: Prisma.EventWhereInput =
@@ -83,7 +105,6 @@ export class PublicContentService {
         deletedAt: null,
         status: 'PUBLISHED',
         ...mallScope,
-        // upcoming: end date is in the future or not set
         OR: [{ endAt: null }, { endAt: { gte: now } }],
         ...(opts.category ? { category: opts.category } : {}),
         ...(opts.search
@@ -94,13 +115,31 @@ export class PublicContentService {
       orderBy: [{ sortOrder: 'asc' }, { startAt: 'asc' }],
       take: opts.limit ?? 20,
     });
-    return rows.map(mapEvent);
+
+    const events = rows.map(mapEvent);
+    if (!opts.localeId || events.length === 0) return events;
+
+    const tMap = await this.resolver.getTranslationsForEntities(
+      opts.tenantId,
+      opts.localeId,
+      'EVENT',
+      events.map((e) => e.id),
+    );
+    return events.map((e) =>
+      this.applyFromMap(e, tMap, e.id, [
+        'title',
+        'shortDescription',
+        'description',
+        'buttonText',
+      ]),
+    );
   }
 
   async getEventBySlug(opts: {
     tenantId: string;
     mallId?: string;
     slug: string;
+    localeId?: string;
   }): Promise<PublicEvent | null> {
     const mallScope: Prisma.EventWhereInput =
       opts.mallId !== undefined
@@ -117,7 +156,23 @@ export class PublicContentService {
       },
       include: { coverMedia: { select: MEDIA_SELECT } },
     });
-    return row ? mapEvent(row) : null;
+    if (!row) return null;
+
+    const event = mapEvent(row);
+    if (!opts.localeId) return event;
+
+    const tMap = await this.resolver.getTranslationsForEntities(
+      opts.tenantId,
+      opts.localeId,
+      'EVENT',
+      [event.id],
+    );
+    return this.applyFromMap(event, tMap, event.id, [
+      'title',
+      'shortDescription',
+      'description',
+      'buttonText',
+    ]);
   }
 
   // ── Campaigns ────────────────────────────────────────────────────────────
@@ -128,6 +183,7 @@ export class PublicContentService {
     storeId?: string;
     search?: string;
     limit?: number;
+    localeId?: string;
   }): Promise<PublicCampaign[]> {
     const now = new Date();
     const mallScope: Prisma.CampaignWhereInput =
@@ -163,13 +219,32 @@ export class PublicContentService {
       orderBy: [{ sortOrder: 'asc' }, { startAt: 'asc' }],
       take: opts.limit ?? 20,
     });
-    return rows.map(mapCampaign);
+
+    const campaigns = rows.map(mapCampaign);
+    if (!opts.localeId || campaigns.length === 0) return campaigns;
+
+    const tMap = await this.resolver.getTranslationsForEntities(
+      opts.tenantId,
+      opts.localeId,
+      'CAMPAIGN',
+      campaigns.map((c) => c.id),
+    );
+    return campaigns.map((c) =>
+      this.applyFromMap(c, tMap, c.id, [
+        'title',
+        'shortDescription',
+        'description',
+        'terms',
+        'buttonText',
+      ]),
+    );
   }
 
   async getCampaignBySlug(opts: {
     tenantId: string;
     mallId?: string;
     slug: string;
+    localeId?: string;
   }): Promise<PublicCampaign | null> {
     const now = new Date();
     const mallScope: Prisma.CampaignWhereInput =
@@ -200,10 +275,29 @@ export class PublicContentService {
         },
       },
     });
-    return row ? mapCampaign(row) : null;
+    if (!row) return null;
+
+    const campaign = mapCampaign(row);
+    if (!opts.localeId) return campaign;
+
+    const tMap = await this.resolver.getTranslationsForEntities(
+      opts.tenantId,
+      opts.localeId,
+      'CAMPAIGN',
+      [campaign.id],
+    );
+    return this.applyFromMap(campaign, tMap, campaign.id, [
+      'title',
+      'shortDescription',
+      'description',
+      'terms',
+      'buttonText',
+    ]);
   }
 
   // ── Stores ───────────────────────────────────────────────────────────────
+  // Translation entity is the MallStore (tenant-scoped).
+  // Translatable fields: `name` (overrides resolved name), `description` (overrides resolved description).
 
   async getStores(opts: {
     tenantId: string;
@@ -212,6 +306,7 @@ export class PublicContentService {
     search?: string;
     featuredOnly?: boolean;
     limit?: number;
+    localeId?: string;
   }): Promise<PublicStore[]> {
     const rows = await this.prisma.mallStore.findMany({
       where: {
@@ -248,13 +343,24 @@ export class PublicContentService {
       orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }, { globalStore: { name: 'asc' } }],
       take: opts.limit ?? 50,
     });
-    return rows.map(mapStore);
+
+    const stores = rows.map(mapStore);
+    if (!opts.localeId || stores.length === 0) return stores;
+
+    const tMap = await this.resolver.getTranslationsForEntities(
+      opts.tenantId,
+      opts.localeId,
+      'STORE',
+      stores.map((s) => s.id),
+    );
+    return stores.map((s) => this.applyFromMap(s, tMap, s.id, ['name', 'description']));
   }
 
   async getStoreBySlug(opts: {
     tenantId: string;
     mallId: string;
     slug: string;
+    localeId?: string;
   }): Promise<PublicStore | null> {
     const row = await this.prisma.mallStore.findFirst({
       where: {
@@ -274,15 +380,30 @@ export class PublicContentService {
         },
       },
     });
-    return row ? mapStore(row) : null;
+    if (!row) return null;
+
+    const store = mapStore(row);
+    if (!opts.localeId) return store;
+
+    const tMap = await this.resolver.getTranslationsForEntities(
+      opts.tenantId,
+      opts.localeId,
+      'STORE',
+      [store.id],
+    );
+    return this.applyFromMap(store, tMap, store.id, ['name', 'description']);
   }
 
   // ── Pages ────────────────────────────────────────────────────────────────
+  // Page fields: title, seoTitle, seoDescription
+  // PageBlock fields: title; dataJson top-level keys: title, subtitle, buttonText, text, html
+  // stored as translation fields `dataJson.title`, `dataJson.subtitle`, etc.
 
   async getPageBySlug(opts: {
     tenantId: string;
     mallId?: string;
     slug: string;
+    localeId?: string;
   }): Promise<PublicPage | null> {
     const mallScope: Prisma.PageWhereInput =
       opts.mallId !== undefined
@@ -305,12 +426,42 @@ export class PublicContentService {
         },
       },
     });
-    return row ? mapPage(row) : null;
+    if (!row) return null;
+
+    const page = mapPage(row);
+    if (!opts.localeId) return page;
+
+    const blockIds = page.blocks.map((b) => b.id);
+    const [pageTMap, blockTMap] = await Promise.all([
+      this.resolver.getTranslationsForEntities(opts.tenantId, opts.localeId, 'PAGE', [page.id]),
+      blockIds.length > 0
+        ? this.resolver.getTranslationsForEntities(
+            opts.tenantId,
+            opts.localeId,
+            'PAGE_BLOCK',
+            blockIds,
+          )
+        : Promise.resolve<EntityTranslationMap>({}),
+    ]);
+
+    const translatedPage = this.applyFromMap(page, pageTMap, page.id, [
+      'title',
+      'seoTitle',
+      'seoDescription',
+    ]);
+    return {
+      ...translatedPage,
+      blocks: page.blocks.map((b) => this.applyBlockFromMap(b, blockTMap)),
+    } as PublicPage;
   }
 
   // ── Cinema ───────────────────────────────────────────────────────────────
 
-  async getCinemas(opts: { tenantId: string; mallId: string }): Promise<PublicCinema[]> {
+  async getCinemas(opts: {
+    tenantId: string;
+    mallId: string;
+    localeId?: string;
+  }): Promise<PublicCinema[]> {
     const rows = await this.prisma.cinema.findMany({
       where: {
         tenantId: opts.tenantId,
@@ -321,10 +472,21 @@ export class PublicContentService {
       include: { logoMedia: { select: MEDIA_URL_ONLY } },
       orderBy: { name: 'asc' },
     });
-    return rows.map(mapCinema);
+
+    const cinemas = rows.map(mapCinema);
+    if (!opts.localeId || cinemas.length === 0) return cinemas;
+
+    const tMap = await this.resolver.getTranslationsForEntities(
+      opts.tenantId,
+      opts.localeId,
+      'CINEMA',
+      cinemas.map((c) => c.id),
+    );
+    return cinemas.map((c) => this.applyFromMap(c, tMap, c.id, ['description']));
   }
 
   // ── Movie Sessions ────────────────────────────────────────────────────────
+  // Movie title is translated via entityType=MOVIE using the embedded movie.id.
 
   async getMovieSessions(opts: {
     tenantId: string;
@@ -333,6 +495,7 @@ export class PublicContentService {
     movieId?: string;
     date?: string;
     limit?: number;
+    localeId?: string;
   }): Promise<PublicMovieSession[]> {
     const dayStart = opts.date ? new Date(opts.date) : undefined;
     let dayEnd: Date | undefined;
@@ -360,25 +523,64 @@ export class PublicContentService {
       orderBy: { startsAt: 'asc' },
       take: opts.limit ?? 50,
     });
-    return rows.map(mapMovieSession);
+
+    const sessions = rows.map(mapMovieSession);
+    if (!opts.localeId || sessions.length === 0) return sessions;
+
+    // Deduplicate movie IDs before fetching translations
+    const movieIds = [...new Set(sessions.map((s) => s.movie.id))];
+    const movieTMap = await this.resolver.getTranslationsForEntities(
+      opts.tenantId,
+      opts.localeId,
+      'MOVIE',
+      movieIds,
+    );
+
+    return sessions.map((s) => {
+      const mt = movieTMap[s.movie.id];
+      if (!mt?.title) return s;
+      return { ...s, movie: { ...s.movie, title: mt.title } };
+    });
   }
 
   // ── Home aggregation ─────────────────────────────────────────────────────
 
-  async getHome(opts: { tenantId: string; mallId?: string }): Promise<PublicHomeResponse> {
+  async getHome(opts: {
+    tenantId: string;
+    mallId?: string;
+    localeId?: string;
+    localeCode?: string;
+    defaultLocaleCode?: string;
+  }): Promise<PublicHomeResponse> {
     const todayStr = new Date().toISOString().split('T')[0];
 
     const [sliders, upcomingEvents, activeCampaigns, featuredStores, todayMovieSessions] =
       await Promise.all([
-        this.getSliders({ tenantId: opts.tenantId, mallId: opts.mallId, limit: 10 }),
-        this.getEvents({ tenantId: opts.tenantId, mallId: opts.mallId, limit: 6 }),
-        this.getCampaigns({ tenantId: opts.tenantId, mallId: opts.mallId, limit: 6 }),
+        this.getSliders({
+          tenantId: opts.tenantId,
+          mallId: opts.mallId,
+          limit: 10,
+          localeId: opts.localeId,
+        }),
+        this.getEvents({
+          tenantId: opts.tenantId,
+          mallId: opts.mallId,
+          limit: 6,
+          localeId: opts.localeId,
+        }),
+        this.getCampaigns({
+          tenantId: opts.tenantId,
+          mallId: opts.mallId,
+          limit: 6,
+          localeId: opts.localeId,
+        }),
         opts.mallId
           ? this.getStores({
               tenantId: opts.tenantId,
               mallId: opts.mallId,
               featuredOnly: true,
               limit: 12,
+              localeId: opts.localeId,
             })
           : Promise.resolve([]),
         opts.mallId
@@ -387,11 +589,70 @@ export class PublicContentService {
               mallId: opts.mallId,
               date: todayStr,
               limit: 10,
+              localeId: opts.localeId,
             })
           : Promise.resolve([]),
       ]);
 
-    return { sliders, upcomingEvents, activeCampaigns, featuredStores, todayMovieSessions };
+    return {
+      locale: opts.localeCode ?? null,
+      defaultLocale: opts.defaultLocaleCode ?? null,
+      sliders,
+      upcomingEvents,
+      activeCampaigns,
+      featuredStores,
+      todayMovieSessions,
+    };
+  }
+
+  // ── Private helpers ───────────────────────────────────────────────────────
+
+  private applyFromMap<T extends object>(
+    obj: T,
+    map: EntityTranslationMap,
+    entityId: string,
+    fields: readonly string[],
+  ): T {
+    const t = map[entityId];
+    if (!t) return obj;
+    const result = { ...obj } as Record<string, unknown>;
+    for (const field of fields) {
+      if (t[field] !== undefined) result[field] = t[field];
+    }
+    return result as unknown as T;
+  }
+
+  // Applies block-level translations including top-level title and selected
+  // dataJson subfields (title, subtitle, buttonText, text, html).
+  // Translation field names for dataJson use dot notation: `dataJson.title`.
+  // If dataJson is not a plain object the nested translation step is skipped.
+  private applyBlockFromMap(block: PublicPageBlock, map: EntityTranslationMap): PublicPageBlock {
+    const t = map[block.id];
+    if (!t) return block;
+
+    let result: PublicPageBlock = { ...block };
+    if (t.title !== undefined) result = { ...result, title: t.title };
+
+    const DATA_FIELDS = ['title', 'subtitle', 'buttonText', 'text', 'html'] as const;
+    const hasDataJsonTranslation = DATA_FIELDS.some((f) => t[`dataJson.${f}`] !== undefined);
+
+    if (
+      hasDataJsonTranslation &&
+      typeof block.dataJson === 'object' &&
+      block.dataJson !== null &&
+      !Array.isArray(block.dataJson)
+    ) {
+      const newDataJson: Record<string, unknown> = {
+        ...(block.dataJson as Record<string, unknown>),
+      };
+      for (const f of DATA_FIELDS) {
+        const val = t[`dataJson.${f}`];
+        if (val !== undefined) newDataJson[f] = val;
+      }
+      result = { ...result, dataJson: newDataJson };
+    }
+
+    return result;
   }
 }
 

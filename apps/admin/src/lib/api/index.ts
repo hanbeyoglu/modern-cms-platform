@@ -171,6 +171,27 @@ export type {
 } from './pages';
 
 export {
+  apiLocalesList,
+  apiLocaleCreate,
+  apiLocaleUpdate,
+  apiLocaleDeactivate,
+  apiLocaleSetDefault,
+} from './locales';
+export type { CmsLocale, CreateLocalePayload, UpdateLocalePayload } from './locales';
+
+export {
+  apiTranslationsList,
+  apiTranslationUpsert,
+  apiTranslationDelete,
+} from './translations';
+export type {
+  LocalizedEntityType,
+  LocalizedContentRow,
+  ListTranslationsParams,
+  UpsertTranslationPayload,
+} from './translations';
+
+export {
   apiAnalyticsSummary,
   apiAnalyticsTopContent,
   apiAnalyticsTimeseries,

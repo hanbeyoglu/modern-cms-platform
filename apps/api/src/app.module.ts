@@ -22,6 +22,9 @@ import { PagesModule } from './pages/pages.module';
 import { PageBlocksModule } from './page-blocks/page-blocks.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { PublicModule } from './public/public.module';
+import { LocalesModule } from './locales/locales.module';
+import { TranslationsModule } from './translations/translations.module';
+import { TranslationResolverModule } from './translation-resolver/translation-resolver.module';
 
 @Module({
   imports: [
@@ -49,6 +52,9 @@ import { PublicModule } from './public/public.module';
     PageBlocksModule,
     AnalyticsModule,
     PublicModule,
+    LocalesModule,
+    TranslationsModule,
+    TranslationResolverModule,
     HealthModule,
   ],
 })
