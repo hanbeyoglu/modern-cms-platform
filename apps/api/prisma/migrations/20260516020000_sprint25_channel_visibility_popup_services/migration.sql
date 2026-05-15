@@ -63,8 +63,8 @@ CREATE INDEX "Popup_status_endAt_idx" ON "Popup"("status", "endAt");
 ALTER TABLE "Popup" ADD CONSTRAINT "Popup_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "Popup" ADD CONSTRAINT "Popup_mallId_fkey" FOREIGN KEY ("mallId") REFERENCES "Mall"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "Popup" ADD CONSTRAINT "Popup_imageMediaId_fkey" FOREIGN KEY ("imageMediaId") REFERENCES "MediaAsset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "Popup" ADD CONSTRAINT "Popup_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON UPDATE CASCADE;
-ALTER TABLE "Popup" ADD CONSTRAINT "Popup_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("id") ON UPDATE CASCADE;
+ALTER TABLE "Popup" ADD CONSTRAINT "Popup_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Popup" ADD CONSTRAINT "Popup_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- ── ServiceStatus enum ───────────────────────────────────────────────────────
 CREATE TYPE "ServiceStatus" AS ENUM ('ACTIVE', 'INACTIVE');
@@ -109,5 +109,13 @@ ALTER TABLE "Service" ADD CONSTRAINT "Service_tenantId_fkey" FOREIGN KEY ("tenan
 ALTER TABLE "Service" ADD CONSTRAINT "Service_mallId_fkey" FOREIGN KEY ("mallId") REFERENCES "Mall"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "Service" ADD CONSTRAINT "Service_iconMediaId_fkey" FOREIGN KEY ("iconMediaId") REFERENCES "MediaAsset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "Service" ADD CONSTRAINT "Service_coverMediaId_fkey" FOREIGN KEY ("coverMediaId") REFERENCES "MediaAsset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "Service" ADD CONSTRAINT "Service_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON UPDATE CASCADE;
-ALTER TABLE "Service" ADD CONSTRAINT "Service_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("id") ON UPDATE CASCADE;
+ALTER TABLE "Service" ADD CONSTRAINT "Service_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Service" ADD CONSTRAINT "Service_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Align channel/searchTags columns with schema (no DB-level defaults)
+ALTER TABLE "Slider" ALTER COLUMN "channels" DROP DEFAULT;
+ALTER TABLE "Event" ALTER COLUMN "channels" DROP DEFAULT;
+ALTER TABLE "Campaign" ALTER COLUMN "channels" DROP DEFAULT;
+ALTER TABLE "MallStore" ALTER COLUMN "searchTags" DROP DEFAULT;
+ALTER TABLE "Popup" ALTER COLUMN "channels" DROP DEFAULT;
+ALTER TABLE "Service" ALTER COLUMN "searchTags" DROP DEFAULT;

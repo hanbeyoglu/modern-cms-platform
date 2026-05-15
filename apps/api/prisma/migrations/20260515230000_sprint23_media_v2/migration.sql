@@ -51,3 +51,6 @@ ALTER TABLE "MediaVariant"
   REFERENCES "MediaAsset"("id")
   ON DELETE CASCADE
   ON UPDATE CASCADE;
+
+-- Align tags column with schema (no DB-level default)
+ALTER TABLE "MediaAsset" ALTER COLUMN "tags" DROP DEFAULT;
