@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, type TenantStatus, type User } from '@prisma/client';
+import { AuditSeverity, Prisma, type TenantStatus, type User } from '@prisma/client';
 import { AuditLogService } from '../audit/audit.service';
 import { AccessService } from '../access/access.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -193,12 +193,15 @@ export class TenantsService {
 
     const updated = await this.prisma.tenant.update({ where: { id }, data: { status } });
 
+    const isDeactivation = status === 'ARCHIVED' || status === 'SUSPENDED';
     await this.audit.logAction({
       userId: actor.id,
       tenantId: id,
-      action: status === 'ARCHIVED' || status === 'SUSPENDED' ? 'tenant:deactivate' : 'tenant:update',
-      entityType: 'Tenant',
+      action: isDeactivation ? 'tenant:deactivate' : 'tenant:reactivate',
+      entityType: 'tenant',
       entityId: id,
+      entityName: existing.name,
+      severity: isDeactivation ? AuditSeverity.CRITICAL : AuditSeverity.SECURITY,
       before: { status: existing.status },
       after: { status },
     });

@@ -13,6 +13,7 @@ import {
 } from '../lib/api';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
+import { AuditTimeline } from '../components/AuditTimeline';
 
 // ── Permission metadata ────────────────────────────────────────────────────────
 
@@ -480,6 +481,20 @@ export function RoleDetailPage() {
           </div>
         )}
       </div>
+
+      {role && (
+        <div
+          style={{
+            background: '#fff',
+            border: '1px solid #e5e7eb',
+            borderRadius: 8,
+            padding: '20px 24px',
+            marginTop: 24,
+          }}
+        >
+          <AuditTimeline entityType="role" entityId={role.id} />
+        </div>
+      )}
     </PageContainer>
   );
 }

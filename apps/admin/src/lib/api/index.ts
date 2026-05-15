@@ -326,3 +326,21 @@ export type {
   CreateLocationPayload,
   UpdateLocationPayload,
 } from './locations';
+
+export {
+  apiAuditLogsList,
+  apiAuditLogGet,
+  apiAuditLogsTimeline,
+  apiAuditLogsRecentActivity,
+  apiAuditLogsSecurityEvents,
+  apiAuditLogsExportUrl,
+} from './audit-logs';
+export type {
+  AuditSeverity,
+  AuditActor,
+  AuditTenant,
+  AuditMall,
+  AuditLog,
+  AuditLogListResponse,
+  AuditLogFilters,
+} from './audit-logs';

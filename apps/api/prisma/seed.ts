@@ -153,6 +153,9 @@ const PERMISSIONS = [
   'notification:update',
   'notification:delete',
   'search:global',
+  'audit:read',
+  'audit:security',
+  'audit:export',
 ] as const;
 
 async function main(): Promise<void> {
@@ -182,12 +185,13 @@ async function main(): Promise<void> {
       name: 'Super Admin',
       permissions: [...PERMISSIONS],
     },
+    // audit permissions are included in PERMISSIONS — SUPER_ADMIN gets all
     {
       code: 'TENANT_ADMIN',
       name: 'Tenant Admin',
       permissions: PERMISSIONS.filter((p) =>
-        // Tenant Admin cannot create/delete tenants or delete locations
-        !['tenant:create', 'tenant:delete'].includes(p)
+        // Tenant Admin cannot create/delete tenants, delete locations, or use security/export audit
+        !['tenant:create', 'tenant:delete', 'audit:security', 'audit:export'].includes(p)
       ),
     },
     {
@@ -260,6 +264,7 @@ async function main(): Promise<void> {
         'notification:read',
         'notification:update',
         'settings:read',
+        'audit:read',
       ],
     },
     {

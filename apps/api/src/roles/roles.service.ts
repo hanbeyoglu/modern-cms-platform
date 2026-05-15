@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { User } from '@prisma/client';
+import { AuditSeverity, type User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import type { CreateRoleDto } from './dto/create-role.dto';
@@ -196,7 +196,9 @@ export class RolesService {
       action: 'role_permissions_updated',
       entityType: 'role',
       entityId: roleId,
-      after: { permissionIds: dto.permissionIds },
+      entityName: role.name,
+      severity: AuditSeverity.SECURITY,
+      after: { permissionIds: dto.permissionIds, permissionCount: perms.length },
     });
 
     return this.findOne(actor, roleId);

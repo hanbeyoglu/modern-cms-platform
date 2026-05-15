@@ -1,11 +1,15 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import type { User } from '@prisma/client';
+import { AuditSeverity, type User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService } from '../audit/audit.service';
 import type { UpdateTenantCapabilitiesDto } from './dto/update-tenant-capabilities.dto';
 
 @Injectable()
 export class CapabilitiesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditLogService,
+  ) {}
 
   async listAll() {
     const caps = await this.prisma.capability.findMany({
@@ -93,6 +97,17 @@ export class CapabilitiesService {
         });
       }),
     );
+
+    await this.audit.logAction({
+      userId: user.id,
+      tenantId,
+      action: 'capability_updated',
+      entityType: 'tenant_capability',
+      entityId: tenantId,
+      entityName: tenant.name,
+      severity: AuditSeverity.SECURITY,
+      after: { changes: dto.capabilities },
+    });
 
     return this.listForTenant(user, tenantId);
   }

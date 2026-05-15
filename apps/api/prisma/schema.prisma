@@ -273,22 +273,40 @@ model RefreshToken {
   @@index([tokenHash])
 }
 
+enum AuditSeverity {
+  INFO
+  WARNING
+  ERROR
+  SECURITY
+  CRITICAL
+}
+
 model AuditLog {
-  id          String   @id @default(cuid())
-  actorUserId String?
-  actor       User?    @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
-  tenantId    String?
-  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
-  mallId      String?
-  mall        Mall?    @relation(fields: [mallId], references: [id], onDelete: SetNull)
-  action      String
-  resource    String
-  resourceId  String?
-  metadata    Json?
-  createdAt   DateTime @default(now())
+  id            String         @id @default(cuid())
+  actorUserId   String?
+  actor         User?          @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  tenantId      String?
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  mallId        String?
+  mall          Mall?          @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  action        String
+  resource      String
+  resourceId    String?
+  resourceName  String?
+  severity      AuditSeverity  @default(INFO)
+  source        String?
+  success       Boolean        @default(true)
+  correlationId String?
+  requestId     String?
+  metadata      Json?
+  createdAt     DateTime       @default(now())
 
   @@index([tenantId, createdAt])
   @@index([actorUserId, createdAt])
+  @@index([severity, createdAt])
+  @@index([resource, createdAt])
+  @@index([correlationId])
+  @@index([success, createdAt])
 }
 
 // ─── Media ────────────────────────────────────────────────────────────────────

@@ -11,8 +11,10 @@ import {
   apiGlobalStoresList,
   apiAnalyticsSummary,
   apiNotificationsList,
+  apiAuditLogsRecentActivity,
+  apiAuditLogsSecurityEvents,
 } from '../lib/api';
-import type { CmsNotification } from '../lib/api';
+import type { CmsNotification, AuditLog } from '../lib/api';
 
 type StatCard = {
   label: string;
@@ -66,6 +68,8 @@ export function DashboardPage() {
   const { accessToken, activeTenantId, activeMallId, user, tenants, malls } = useAuth();
   const { can } = usePermission();
   const canReadNotifications = can('notification:read');
+  const canReadAudit = can('audit:read');
+  const canReadSecurityAudit = can('audit:security');
   const activeTenant = tenants.find((t) => t.id === activeTenantId);
   const activeMall = malls.find((m) => m.id === activeMallId);
 
@@ -82,6 +86,8 @@ export function DashboardPage() {
   }>({ totalEvents: null, pageViews: null });
 
   const [opsNotifications, setOpsNotifications] = useState<CmsNotification[]>([]);
+  const [recentActivity, setRecentActivity] = useState<AuditLog[]>([]);
+  const [securityEvents, setSecurityEvents] = useState<AuditLog[]>([]);
 
   useEffect(() => {
     if (!accessToken || !activeTenantId) return;
@@ -165,6 +171,24 @@ export function DashboardPage() {
       cancelled = true;
     };
   }, [accessToken, activeTenantId, activeMallId, canReadNotifications]);
+
+  useEffect(() => {
+    if (!accessToken || !canReadAudit) { setRecentActivity([]); return; }
+    let cancelled = false;
+    void apiAuditLogsRecentActivity(accessToken, activeTenantId ?? undefined, 8)
+      .then((r) => { if (!cancelled) setRecentActivity(r); })
+      .catch(() => { if (!cancelled) setRecentActivity([]); });
+    return () => { cancelled = true; };
+  }, [accessToken, activeTenantId, canReadAudit]);
+
+  useEffect(() => {
+    if (!accessToken || !canReadSecurityAudit) { setSecurityEvents([]); return; }
+    let cancelled = false;
+    void apiAuditLogsSecurityEvents(accessToken, activeTenantId ?? undefined, 5)
+      .then((r) => { if (!cancelled) setSecurityEvents(r); })
+      .catch(() => { if (!cancelled) setSecurityEvents([]); });
+    return () => { cancelled = true; };
+  }, [accessToken, activeTenantId, canReadSecurityAudit]);
 
   const contextLabel = [activeTenant?.name, activeMall?.name].filter(Boolean).join(' › ');
 
@@ -264,6 +288,120 @@ export function DashboardPage() {
               <p style={{ margin: '10px 0 0', fontSize: 12, color: '#9ca3af' }}>
                 Ayrıntılar için <Link to="/analytics">Raporlar</Link> sayfasına gidin.
               </p>
+            </div>
+          )}
+
+          {/* Recent Activity Widget */}
+          {canReadAudit && recentActivity.length > 0 && (
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 10 }}>
+                Son Aktiviteler
+              </div>
+              <div
+                style={{
+                  background: '#f9fafb',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                }}
+              >
+                {recentActivity.map((log, i) => {
+                  const actorName = log.actor
+                    ? [log.actor.firstName, log.actor.lastName].filter(Boolean).join(' ') || log.actor.email
+                    : 'Sistem';
+                  return (
+                    <div
+                      key={log.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '10px 16px',
+                        borderBottom: i < recentActivity.length - 1 ? '1px solid #e5e7eb' : 'none',
+                        fontSize: 13,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                          background: log.severity === 'SECURITY' || log.severity === 'CRITICAL'
+                            ? '#dc2626'
+                            : log.severity === 'WARNING'
+                            ? '#f59e0b'
+                            : '#3b82f6',
+                        }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontWeight: 600 }}>{actorName}</span>
+                        <span style={{ color: '#6b7280', marginLeft: 6 }}>{log.action}</span>
+                        {log.resource && <span style={{ color: '#9ca3af', marginLeft: 6 }}>{log.resource}</span>}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#9ca3af', flexShrink: 0 }}>
+                        {new Date(log.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{ padding: '10px 16px', borderTop: '1px solid #e5e7eb', fontSize: 12 }}>
+                  <Link to="/audit-logs" style={{ color: '#2563eb' }}>
+                    Tüm denetim günlükleri →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Security Events Widget */}
+          {canReadSecurityAudit && securityEvents.length > 0 && (
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#dc2626', marginBottom: 10 }}>
+                ⚠ Güvenlik Olayları
+              </div>
+              <div
+                style={{
+                  background: '#fff5f5',
+                  border: '1px solid #fecaca',
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                }}
+              >
+                {securityEvents.map((log, i) => {
+                  const actorName = log.actor
+                    ? [log.actor.firstName, log.actor.lastName].filter(Boolean).join(' ') || log.actor.email
+                    : 'Sistem';
+                  return (
+                    <div
+                      key={log.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '10px 16px',
+                        borderBottom: i < securityEvents.length - 1 ? '1px solid #fecaca' : 'none',
+                        fontSize: 13,
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>{log.severity === 'CRITICAL' ? '🔴' : '🟠'}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontWeight: 600, color: '#991b1b' }}>{log.action}</span>
+                        {log.resourceName && <span style={{ color: '#6b7280', marginLeft: 6 }}>· {log.resourceName}</span>}
+                        <span style={{ color: '#9ca3af', marginLeft: 6 }}>by {actorName}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#9ca3af', flexShrink: 0 }}>
+                        {new Date(log.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{ padding: '10px 16px', borderTop: '1px solid #fecaca', fontSize: 12 }}>
+                  <Link to="/audit-logs?severity=SECURITY" style={{ color: '#dc2626' }}>
+                    Tüm güvenlik olayları →
+                  </Link>
+                </div>
+              </div>
             </div>
           )}
 

@@ -151,6 +151,14 @@ export const NAV_ITEMS: NavItem[] = [
     group: 'Platform',
   },
   {
+    id: 'audit-logs',
+    label: 'Denetim Günlükleri',
+    icon: '◫',
+    href: '/audit-logs',
+    permission: 'audit:read',
+    group: 'Platform',
+  },
+  {
     id: 'tenants',
     label: 'Müşteriler',
     icon: '◑',

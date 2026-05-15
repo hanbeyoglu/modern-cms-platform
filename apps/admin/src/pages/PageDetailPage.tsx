@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MultilingualContentFields, PAGE_I18N_FIELDS } from '../components/MultilingualContentFields';
+import { AuditTimeline } from '../components/AuditTimeline';
 import { useAuth } from '../auth/useAuth';
 import {
   apiLocalesList,
@@ -775,6 +776,18 @@ export function PageDetailPage() {
             ))}
           </div>
         )}
+      </div>
+
+      <div
+        style={{
+          border: '1px solid #e5e7eb',
+          borderRadius: 8,
+          padding: '20px 24px',
+          marginTop: 24,
+          background: '#fff',
+        }}
+      >
+        <AuditTimeline entityType="page" entityId={page.id} />
       </div>
     </div>
   );

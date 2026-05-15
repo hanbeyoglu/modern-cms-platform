@@ -32,6 +32,8 @@ import { TenantsPage } from '../pages/TenantsPage';
 import { TenantDetailPage } from '../pages/TenantDetailPage';
 import { LocationsPage } from '../pages/LocationsPage';
 import { LocationDetailPage } from '../pages/LocationDetailPage';
+import { AuditLogsPage } from '../pages/AuditLogsPage';
+import { AuditLogDetailPage } from '../pages/AuditLogDetailPage';
 
 export const router = createBrowserRouter([
   {
@@ -79,6 +81,8 @@ export const router = createBrowserRouter([
           { path: '/tenants/:id', element: <TenantDetailPage /> },
           { path: '/locations', element: <LocationsPage /> },
           { path: '/locations/:id', element: <LocationDetailPage /> },
+          { path: '/audit-logs', element: <AuditLogsPage /> },
+          { path: '/audit-logs/:id', element: <AuditLogDetailPage /> },
         ],
       },
     ],

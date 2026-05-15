@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import type { User } from '@prisma/client';
+import { AuditSeverity, type User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import type { ListUsersDto } from './dto/list-users.dto';
@@ -325,6 +325,7 @@ export class UsersService {
       action: 'password_reset_requested',
       entityType: 'user',
       entityId: userId,
+      severity: AuditSeverity.SECURITY,
     });
     return { success: true, message: 'Password reset token placeholder' };
   }

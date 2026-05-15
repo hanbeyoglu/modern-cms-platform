@@ -34,6 +34,9 @@ export class AuditInterceptor implements NestInterceptor {
           mallId: req.mallId,
           action,
           entityType: context.getClass().name.replace('Controller', '').toLowerCase(),
+          source: 'api',
+          correlationId: req.correlationId,
+          requestId: req.requestId,
           ip: req.ip,
           userAgent: req.get('user-agent'),
         });

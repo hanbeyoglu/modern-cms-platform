@@ -4,6 +4,7 @@ import { AccessModule } from './access/access.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { TenantContextMiddleware } from './common/middleware/tenant-context.middleware';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { HealthModule } from './health/health.module';
 import { MallsModule } from './malls/malls.module';
 import { MediaModule } from './media/media.module';
@@ -76,6 +77,6 @@ import { VersionModule } from './version/version.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(TenantContextMiddleware).forRoutes('*');
+    consumer.apply(CorrelationIdMiddleware, TenantContextMiddleware).forRoutes('*');
   }
 }

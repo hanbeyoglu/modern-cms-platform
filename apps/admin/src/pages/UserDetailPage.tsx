@@ -16,6 +16,7 @@ import {
 } from '../lib/api';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
+import { AuditTimeline } from '../components/AuditTimeline';
 
 const STATUS_LABELS: Record<string, string> = { ACTIVE: 'Aktif', DISABLED: 'Pasif', INVITED: 'Davetli' };
 const STATUS_COLORS: Record<string, string> = { ACTIVE: '#16a34a', DISABLED: '#dc2626', INVITED: '#d97706' };
@@ -244,6 +245,20 @@ export function UserDetailPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {user && (
+        <div
+          style={{
+            background: '#fff',
+            border: '1px solid #e5e7eb',
+            borderRadius: 8,
+            padding: '20px 24px',
+            marginTop: 24,
+          }}
+        >
+          <AuditTimeline entityType="user" entityId={user.id} />
         </div>
       )}
     </PageContainer>

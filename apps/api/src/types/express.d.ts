@@ -3,6 +3,8 @@ declare global {
     interface Request {
       tenantId?: string;
       mallId?: string;
+      correlationId?: string;
+      requestId?: string;
     }
   }
 }
