@@ -20,11 +20,25 @@ export type {
 export {
   apiMediaUpload,
   apiMediaList,
+  apiMediaGet,
+  apiMediaUpdate,
+  apiMediaMove,
   apiMediaDelete,
+  apiMediaUsages,
   apiFoldersList,
   apiFolderCreate,
+  apiFolderUpdate,
+  apiFolderDelete,
 } from './media';
-export type { MediaAsset, MediaFolder, MediaListResponse, FolderListResponse } from './media';
+export type {
+  MediaAsset,
+  MediaAssetStatus,
+  MediaFolder,
+  MediaUsage,
+  MediaListResponse,
+  FolderListResponse,
+  UpdateMediaPayload,
+} from './media';
 
 export {
   apiSlidersList,

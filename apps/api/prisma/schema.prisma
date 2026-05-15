@@ -311,16 +311,23 @@ model AuditLog {
 
 // ─── Media ────────────────────────────────────────────────────────────────────
 
+enum MediaAssetStatus {
+  ACTIVE
+  ARCHIVED
+}
+
 model MediaFolder {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   tenantId  String
   mallId    String?
   parentId  String?
   name      String
   slug      String
+  sortOrder Int       @default(0)
   createdBy String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   mall     Mall?         @relation(fields: [mallId], references: [id], onDelete: SetNull)
@@ -335,46 +342,75 @@ model MediaFolder {
 }
 
 model MediaAsset {
-  id           String    @id @default(cuid())
-  tenantId     String
-  mallId       String?
-  folderId     String?
-  uploadedBy   String
-  originalName String
-  fileName     String
-  mimeType     String
-  extension    String
-  size         Int
-  width        Int?
-  height       Int?
-  storageKey   String    @unique
-  publicUrl    String
-  altText      String?
-  metadataJson Json?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
+  id              String           @id @default(cuid())
+  tenantId        String
+  mallId          String?
+  folderId        String?
+  uploadedBy      String
+  originalName    String
+  fileName        String
+  mimeType        String
+  extension       String
+  size            Int
+  width           Int?
+  height          Int?
+  durationSeconds Float?
+  storageKey      String           @unique
+  publicUrl       String
+  altText         String?
+  caption         String?
+  description     String?
+  tags            String[]
+  focalPointX     Float?
+  focalPointY     Float?
+  dominantColor   String?
+  source          String?
+  checksum        String?
+  status          MediaAssetStatus @default(ACTIVE)
+  metadataJson    Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
 
   tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   mall     Mall?        @relation(fields: [mallId], references: [id], onDelete: SetNull)
   folder   MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
   uploader User         @relation("AssetUploader", fields: [uploadedBy], references: [id])
+  variants MediaVariant[]
 
-  slidersDesktop Slider[] @relation("SliderDesktopMedia")
-  slidersMobile  Slider[] @relation("SliderMobileMedia")
-  slidersVideo   Slider[] @relation("SliderVideoMedia")
-  globalStoreLogos GlobalStore[] @relation("GlobalStoreLogo")
+  slidersDesktop      Slider[]    @relation("SliderDesktopMedia")
+  slidersMobile       Slider[]    @relation("SliderMobileMedia")
+  slidersVideo        Slider[]    @relation("SliderVideoMedia")
+  globalStoreLogos    GlobalStore[] @relation("GlobalStoreLogo")
   mallStoreLocalLogos MallStore[] @relation("MallStoreLocalLogo")
-  eventCovers      Event[]      @relation("EventCoverMedia")
-  campaignCovers   Campaign[]   @relation("CampaignCoverMedia")
-  cinemaLogos      Cinema[]     @relation("CinemaLogoMedia")
-  moviePosters     Movie[]      @relation("MoviePosterMedia")
-  mallLogos        Mall[]       @relation("MallLogoMedia")
-  mallCovers       Mall[]       @relation("MallCoverMedia")
+  eventCovers         Event[]     @relation("EventCoverMedia")
+  campaignCovers      Campaign[]  @relation("CampaignCoverMedia")
+  cinemaLogos         Cinema[]    @relation("CinemaLogoMedia")
+  moviePosters        Movie[]     @relation("MoviePosterMedia")
+  mallLogos           Mall[]      @relation("MallLogoMedia")
+  mallCovers          Mall[]      @relation("MallCoverMedia")
 
   @@index([tenantId, createdAt])
   @@index([tenantId, folderId])
+  @@index([tenantId, status])
   @@index([mallId])
+}
+
+model MediaVariant {
+  id           String     @id @default(cuid())
+  mediaAssetId String
+  variantKey   String
+  url          String
+  width        Int?
+  height       Int?
+  mimeType     String
+  fileSize     Int
+  createdAt    DateTime   @default(now())
+
+  asset MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaAssetId, variantKey])
+  @@index([mediaAssetId])
 }
 
 // ─── Sliders ──────────────────────────────────────────────────────────────────

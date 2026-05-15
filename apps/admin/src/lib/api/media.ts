@@ -1,5 +1,7 @@
 import { request } from './client';
 
+export type MediaAssetStatus = 'ACTIVE' | 'ARCHIVED';
+
 export type MediaAsset = {
   id: string;
   tenantId: string;
@@ -12,10 +14,21 @@ export type MediaAsset = {
   size: number;
   width: number | null;
   height: number | null;
+  durationSeconds: number | null;
   storageKey: string;
   publicUrl: string;
   altText: string | null;
+  caption: string | null;
+  description: string | null;
+  tags: string[];
+  focalPointX: number | null;
+  focalPointY: number | null;
+  dominantColor: string | null;
+  source: string | null;
+  checksum: string | null;
+  status: MediaAssetStatus;
   createdAt: string;
+  updatedAt: string;
 };
 
 export type MediaFolder = {
@@ -25,11 +38,31 @@ export type MediaFolder = {
   parentId: string | null;
   name: string;
   slug: string;
+  sortOrder: number;
   createdAt: string;
+  updatedAt: string;
+};
+
+export type MediaUsage = {
+  entityType: string;
+  entityId: string;
+  entityName: string;
+  field: string;
+  route?: string;
 };
 
 export type MediaListResponse = { assets: MediaAsset[]; total: number };
 export type FolderListResponse = { folders: MediaFolder[] };
+
+export type UpdateMediaPayload = {
+  altText?: string;
+  caption?: string;
+  description?: string;
+  tags?: string[];
+  focalPointX?: number | null;
+  focalPointY?: number | null;
+  status?: MediaAssetStatus;
+};
 
 export async function apiMediaUpload(
   token: string,
@@ -54,13 +87,30 @@ export async function apiMediaUpload(
 export async function apiMediaList(
   token: string,
   tenantId: string,
-  opts?: { folderId?: string; mallId?: string; page?: number; limit?: number },
+  opts?: {
+    folderId?: string;
+    mallId?: string;
+    page?: number;
+    limit?: number;
+    mimeType?: string;
+    tag?: string;
+    search?: string;
+    status?: MediaAssetStatus;
+    dateFrom?: string;
+    dateTo?: string;
+  },
 ): Promise<MediaListResponse> {
   const params = new URLSearchParams();
   if (opts?.folderId) params.set('folderId', opts.folderId);
   if (opts?.mallId) params.set('mallId', opts.mallId);
   if (opts?.page) params.set('page', String(opts.page));
   if (opts?.limit) params.set('limit', String(opts.limit));
+  if (opts?.mimeType) params.set('mimeType', opts.mimeType);
+  if (opts?.tag) params.set('tag', opts.tag);
+  if (opts?.search) params.set('search', opts.search);
+  if (opts?.status) params.set('status', opts.status);
+  if (opts?.dateFrom) params.set('dateFrom', opts.dateFrom);
+  if (opts?.dateTo) params.set('dateTo', opts.dateTo);
   const qs = params.toString();
   return request<MediaListResponse>(`/media${qs ? `?${qs}` : ''}`, {
     method: 'GET',
@@ -69,8 +119,48 @@ export async function apiMediaList(
   });
 }
 
+export async function apiMediaGet(token: string, tenantId: string, id: string): Promise<MediaAsset> {
+  return request<MediaAsset>(`/media/${id}`, { method: 'GET', token, tenantId });
+}
+
+export async function apiMediaUpdate(
+  token: string,
+  tenantId: string,
+  id: string,
+  payload: UpdateMediaPayload,
+): Promise<MediaAsset> {
+  return request<MediaAsset>(`/media/${id}`, {
+    method: 'PATCH',
+    token,
+    tenantId,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiMediaMove(
+  token: string,
+  tenantId: string,
+  id: string,
+  folderId: string | null,
+): Promise<MediaAsset> {
+  return request<MediaAsset>(`/media/${id}/move`, {
+    method: 'PATCH',
+    token,
+    tenantId,
+    body: JSON.stringify({ folderId }),
+  });
+}
+
 export async function apiMediaDelete(token: string, tenantId: string, id: string): Promise<void> {
   return request<void>(`/media/${id}`, { method: 'DELETE', token, tenantId });
+}
+
+export async function apiMediaUsages(
+  token: string,
+  tenantId: string,
+  id: string,
+): Promise<MediaUsage[]> {
+  return request<MediaUsage[]>(`/media/${id}/usages`, { method: 'GET', token, tenantId });
 }
 
 export async function apiFoldersList(
@@ -101,4 +191,22 @@ export async function apiFolderCreate(
     tenantId,
     body: JSON.stringify({ name, parentId }),
   });
+}
+
+export async function apiFolderUpdate(
+  token: string,
+  tenantId: string,
+  id: string,
+  payload: { name?: string; sortOrder?: number },
+): Promise<MediaFolder> {
+  return request<MediaFolder>(`/media/folders/${id}`, {
+    method: 'PATCH',
+    token,
+    tenantId,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiFolderDelete(token: string, tenantId: string, id: string): Promise<void> {
+  return request<void>(`/media/folders/${id}`, { method: 'DELETE', token, tenantId });
 }

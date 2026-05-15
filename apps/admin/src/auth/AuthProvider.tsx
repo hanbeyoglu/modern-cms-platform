@@ -3,6 +3,7 @@ import { apiMe, apiTenants, apiMalls, onUnauthorized, type Mall, type Tenant } f
 import {
   AuthContext,
   initialAuthState,
+  persistAdminContext,
   persistTokens,
   type AuthContextValue,
   type AuthState,
@@ -14,9 +15,14 @@ type Action =
   | { type: 'CLEAR_SESSION' }
   | { type: 'SET_PROFILE'; user: AuthUser; tenants: Tenant[] }
   | { type: 'SET_MALLS'; malls: Mall[] }
+  | { type: 'CLEAR_TENANT_CONTEXT' }
   | { type: 'SELECT_TENANT'; tenantId: string }
   | { type: 'SELECT_MALL'; mallId: string | null }
   | { type: 'PROFILE_LOADING'; loading: boolean };
+
+function isTenantSelectable(tenant: Tenant): boolean {
+  return tenant.status.toUpperCase() !== 'DISABLED';
+}
 
 function reducer(state: AuthState, action: Action): AuthState {
   switch (action.type) {
@@ -32,6 +38,7 @@ function reducer(state: AuthState, action: Action): AuthState {
         malls: [],
         activeMallId: null,
         profileLoading: true,
+        mallsLoading: false,
       };
     case 'CLEAR_SESSION':
       return {
@@ -44,19 +51,48 @@ function reducer(state: AuthState, action: Action): AuthState {
         malls: [],
         activeMallId: null,
         profileLoading: false,
+        mallsLoading: false,
       };
-    case 'SET_PROFILE':
+    case 'SET_PROFILE': {
+      const selectableTenants = action.tenants.filter(isTenantSelectable);
+      const existingTenant = selectableTenants.find((tenant) => tenant.id === state.activeTenantId);
+      const nextTenantId =
+        existingTenant?.id ??
+        (!action.user.isSuperAdmin && selectableTenants.length === 1 ? selectableTenants[0].id : null);
       return {
         ...state,
         user: action.user,
         tenants: action.tenants,
-        activeTenantId: action.tenants.length === 1 ? action.tenants[0].id : state.activeTenantId,
+        activeTenantId: nextTenantId,
+        activeMallId: nextTenantId === state.activeTenantId ? state.activeMallId : null,
+        malls: nextTenantId === state.activeTenantId ? state.malls : [],
         profileLoading: false,
+        mallsLoading: nextTenantId === state.activeTenantId ? state.mallsLoading : !!nextTenantId,
       };
-    case 'SET_MALLS':
-      return { ...state, malls: action.malls, activeMallId: null };
+    }
+    case 'SET_MALLS': {
+      const activeMallBelongsToTenant = action.malls.some(
+        (mall) => mall.id === state.activeMallId && mall.tenantId === state.activeTenantId,
+      );
+      const nextMallId =
+        activeMallBelongsToTenant || action.malls.length !== 1 ? state.activeMallId : action.malls[0].id;
+      return {
+        ...state,
+        malls: action.malls,
+        activeMallId: activeMallBelongsToTenant || action.malls.length === 1 ? nextMallId : null,
+        mallsLoading: false,
+      };
+    }
+    case 'CLEAR_TENANT_CONTEXT':
+      return { ...state, activeTenantId: null, malls: [], activeMallId: null, mallsLoading: false };
     case 'SELECT_TENANT':
-      return { ...state, activeTenantId: action.tenantId, malls: [], activeMallId: null };
+      return {
+        ...state,
+        activeTenantId: action.tenantId,
+        malls: [],
+        activeMallId: null,
+        mallsLoading: action.tenantId.length > 0,
+      };
     case 'SELECT_MALL':
       return { ...state, activeMallId: action.mallId };
     case 'PROFILE_LOADING':
@@ -94,7 +130,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.accessToken]);
 
   // Auto-load malls whenever active tenant changes
@@ -115,8 +150,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.activeTenantId]);
+  }, [state.accessToken, state.activeTenantId]);
+
+  useEffect(() => {
+    persistAdminContext({
+      activeTenantId: state.activeTenantId,
+      activeMallId: state.activeMallId,
+    });
+  }, [state.activeTenantId, state.activeMallId]);
 
   // Auto-logout on 401 from any API call
   useEffect(() => {
@@ -136,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearSession = useCallback(() => {
     persistTokens({ accessToken: null, refreshToken: null, email: null });
+    persistAdminContext({ activeTenantId: null, activeMallId: null });
     dispatch({ type: 'CLEAR_SESSION' });
   }, []);
 
@@ -148,6 +190,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const selectTenant = useCallback((tenantId: string) => {
+    if (!tenantId) {
+      dispatch({ type: 'CLEAR_TENANT_CONTEXT' });
+      return;
+    }
     dispatch({ type: 'SELECT_TENANT', tenantId });
   }, []);
 

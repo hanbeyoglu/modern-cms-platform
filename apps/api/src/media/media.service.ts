@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { MediaAsset, User } from '@prisma/client';
+import type { MediaAsset, MediaAssetStatus, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import { StorageProvider } from './storage/storage.provider';
@@ -16,6 +16,8 @@ import {
   MIME_TO_EXTENSION,
 } from './constants/media.constants';
 import type { ListMediaDto } from './dto/list-media.dto';
+import type { UpdateMediaDto } from './dto/update-media.dto';
+import type { MoveMediaDto } from './dto/move-media.dto';
 
 export interface UploadOptions {
   folderId?: string;
@@ -36,11 +38,30 @@ export type MediaAssetResponse = Pick<
   | 'size'
   | 'width'
   | 'height'
+  | 'durationSeconds'
   | 'storageKey'
   | 'publicUrl'
   | 'altText'
+  | 'caption'
+  | 'description'
+  | 'tags'
+  | 'focalPointX'
+  | 'focalPointY'
+  | 'dominantColor'
+  | 'source'
+  | 'checksum'
+  | 'status'
   | 'createdAt'
+  | 'updatedAt'
 >;
+
+export interface MediaUsage {
+  entityType: string;
+  entityId: string;
+  entityName: string;
+  field: string;
+  route?: string;
+}
 
 @Injectable()
 export class MediaService {
@@ -87,6 +108,7 @@ export class MediaService {
         storageKey: key,
         publicUrl,
         altText: options.altText ?? null,
+        tags: [],
       },
     });
 
@@ -103,16 +125,40 @@ export class MediaService {
     return this.toResponse(asset);
   }
 
-  async listAssets(tenantId: string, query: ListMediaDto): Promise<{ assets: MediaAssetResponse[]; total: number }> {
+  async listAssets(
+    tenantId: string,
+    query: ListMediaDto,
+  ): Promise<{ assets: MediaAssetResponse[]; total: number }> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 40;
     const skip = (page - 1) * limit;
 
-    const where = {
+    const where: Record<string, unknown> = {
       tenantId,
       deletedAt: null,
       ...(query.folderId !== undefined ? { folderId: query.folderId } : {}),
       ...(query.mallId !== undefined ? { mallId: query.mallId } : {}),
+      ...(query.mimeType ? { mimeType: { startsWith: query.mimeType } } : {}),
+      ...(query.status ? { status: query.status } : { status: 'ACTIVE' }),
+      ...(query.tag ? { tags: { has: query.tag } } : {}),
+      ...(query.search
+        ? {
+            OR: [
+              { originalName: { contains: query.search, mode: 'insensitive' } },
+              { altText: { contains: query.search, mode: 'insensitive' } },
+              { caption: { contains: query.search, mode: 'insensitive' } },
+              { description: { contains: query.search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+      ...(query.dateFrom || query.dateTo
+        ? {
+            createdAt: {
+              ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
+              ...(query.dateTo ? { lte: new Date(query.dateTo) } : {}),
+            },
+          }
+        : {}),
     };
 
     const [assets, total] = await Promise.all([
@@ -136,23 +182,196 @@ export class MediaService {
     return this.toResponse(asset);
   }
 
+  async updateAsset(
+    id: string,
+    dto: UpdateMediaDto,
+    user: User,
+    tenantId: string,
+  ): Promise<MediaAssetResponse> {
+    const asset = await this.prisma.mediaAsset.findFirst({
+      where: { id, tenantId, deletedAt: null },
+    });
+    if (!asset) throw new NotFoundException('Media asset not found');
+
+    const before = this.toResponse(asset);
+    const updated = await this.prisma.mediaAsset.update({
+      where: { id },
+      data: {
+        ...(dto.altText !== undefined ? { altText: dto.altText } : {}),
+        ...(dto.caption !== undefined ? { caption: dto.caption } : {}),
+        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.tags !== undefined ? { tags: dto.tags } : {}),
+        ...(dto.focalPointX !== undefined ? { focalPointX: dto.focalPointX } : {}),
+        ...(dto.focalPointY !== undefined ? { focalPointY: dto.focalPointY } : {}),
+        ...(dto.status !== undefined ? { status: dto.status } : {}),
+      },
+    });
+
+    await this.audit.logAction({
+      userId: user.id,
+      tenantId,
+      action: 'media:update',
+      entityType: 'media_asset',
+      entityId: asset.id,
+      before,
+      after: this.toResponse(updated),
+    });
+
+    return this.toResponse(updated);
+  }
+
+  async moveAsset(
+    id: string,
+    dto: MoveMediaDto,
+    user: User,
+    tenantId: string,
+  ): Promise<MediaAssetResponse> {
+    const asset = await this.prisma.mediaAsset.findFirst({
+      where: { id, tenantId, deletedAt: null },
+    });
+    if (!asset) throw new NotFoundException('Media asset not found');
+
+    if (dto.folderId) {
+      await this.assertFolderBelongsToTenant(dto.folderId, tenantId);
+    }
+
+    const updated = await this.prisma.mediaAsset.update({
+      where: { id },
+      data: { folderId: dto.folderId ?? null },
+    });
+
+    await this.audit.logAction({
+      userId: user.id,
+      tenantId,
+      action: 'media:move',
+      entityType: 'media_asset',
+      entityId: asset.id,
+      before: { folderId: asset.folderId },
+      after: { folderId: dto.folderId ?? null },
+    });
+
+    return this.toResponse(updated);
+  }
+
+  async getUsages(id: string, tenantId: string): Promise<MediaUsage[]> {
+    const asset = await this.prisma.mediaAsset.findFirst({
+      where: { id, tenantId, deletedAt: null },
+    });
+    if (!asset) throw new NotFoundException('Media asset not found');
+
+    const usages: MediaUsage[] = [];
+
+    const [
+      slidersDesktop,
+      slidersMobile,
+      slidersVideo,
+      globalStoreLogos,
+      mallStoreLogos,
+      eventCovers,
+      campaignCovers,
+      cinemaLogos,
+      moviePosters,
+      mallLogos,
+      mallCovers,
+    ] = await Promise.all([
+      this.prisma.slider.findMany({
+        where: { desktopMediaId: id, tenantId, deletedAt: null },
+        select: { id: true, title: true, mallId: true },
+      }),
+      this.prisma.slider.findMany({
+        where: { mobileMediaId: id, tenantId, deletedAt: null },
+        select: { id: true, title: true, mallId: true },
+      }),
+      this.prisma.slider.findMany({
+        where: { videoMediaId: id, tenantId, deletedAt: null },
+        select: { id: true, title: true, mallId: true },
+      }),
+      this.prisma.globalStore.findMany({
+        where: { logoMediaId: id, deletedAt: null },
+        select: { id: true, name: true },
+      }),
+      this.prisma.mallStore.findMany({
+        where: { localLogoMediaId: id, tenantId, deletedAt: null },
+        select: { id: true, globalStoreId: true, globalStore: { select: { name: true } } },
+      }),
+      this.prisma.event.findMany({
+        where: { coverMediaId: id, tenantId, deletedAt: null },
+        select: { id: true, title: true, slug: true },
+      }),
+      this.prisma.campaign.findMany({
+        where: { coverMediaId: id, tenantId, deletedAt: null },
+        select: { id: true, title: true, slug: true },
+      }),
+      this.prisma.cinema.findMany({
+        where: { logoMediaId: id, tenantId, deletedAt: null },
+        select: { id: true, name: true },
+      }),
+      this.prisma.movie.findMany({
+        where: { posterMediaId: id, tenantId, deletedAt: null },
+        select: { id: true, title: true, slug: true },
+      }),
+      this.prisma.mall.findMany({
+        where: { logoMediaId: id, tenantId, deletedAt: null },
+        select: { id: true, name: true, slug: true },
+      }),
+      this.prisma.mall.findMany({
+        where: { coverMediaId: id, tenantId, deletedAt: null },
+        select: { id: true, name: true, slug: true },
+      }),
+    ]);
+
+    for (const s of slidersDesktop) {
+      usages.push({ entityType: 'slider', entityId: s.id, entityName: s.title, field: 'desktopMedia', route: `/sliders/${s.id}` });
+    }
+    for (const s of slidersMobile) {
+      usages.push({ entityType: 'slider', entityId: s.id, entityName: s.title, field: 'mobileMedia', route: `/sliders/${s.id}` });
+    }
+    for (const s of slidersVideo) {
+      usages.push({ entityType: 'slider', entityId: s.id, entityName: s.title, field: 'videoMedia', route: `/sliders/${s.id}` });
+    }
+    for (const s of globalStoreLogos) {
+      usages.push({ entityType: 'global_store', entityId: s.id, entityName: s.name, field: 'logo', route: `/stores/global/${s.id}` });
+    }
+    for (const s of mallStoreLogos) {
+      const name = s.globalStore?.name ?? s.id;
+      usages.push({ entityType: 'mall_store', entityId: s.id, entityName: name, field: 'localLogo', route: `/stores/${s.id}` });
+    }
+    for (const e of eventCovers) {
+      usages.push({ entityType: 'event', entityId: e.id, entityName: e.title, field: 'coverMedia', route: `/events/${e.slug}` });
+    }
+    for (const c of campaignCovers) {
+      usages.push({ entityType: 'campaign', entityId: c.id, entityName: c.title, field: 'coverMedia', route: `/campaigns/${c.slug}` });
+    }
+    for (const c of cinemaLogos) {
+      usages.push({ entityType: 'cinema', entityId: c.id, entityName: c.name, field: 'logo', route: `/cinemas/${c.id}` });
+    }
+    for (const m of moviePosters) {
+      usages.push({ entityType: 'movie', entityId: m.id, entityName: m.title, field: 'poster', route: `/movies/${m.slug}` });
+    }
+    for (const m of mallLogos) {
+      usages.push({ entityType: 'location', entityId: m.id, entityName: m.name, field: 'logo', route: `/locations/${m.slug}` });
+    }
+    for (const m of mallCovers) {
+      usages.push({ entityType: 'location', entityId: m.id, entityName: m.name, field: 'cover', route: `/locations/${m.slug}` });
+    }
+
+    return usages;
+  }
+
   async deleteAsset(id: string, user: User, tenantId: string): Promise<void> {
     const asset = await this.prisma.mediaAsset.findFirst({
       where: { id, tenantId, deletedAt: null },
     });
     if (!asset) throw new NotFoundException('Media asset not found');
 
-    // Soft-delete first so the record is gone from queries immediately
     await this.prisma.mediaAsset.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
 
-    // Best-effort physical delete — failures are logged but don't roll back the soft-delete
     try {
       await this.storage.delete(asset.storageKey);
     } catch (err) {
-      // Log but don't re-throw; the DB record is already soft-deleted
       console.error(`Storage delete failed for key ${asset.storageKey}:`, err);
     }
 
@@ -190,7 +409,6 @@ export class MediaService {
   }
 
   private resolveExtension(file: Express.Multer.File): string {
-    // Prefer MIME-derived extension (canonical), fall back to filename extension
     return MIME_TO_EXTENSION[file.mimetype] ?? path.extname(file.originalname).toLowerCase().slice(1);
   }
 
@@ -203,7 +421,7 @@ export class MediaService {
 
   private async assertFolderBelongsToTenant(folderId: string, tenantId: string): Promise<void> {
     const folder = await this.prisma.mediaFolder.findFirst({
-      where: { id: folderId, tenantId },
+      where: { id: folderId, tenantId, deletedAt: null },
     });
     if (!folder) throw new NotFoundException('Folder not found or does not belong to this tenant');
   }
@@ -221,10 +439,21 @@ export class MediaService {
       size: asset.size,
       width: asset.width,
       height: asset.height,
+      durationSeconds: asset.durationSeconds,
       storageKey: asset.storageKey,
       publicUrl: asset.publicUrl,
       altText: asset.altText,
+      caption: asset.caption,
+      description: asset.description,
+      tags: asset.tags,
+      focalPointX: asset.focalPointX,
+      focalPointY: asset.focalPointY,
+      dominantColor: asset.dominantColor,
+      source: asset.source,
+      checksum: asset.checksum,
+      status: asset.status as MediaAssetStatus,
       createdAt: asset.createdAt,
+      updatedAt: asset.updatedAt,
     };
   }
 }

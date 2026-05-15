@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -26,6 +27,9 @@ import { PermissionsGuard } from '../access/guards/permissions.guard';
 import { MediaService } from './media.service';
 import { MediaFolderService } from './media-folder.service';
 import { CreateFolderDto } from './dto/create-folder.dto';
+import { UpdateFolderDto } from './dto/update-folder.dto';
+import { UpdateMediaDto } from './dto/update-media.dto';
+import { MoveMediaDto } from './dto/move-media.dto';
 import { ListFoldersDto, ListMediaDto } from './dto/list-media.dto';
 import { MAX_FILE_SIZE_BYTES } from './constants/media.constants';
 
@@ -66,13 +70,14 @@ export class MediaController {
   @Get()
   @RequirePermission('media:read')
   async list(@CurrentUser() _user: User, @Req() req: Request, @Query() query: ListMediaDto) {
-    // x-mall-id acts as a filter when provided
     const effectiveQuery: ListMediaDto = {
       ...query,
       ...(req.mallId && !query.mallId ? { mallId: req.mallId } : {}),
     };
     return this.media.listAssets(req.tenantId!, effectiveQuery);
   }
+
+  // ─── Folder endpoints (before /:id to avoid route collision) ────────────────
 
   @Get('folders')
   @RequirePermission('media:read')
@@ -81,7 +86,7 @@ export class MediaController {
   }
 
   @Post('folders')
-  @RequirePermission('media:upload')
+  @RequirePermission('media:manage-folders')
   async createFolder(
     @Body() dto: CreateFolderDto,
     @CurrentUser() user: User,
@@ -90,13 +95,62 @@ export class MediaController {
     return this.folders.createFolder(dto, user, req.tenantId!);
   }
 
-  // NOTE: /:id routes are declared after /folders to prevent NestJS matching
-  // "folders" as an id parameter.
+  @Patch('folders/:id')
+  @RequirePermission('media:manage-folders')
+  async updateFolder(
+    @Param('id') id: string,
+    @Body() dto: UpdateFolderDto,
+    @CurrentUser() user: User,
+    @Req() req: Request,
+  ) {
+    return this.folders.updateFolder(id, dto, user, req.tenantId!);
+  }
+
+  @Delete('folders/:id')
+  @HttpCode(204)
+  @RequirePermission('media:manage-folders')
+  async deleteFolder(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Req() req: Request,
+  ) {
+    await this.folders.deleteFolder(id, user, req.tenantId!);
+  }
+
+  // ─── Asset by-id endpoints ──────────────────────────────────────────────────
 
   @Get(':id')
   @RequirePermission('media:read')
   async getOne(@Param('id') id: string, @Req() req: Request) {
     return this.media.getAsset(id, req.tenantId!);
+  }
+
+  @Get(':id/usages')
+  @RequirePermission('media:read')
+  async getUsages(@Param('id') id: string, @Req() req: Request) {
+    return this.media.getUsages(id, req.tenantId!);
+  }
+
+  @Patch(':id')
+  @RequirePermission('media:update')
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateMediaDto,
+    @CurrentUser() user: User,
+    @Req() req: Request,
+  ) {
+    return this.media.updateAsset(id, dto, user, req.tenantId!);
+  }
+
+  @Patch(':id/move')
+  @RequirePermission('media:update')
+  async move(
+    @Param('id') id: string,
+    @Body() dto: MoveMediaDto,
+    @CurrentUser() user: User,
+    @Req() req: Request,
+  ) {
+    return this.media.moveAsset(id, dto, user, req.tenantId!);
   }
 
   @Delete(':id')

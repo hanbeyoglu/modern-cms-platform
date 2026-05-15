@@ -1,5 +1,6 @@
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsISO8601, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { MediaAssetStatus } from '@prisma/client';
 
 export class ListMediaDto {
   @IsOptional()
@@ -9,6 +10,30 @@ export class ListMediaDto {
   @IsOptional()
   @IsString()
   mallId?: string;
+
+  @IsOptional()
+  @IsString()
+  mimeType?: string;
+
+  @IsOptional()
+  @IsString()
+  tag?: string;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsEnum(MediaAssetStatus)
+  status?: MediaAssetStatus;
+
+  @IsOptional()
+  @IsISO8601()
+  dateFrom?: string;
+
+  @IsOptional()
+  @IsISO8601()
+  dateTo?: string;
 
   @IsOptional()
   @Transform(({ value }: { value: string }) => Number(value))

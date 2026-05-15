@@ -16,6 +16,7 @@ export type AuthState = {
   malls: Mall[];
   activeMallId: string | null;
   profileLoading: boolean;
+  mallsLoading: boolean;
 };
 
 export type AuthContextValue = AuthState & {
@@ -30,11 +31,17 @@ export type AuthContextValue = AuthState & {
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const AUTH_STORAGE_KEY = 'modern-cms.admin.auth';
+export const ADMIN_CONTEXT_STORAGE_KEY = 'modern-cms.admin.context';
 
 type PersistedTokens = {
   accessToken: string | null;
   refreshToken: string | null;
   email: string | null;
+};
+
+type PersistedAdminContext = {
+  activeTenantId: string | null;
+  activeMallId: string | null;
 };
 
 export function loadTokensFromStorage(): PersistedTokens {
@@ -60,19 +67,46 @@ export function persistTokens(tokens: PersistedTokens): void {
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(tokens));
 }
 
+export function loadAdminContextFromStorage(): PersistedAdminContext {
+  try {
+    const raw = localStorage.getItem(ADMIN_CONTEXT_STORAGE_KEY);
+    if (!raw) return { activeTenantId: null, activeMallId: null };
+    const parsed = JSON.parse(raw) as PersistedAdminContext;
+    return {
+      activeTenantId: parsed.activeTenantId ?? null,
+      activeMallId: parsed.activeMallId ?? null,
+    };
+  } catch {
+    return { activeTenantId: null, activeMallId: null };
+  }
+}
+
+export function persistAdminContext(context: PersistedAdminContext): void {
+  if (!context.activeTenantId && !context.activeMallId) {
+    localStorage.removeItem(ADMIN_CONTEXT_STORAGE_KEY);
+    return;
+  }
+  localStorage.setItem(ADMIN_CONTEXT_STORAGE_KEY, JSON.stringify(context));
+}
+
 export function initialAuthState(): AuthState {
   const tokens =
     typeof window === 'undefined'
       ? { accessToken: null, refreshToken: null, email: null }
       : loadTokensFromStorage();
+  const context =
+    typeof window === 'undefined'
+      ? { activeTenantId: null, activeMallId: null }
+      : loadAdminContextFromStorage();
 
   return {
     ...tokens,
     user: null,
     tenants: [],
-    activeTenantId: null,
+    activeTenantId: context.activeTenantId,
     malls: [],
-    activeMallId: null,
+    activeMallId: context.activeMallId,
     profileLoading: tokens.accessToken !== null,
+    mallsLoading: tokens.accessToken !== null && context.activeTenantId !== null,
   };
 }
