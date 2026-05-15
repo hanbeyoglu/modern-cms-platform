@@ -25,8 +25,15 @@ Bu sprint, yerelleştirmeyi tenant düzeyinde birinci sınıf bir CMS yeteneğin
 ## Admin UX
 
 - **Ayarlar → Yerelleştirme** (`/settings/localization`): dil listesi, RTL göstergesi, varsayılan işareti, sıra kontrolleri.
-- **Etkinlik formu:** `MultilingualContentFields` ile aktif dillere göre sekmeler; varsayılan dilde başlık zorunlu; tamamlanma yüzdesi (yeşil / sarı / gri); varsayılan içeriği dile kopyala; RTL metin alanları.
-- **Diğer varlıklar (kampanya, sayfa, slider vb.):** `TranslationPanel` geliştirilmiştir (aktif dillere göre sekmeler, toplu kaydet, tamamlanma, varsayılandan kopyala, RTL, kaydedilmemiş uyarısı). İleride bu varlıklar da etkinlikteki gibi forma gömülü sekmelere taşınabilir.
+- **Forma gömülü çok dilli alanlar:** `MultilingualContentFields` aktif dillere göre sekmeler, varsayılan dil zorunlu alanı, tamamlanma yüzdesi (yeşil / sarı / gri), varsayılandan kopyalama ve RTL metin yönü sağlar.
+- **Adoption durumu:**
+  - Events: `title`, `shortDescription`, `description`, `buttonText`.
+  - Campaigns: `title`, `shortDescription`, `description`, `terms`, `buttonText`.
+  - Sliders: `title`, `subtitle`, `description`, `buttonText`.
+  - Pages: `title`, `seoTitle`, `seoDescription`.
+  - Locations: `displayName`, `shortDescription`, `description`.
+  - Stores: Global Store için `name`, `description`; Mall Store için `localName`, `localDescription`.
+- **Storage davranışı:** Varsayılan locale değerleri varlığın core alanlarına yazılır; varsayılan dışı aktif locale değerleri `LocalizedContent` / translations API üzerinden `entityType` bazında saklanır. Çeviri yetkisi olmayan kullanıcıda core kayıt başarılı kalır, çeviri flush adımı atlanır.
 
 ## Public API ve fallback
 

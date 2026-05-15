@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
+import { usePermission } from '../hooks/usePermission';
+import { MALL_STORE_I18N_FIELDS, MultilingualContentFields } from '../components/MultilingualContentFields';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -8,6 +10,7 @@ import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
 import {
   apiGlobalStoresList,
+  apiLocalesList,
   apiMallStoreAssign,
   apiMallStoreDelete,
   apiMallStoreFeature,
@@ -15,6 +18,10 @@ import {
   apiMallStoreUpdate,
   apiMallStoresList,
   apiMediaList,
+  apiTranslationDelete,
+  apiTranslationsList,
+  apiTranslationUpsert,
+  type CmsLocale,
   type GlobalStore,
   type MallStore,
   type MediaAsset,
@@ -52,6 +59,7 @@ function parseJsonField(raw: string, label: string): Record<string, unknown> | u
 
 export function MallStoresPage() {
   const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { can } = usePermission();
   const [items, setItems] = useState<MallStore[]>([]);
   const [globals, setGlobals] = useState<GlobalStore[]>([]);
   const [media, setMedia] = useState<MediaAsset[]>([]);
@@ -76,6 +84,10 @@ export function MallStoresPage() {
   const [formStatus, setFormStatus] = useState<StoreStatus>('ACTIVE');
   const [isFeatured, setIsFeatured] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
+  const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
+  const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
+  const [i18nDirty, setI18nDirty] = useState(false);
 
   const tenantId = activeTenantId;
   const mallId = activeMallId;
@@ -105,6 +117,93 @@ export function MallStoresPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!showAssign || !i18nDirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [showAssign, i18nDirty]);
+
+  useEffect(() => {
+    if (!showAssign || !accessToken || !tenantId) {
+      setTenantLocales([]);
+      setContentLocaleTab(null);
+      setLocaleDrafts({});
+      return;
+    }
+    void (async () => {
+      try {
+        const locs = await apiLocalesList(accessToken, tenantId);
+        setTenantLocales(locs);
+        const activeLocales = locs.filter((l) => l.isActive);
+        const defaultLocale = locs.find((l) => l.isDefault);
+        setContentLocaleTab((prev) => {
+          if (prev && activeLocales.some((l) => l.id === prev)) return prev;
+          return defaultLocale?.id ?? activeLocales[0]?.id ?? null;
+        });
+        if (editing) {
+          const translations = await apiTranslationsList(accessToken, tenantId, {
+            entityType: 'STORE',
+            entityId: editing.id,
+          });
+          const drafts: Record<string, Record<string, string>> = {};
+          for (const loc of activeLocales) {
+            if (loc.id === defaultLocale?.id) continue;
+            drafts[loc.id] = { localName: '', localDescription: '' };
+            for (const field of MALL_STORE_I18N_FIELDS) {
+              drafts[loc.id][field] =
+                translations.find((row) => row.localeId === loc.id && row.field === field)?.value ?? '';
+            }
+          }
+          setLocaleDrafts(drafts);
+          setI18nDirty(false);
+        } else {
+          setLocaleDrafts({});
+          setI18nDirty(false);
+        }
+      } catch {
+        setTenantLocales([]);
+        setLocaleDrafts({});
+      }
+    })();
+  }, [showAssign, editing?.id, accessToken, tenantId]);
+
+  const flushMallStoreTranslations = useCallback(
+    async (storeId: string) => {
+      if (!accessToken || !tenantId || !can('translation:create')) return;
+      const defaultLocale = tenantLocales.find((l) => l.isDefault);
+      const translations = await apiTranslationsList(accessToken, tenantId, {
+        entityType: 'STORE',
+        entityId: storeId,
+      });
+      const idByKey = new Map(translations.map((t) => [`${t.localeId}:${t.field}`, t.id] as const));
+      for (const loc of tenantLocales.filter((l) => l.isActive)) {
+        if (!defaultLocale || loc.id === defaultLocale.id) continue;
+        const slice = localeDrafts[loc.id] ?? {};
+        for (const field of MALL_STORE_I18N_FIELDS) {
+          const value = (slice[field] ?? '').trim();
+          const prevId = idByKey.get(`${loc.id}:${field}`);
+          if (!value) {
+            if (prevId && can('translation:delete')) {
+              await apiTranslationDelete(accessToken, tenantId, prevId);
+            }
+            continue;
+          }
+          await apiTranslationUpsert(accessToken, tenantId, {
+            localeCode: loc.code,
+            entityType: 'STORE',
+            entityId: storeId,
+            field,
+            value,
+          });
+        }
+      }
+    },
+    [accessToken, tenantId, tenantLocales, localeDrafts, can],
+  );
+
   function openAssign() {
     setEditing(null);
     setGlobalStoreId('');
@@ -120,6 +219,8 @@ export function MallStoresPage() {
     setSortOrder('0');
     setFormStatus('ACTIVE');
     setIsFeatured(false);
+    setLocaleDrafts({});
+    setI18nDirty(false);
     setShowAssign(true);
   }
 
@@ -138,6 +239,7 @@ export function MallStoresPage() {
     setSortOrder(String(m.sortOrder));
     setFormStatus(m.status);
     setIsFeatured(m.isFeatured);
+    setI18nDirty(false);
     setShowAssign(true);
   }
 
@@ -173,6 +275,7 @@ export function MallStoresPage() {
           isFeatured,
         });
         setItems((prev) => prev.map((x) => (x.id === u.id ? u : x)));
+        await flushMallStoreTranslations(u.id);
       } else {
         if (!globalStoreId) {
           setError('Global mağaza seçin.');
@@ -196,8 +299,11 @@ export function MallStoresPage() {
         });
         setItems((prev) => [c, ...prev]);
         setTotal((t) => t + 1);
+        await flushMallStoreTranslations(c.id);
       }
       setShowAssign(false);
+      setLocaleDrafts({});
+      setI18nDirty(false);
       toast.success(editing ? 'AVM mağazası güncellendi' : 'Mağaza AVM\'ye atandı');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Kayıt hatası');
@@ -254,7 +360,7 @@ export function MallStoresPage() {
       <PageHeader
         title="AVM Mağazaları"
         meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} mağaza</span>}
-        action={<Button variant="primary" onClick={() => setShowAssign(true)}>+ Mağaza Ata</Button>}
+        action={<Button variant="primary" onClick={openAssign}>+ Mağaza Ata</Button>}
       />
     <div style={{ fontSize: 13 }}>
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
@@ -296,10 +402,57 @@ export function MallStoresPage() {
                 </select>
               </label>
             )}
-            <label>
-              Yerel ad
-              <input value={localName} onChange={(e) => setLocalName(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
-            </label>
+            <div style={{ gridColumn: '1 / -1' }}>
+              {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
+                <MultilingualContentFields
+                  locales={tenantLocales}
+                  fields={MALL_STORE_I18N_FIELDS}
+                  requiredField={null}
+                  activeLocaleId={contentLocaleTab}
+                  onTabChange={(localeId) => setContentLocaleTab(localeId)}
+                  defaultLocaleId={tenantLocales.find((l) => l.isDefault)?.id}
+                  getValue={(localeId, field) => {
+                    const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                    if (defaultLocaleId && localeId === defaultLocaleId) {
+                      return field === 'localName' ? localName : localDescription;
+                    }
+                    return localeDrafts[localeId]?.[field] ?? '';
+                  }}
+                  setValue={(localeId, field, value) => {
+                    const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                    if (defaultLocaleId && localeId === defaultLocaleId) {
+                      if (field === 'localName') setLocalName(value);
+                      if (field === 'localDescription') setLocalDescription(value);
+                      return;
+                    }
+                    setLocaleDrafts((drafts) => ({
+                      ...drafts,
+                      [localeId]: { ...drafts[localeId], [field]: value },
+                    }));
+                    setI18nDirty(true);
+                  }}
+                  onCopyFromDefault={(targetId) => {
+                    setLocaleDrafts((drafts) => ({
+                      ...drafts,
+                      [targetId]: { localName, localDescription },
+                    }));
+                    setI18nDirty(true);
+                  }}
+                  disabled={saving}
+                />
+              ) : (
+                <>
+                  <label style={{ display: 'block', marginBottom: 10 }}>
+                    Yerel ad
+                    <input value={localName} onChange={(e) => setLocalName(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
+                  </label>
+                  <label style={{ display: 'block', marginBottom: 10 }}>
+                    Yerel açıklama
+                    <textarea value={localDescription} onChange={(e) => setLocalDescription(e.target.value)} rows={2} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
+                  </label>
+                </>
+              )}
+            </div>
             <label>
               Kat
               <input value={floor} onChange={(e) => setFloor(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
@@ -342,10 +495,6 @@ export function MallStoresPage() {
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} />
               Öne çıkan
-            </label>
-            <label style={{ gridColumn: '1 / -1' }}>
-              Yerel açıklama
-              <textarea value={localDescription} onChange={(e) => setLocalDescription(e.target.value)} rows={2} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
             </label>
             <label style={{ gridColumn: '1 / -1' }}>
               Çalışma saatleri (JSON nesnesi, opsiyonel)

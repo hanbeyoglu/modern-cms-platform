@@ -3,26 +3,69 @@ import type { CmsLocale } from '../lib/api';
 
 export const EVENT_I18N_FIELDS = ['title', 'shortDescription', 'description', 'buttonText'] as const;
 export type EventI18nField = (typeof EVENT_I18N_FIELDS)[number];
+export const CAMPAIGN_I18N_FIELDS = [
+  'title',
+  'shortDescription',
+  'description',
+  'terms',
+  'buttonText',
+] as const;
+export type CampaignI18nField = (typeof CAMPAIGN_I18N_FIELDS)[number];
+export const SLIDER_I18N_FIELDS = ['title', 'subtitle', 'description', 'buttonText'] as const;
+export type SliderI18nField = (typeof SLIDER_I18N_FIELDS)[number];
+export const PAGE_I18N_FIELDS = ['title', 'seoTitle', 'seoDescription'] as const;
+export type PageI18nField = (typeof PAGE_I18N_FIELDS)[number];
+export const LOCATION_I18N_FIELDS = ['displayName', 'shortDescription', 'description'] as const;
+export type LocationI18nField = (typeof LOCATION_I18N_FIELDS)[number];
+export const GLOBAL_STORE_I18N_FIELDS = ['name', 'description'] as const;
+export type GlobalStoreI18nField = (typeof GLOBAL_STORE_I18N_FIELDS)[number];
+export const MALL_STORE_I18N_FIELDS = ['localName', 'localDescription'] as const;
+export type MallStoreI18nField = (typeof MALL_STORE_I18N_FIELDS)[number];
+export type MultilingualContentField =
+  | EventI18nField
+  | CampaignI18nField
+  | SliderI18nField
+  | PageI18nField
+  | LocationI18nField
+  | GlobalStoreI18nField
+  | MallStoreI18nField;
 
-const LABELS: Record<EventI18nField, string> = {
+const LABELS: Record<MultilingualContentField, string> = {
+  name: 'Ad',
   title: 'Başlık',
+  displayName: 'Görünen Ad',
+  localName: 'Yerel ad',
+  subtitle: 'Alt Başlık',
   shortDescription: 'Kısa açıklama',
   description: 'Açıklama',
+  localDescription: 'Yerel açıklama',
+  terms: 'Şartlar',
   buttonText: 'Buton metni',
+  seoTitle: 'SEO Başlığı',
+  seoDescription: 'SEO Açıklaması',
 };
 
 function completionForLocale(
   loc: CmsLocale,
   defaultLocaleId: string | undefined,
-  getValue: (localeId: string, field: EventI18nField) => string,
+  fields: readonly MultilingualContentField[],
+  requiredField: MultilingualContentField | null | undefined,
+  getValue: (localeId: string, field: MultilingualContentField) => string,
 ): { pct: number; tone: 'complete' | 'partial' | 'none' } {
   if (loc.id === defaultLocaleId) {
-    const req = getValue(loc.id, 'title').trim();
-    return req ? { pct: 100, tone: 'complete' } : { pct: 0, tone: 'none' };
+    const required = requiredField === undefined ? fields[0] : requiredField;
+    if (required) {
+      const req = getValue(loc.id, required).trim();
+      return req ? { pct: 100, tone: 'complete' } : { pct: 0, tone: 'none' };
+    }
+    const filled = fields.filter((f) => getValue(loc.id, f).trim()).length;
+    if (filled === 0) return { pct: 0, tone: 'none' };
+    if (filled === fields.length) return { pct: 100, tone: 'complete' };
+    return { pct: Math.round((filled / fields.length) * 100), tone: 'partial' };
   }
   let filled = 0;
   let needed = 0;
-  for (const f of EVENT_I18N_FIELDS) {
+  for (const f of fields) {
     const base = getValue(defaultLocaleId ?? '', f).trim();
     if (!base) continue;
     needed += 1;
@@ -49,8 +92,10 @@ type Props = {
   activeLocaleId: string;
   onTabChange: (id: string) => void;
   defaultLocaleId: string | undefined;
-  getValue: (localeId: string, field: EventI18nField) => string;
-  setValue: (localeId: string, field: EventI18nField, v: string) => void;
+  fields?: readonly MultilingualContentField[];
+  requiredField?: MultilingualContentField | null;
+  getValue: (localeId: string, field: MultilingualContentField) => string;
+  setValue: (localeId: string, field: MultilingualContentField, v: string) => void;
   onCopyFromDefault: (targetLocaleId: string) => void;
   disabled?: boolean;
 };
@@ -60,6 +105,8 @@ export function MultilingualContentFields({
   activeLocaleId,
   onTabChange,
   defaultLocaleId,
+  fields = EVENT_I18N_FIELDS,
+  requiredField,
   getValue,
   setValue,
   onCopyFromDefault,
@@ -95,7 +142,7 @@ export function MultilingualContentFields({
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
         {tabLocales.map((loc) => {
-          const { pct, tone } = completionForLocale(loc, defaultLocaleId, getValue);
+          const { pct, tone } = completionForLocale(loc, defaultLocaleId, fields, requiredField, getValue);
           return (
             <button
               key={loc.id}
@@ -145,15 +192,25 @@ export function MultilingualContentFields({
         </div>
       )}
       <div style={{ display: 'grid', gap: 10 }}>
-        {EVENT_I18N_FIELDS.map((field) => (
+        {fields.map((field) => (
           <div key={field}>
             <label style={labelStyle}>
               {LABELS[field]}
-              {field === 'title' && active.id === defaultLocaleId && ' *'}
+              {field === (requiredField === undefined ? fields[0] : requiredField) &&
+                active.id === defaultLocaleId &&
+                ' *'}
             </label>
-            {field === 'description' || field === 'shortDescription' ? (
+            {field === 'description' ||
+            field === 'shortDescription' ||
+            field === 'terms' ||
+            field === 'seoDescription' ||
+            field === 'localDescription' ? (
               <textarea
-                style={{ ...inputStyle, minHeight: field === 'description' ? 88 : 52, resize: 'vertical' }}
+                style={{
+                  ...inputStyle,
+                  minHeight: field === 'description' ? 88 : field === 'terms' || field === 'seoDescription' ? 64 : 52,
+                  resize: 'vertical',
+                }}
                 value={getValue(active.id, field)}
                 disabled={disabled}
                 onChange={(e) => setValue(active.id, field, e.target.value)}

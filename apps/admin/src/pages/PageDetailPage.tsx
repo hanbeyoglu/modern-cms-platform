@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { TranslationPanel } from '../components/TranslationPanel';
+import { MultilingualContentFields, PAGE_I18N_FIELDS } from '../components/MultilingualContentFields';
 import { useAuth } from '../auth/useAuth';
+import {
+  apiLocalesList,
+  apiTranslationDelete,
+  apiTranslationsList,
+  apiTranslationUpsert,
+  type CmsLocale,
+} from '../lib/api';
+import { usePermission } from '../hooks/usePermission';
 import {
   apiPageGet,
   apiPageUpdate,
@@ -117,6 +125,7 @@ const EMPTY_BLOCK_FORM: BlockFormState = {
 export function PageDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { can } = usePermission();
   const navigate = useNavigate();
 
   const [page, setPage] = useState<CmsPage | null>(null);
@@ -127,6 +136,11 @@ export function PageDetailPage() {
   // Page edit form
   const [pageForm, setPageForm] = useState<PageFormState | null>(null);
   const [savingPage, setSavingPage] = useState(false);
+  const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
+  const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
+  const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
+  const [i18nDirty, setI18nDirty] = useState(false);
+  const [pageFormDirty, setPageFormDirty] = useState(false);
 
   // Block form
   const [showBlockForm, setShowBlockForm] = useState(false);
@@ -158,6 +172,7 @@ export function PageDetailPage() {
         publishAt: p.publishAt ? p.publishAt.slice(0, 16) : '',
         unpublishAt: p.unpublishAt ? p.unpublishAt.slice(0, 16) : '',
       });
+      setPageFormDirty(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Yüklenemedi');
     } finally {
@@ -167,12 +182,98 @@ export function PageDetailPage() {
 
   useEffect(() => { void loadPage(); }, [loadPage]);
 
+  useEffect(() => {
+    if (!accessToken || !activeTenantId || !id || !page) {
+      setTenantLocales([]);
+      setContentLocaleTab(null);
+      setLocaleDrafts({});
+      return;
+    }
+    void (async () => {
+      try {
+        const locs = await apiLocalesList(accessToken, activeTenantId);
+        setTenantLocales(locs);
+        const activeLocales = locs.filter((l) => l.isActive);
+        const defaultLocale = locs.find((l) => l.isDefault);
+        setContentLocaleTab((prev) => {
+          if (prev && activeLocales.some((l) => l.id === prev)) return prev;
+          return defaultLocale?.id ?? activeLocales[0]?.id ?? null;
+        });
+        const translations = await apiTranslationsList(accessToken, activeTenantId, {
+          entityType: 'PAGE',
+          entityId: id,
+        });
+        const drafts: Record<string, Record<string, string>> = {};
+        for (const loc of activeLocales) {
+          if (loc.id === defaultLocale?.id) continue;
+          drafts[loc.id] = {
+            title: '',
+            seoTitle: '',
+            seoDescription: '',
+          };
+          for (const field of PAGE_I18N_FIELDS) {
+            drafts[loc.id][field] =
+              translations.find((row) => row.localeId === loc.id && row.field === field)?.value ?? '';
+          }
+        }
+        setLocaleDrafts(drafts);
+        setI18nDirty(false);
+      } catch {
+        setTenantLocales([]);
+        setLocaleDrafts({});
+      }
+    })();
+  }, [accessToken, activeTenantId, id, page?.id]);
+
+  useEffect(() => {
+    if (!page || (!i18nDirty && !pageFormDirty)) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [page, i18nDirty, pageFormDirty]);
+
+  const flushPageTranslations = useCallback(
+    async (pageId: string) => {
+      if (!accessToken || !activeTenantId || !can('translation:create')) return;
+      const defaultLocale = tenantLocales.find((l) => l.isDefault);
+      const translations = await apiTranslationsList(accessToken, activeTenantId, {
+        entityType: 'PAGE',
+        entityId: pageId,
+      });
+      const idByKey = new Map(translations.map((t) => [`${t.localeId}:${t.field}`, t.id] as const));
+      for (const loc of tenantLocales.filter((l) => l.isActive)) {
+        if (!defaultLocale || loc.id === defaultLocale.id) continue;
+        const slice = localeDrafts[loc.id] ?? {};
+        for (const field of PAGE_I18N_FIELDS) {
+          const value = (slice[field] ?? '').trim();
+          const prevId = idByKey.get(`${loc.id}:${field}`);
+          if (!value) {
+            if (prevId && can('translation:delete')) {
+              await apiTranslationDelete(accessToken, activeTenantId, prevId);
+            }
+            continue;
+          }
+          await apiTranslationUpsert(accessToken, activeTenantId, {
+            localeCode: loc.code,
+            entityType: 'PAGE',
+            entityId: pageId,
+            field,
+            value,
+          });
+        }
+      }
+    },
+    [accessToken, activeTenantId, tenantLocales, localeDrafts, can],
+  );
+
   async function handleSavePage() {
     if (!accessToken || !activeTenantId || !id || !pageForm) return;
     if (!pageForm.title.trim()) { toast.error('Başlık zorunludur'); return; }
     setSavingPage(true);
     try {
-      await apiPageUpdate(accessToken, activeTenantId, id, {
+      const updated = await apiPageUpdate(accessToken, activeTenantId, id, {
         title: pageForm.title,
         slug: pageForm.slug || undefined,
         type: pageForm.type,
@@ -183,6 +284,9 @@ export function PageDetailPage() {
         publishAt: pageForm.publishAt ? new Date(pageForm.publishAt).toISOString() : undefined,
         unpublishAt: pageForm.unpublishAt ? new Date(pageForm.unpublishAt).toISOString() : undefined,
       }, activeMallId ?? undefined);
+      await flushPageTranslations(updated.id);
+      setPageFormDirty(false);
+      setI18nDirty(false);
       toast.success('Sayfa güncellendi');
       void loadPage();
     } catch (e) {
@@ -365,19 +469,93 @@ export function PageDetailPage() {
       <div style={cardStyle({ marginBottom: 24 })}>
         <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700 }}>Sayfa Bilgileri</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Başlık *</label>
-            <input
-              value={pageForm.title}
-              onChange={(e) => setPageForm((f) => f && { ...f, title: e.target.value })}
-              style={inputStyle({ width: '100%' })}
-            />
+          <div style={{ gridColumn: '1 / -1' }}>
+            {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
+              <MultilingualContentFields
+                locales={tenantLocales}
+                fields={PAGE_I18N_FIELDS}
+                activeLocaleId={contentLocaleTab}
+                onTabChange={(localeId) => setContentLocaleTab(localeId)}
+                defaultLocaleId={tenantLocales.find((l) => l.isDefault)?.id}
+                getValue={(localeId, field) => {
+                  const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                  if (defaultLocaleId && localeId === defaultLocaleId) {
+                    return String(pageForm[field as keyof PageFormState] ?? '');
+                  }
+                  return localeDrafts[localeId]?.[field] ?? '';
+                }}
+                setValue={(localeId, field, value) => {
+                  const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                  if (defaultLocaleId && localeId === defaultLocaleId) {
+                    setPageForm((f) => f && { ...f, [field]: value });
+                    setPageFormDirty(true);
+                    return;
+                  }
+                  setLocaleDrafts((drafts) => ({
+                    ...drafts,
+                    [localeId]: { ...drafts[localeId], [field]: value },
+                  }));
+                  setI18nDirty(true);
+                }}
+                onCopyFromDefault={(targetId) => {
+                  setLocaleDrafts((drafts) => ({
+                    ...drafts,
+                    [targetId]: {
+                      title: pageForm.title,
+                      seoTitle: pageForm.seoTitle,
+                      seoDescription: pageForm.seoDescription,
+                    },
+                  }));
+                  setI18nDirty(true);
+                }}
+                disabled={savingPage}
+              />
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={labelStyle}>Başlık *</label>
+                  <input
+                    value={pageForm.title}
+                    onChange={(e) => {
+                      setPageForm((f) => f && { ...f, title: e.target.value });
+                      setPageFormDirty(true);
+                    }}
+                    style={inputStyle({ width: '100%' })}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>SEO Başlığı</label>
+                  <input
+                    value={pageForm.seoTitle}
+                    onChange={(e) => {
+                      setPageForm((f) => f && { ...f, seoTitle: e.target.value });
+                      setPageFormDirty(true);
+                    }}
+                    style={inputStyle({ width: '100%' })}
+                  />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={labelStyle}>SEO Açıklaması</label>
+                  <input
+                    value={pageForm.seoDescription}
+                    onChange={(e) => {
+                      setPageForm((f) => f && { ...f, seoDescription: e.target.value });
+                      setPageFormDirty(true);
+                    }}
+                    style={inputStyle({ width: '100%' })}
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <label style={labelStyle}>Slug</label>
             <input
               value={pageForm.slug}
-              onChange={(e) => setPageForm((f) => f && { ...f, slug: e.target.value })}
+              onChange={(e) => {
+                setPageForm((f) => f && { ...f, slug: e.target.value });
+                setPageFormDirty(true);
+              }}
               style={inputStyle({ width: '100%', fontFamily: 'monospace', fontSize: 12 })}
             />
           </div>
@@ -385,7 +563,10 @@ export function PageDetailPage() {
             <label style={labelStyle}>Tip</label>
             <select
               value={pageForm.type}
-              onChange={(e) => setPageForm((f) => f && { ...f, type: e.target.value as PageType })}
+              onChange={(e) => {
+                setPageForm((f) => f && { ...f, type: e.target.value as PageType });
+                setPageFormDirty(true);
+              }}
               style={inputStyle({ width: '100%' })}
             >
               {(Object.keys(TYPE_LABELS) as PageType[]).map((t) => (
@@ -397,7 +578,10 @@ export function PageDetailPage() {
             <label style={labelStyle}>Durum</label>
             <select
               value={pageForm.status}
-              onChange={(e) => setPageForm((f) => f && { ...f, status: e.target.value as PageStatus })}
+              onChange={(e) => {
+                setPageForm((f) => f && { ...f, status: e.target.value as PageStatus });
+                setPageFormDirty(true);
+              }}
               style={inputStyle({ width: '100%' })}
             >
               {(Object.keys(STATUS_LABELS) as PageStatus[]).map((s) => (
@@ -411,7 +595,10 @@ export function PageDetailPage() {
             <input
               type="datetime-local"
               value={pageForm.publishAt}
-              onChange={(e) => setPageForm((f) => f && { ...f, publishAt: e.target.value })}
+              onChange={(e) => {
+                setPageForm((f) => f && { ...f, publishAt: e.target.value });
+                setPageFormDirty(true);
+              }}
               style={inputStyle({ width: '100%', maxWidth: 280 })}
             />
           </div>
@@ -420,7 +607,10 @@ export function PageDetailPage() {
             <input
               type="datetime-local"
               value={pageForm.unpublishAt}
-              onChange={(e) => setPageForm((f) => f && { ...f, unpublishAt: e.target.value })}
+              onChange={(e) => {
+                setPageForm((f) => f && { ...f, unpublishAt: e.target.value });
+                setPageFormDirty(true);
+              }}
               style={inputStyle({ width: '100%', maxWidth: 280 })}
             />
             <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
@@ -432,28 +622,15 @@ export function PageDetailPage() {
             <label style={{ ...labelStyle, color: '#9ca3af', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>SEO</label>
           </div>
           <div>
-            <label style={labelStyle}>SEO Başlığı</label>
-            <input
-              value={pageForm.seoTitle}
-              onChange={(e) => setPageForm((f) => f && { ...f, seoTitle: e.target.value })}
-              style={inputStyle({ width: '100%' })}
-            />
-          </div>
-          <div>
             <label style={labelStyle}>SEO Anahtar Kelimeler</label>
             <input
               value={pageForm.seoKeywords}
-              onChange={(e) => setPageForm((f) => f && { ...f, seoKeywords: e.target.value })}
+              onChange={(e) => {
+                setPageForm((f) => f && { ...f, seoKeywords: e.target.value });
+                setPageFormDirty(true);
+              }}
               style={inputStyle({ width: '100%' })}
               placeholder="kelime1, kelime2"
-            />
-          </div>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={labelStyle}>SEO Açıklaması</label>
-            <input
-              value={pageForm.seoDescription}
-              onChange={(e) => setPageForm((f) => f && { ...f, seoDescription: e.target.value })}
-              style={inputStyle({ width: '100%' })}
             />
           </div>
         </div>
@@ -461,13 +638,6 @@ export function PageDetailPage() {
           {savingPage ? 'Kaydediliyor…' : 'Kaydet'}
         </button>
       </div>
-
-      <TranslationPanel
-        entityType="PAGE"
-        entityId={page.id}
-        fields={['title', 'seoTitle', 'seoDescription']}
-        title="Çok dilli alanlar"
-      />
 
       {/* Blocks section */}
       <div style={cardStyle()}>

@@ -6,9 +6,10 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
-import { TranslationPanel } from '../components/TranslationPanel';
+import { MultilingualContentFields, SLIDER_I18N_FIELDS } from '../components/MultilingualContentFields';
 import { Button } from '../components/ui/Button';
 import {
+  apiLocalesList,
   apiMediaList,
   apiSliderArchive,
   apiSliderCreate,
@@ -16,6 +17,10 @@ import {
   apiSliderPublish,
   apiSlidersList,
   apiSliderUpdate,
+  apiTranslationDelete,
+  apiTranslationsList,
+  apiTranslationUpsert,
+  type CmsLocale,
   type CreateSliderPayload,
   type MediaAsset,
   type Slider,
@@ -23,6 +28,7 @@ import {
   type SliderStatus,
   type SliderTargetDevice,
 } from '../lib/api';
+import { usePermission } from '../hooks/usePermission';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -159,26 +165,44 @@ function formToPayload(f: FormState): CreateSliderPayload {
 interface SliderFormProps {
   form: FormState;
   onChange: (f: FormState) => void;
+  onDirty: () => void;
   mediaAssets: MediaAsset[];
   saving: boolean;
   error: string | null;
   onSubmit: () => void;
   onCancel: () => void;
   isEdit: boolean;
+  tenantLocales: CmsLocale[];
+  contentLocaleTab: string | null;
+  onLocaleTabChange: (id: string) => void;
+  localeDrafts: Record<string, Record<string, string>>;
+  setLocaleDrafts: React.Dispatch<React.SetStateAction<Record<string, Record<string, string>>>>;
+  setI18nDirty: (dirty: boolean) => void;
 }
 
 function SliderForm({
   form,
   onChange,
+  onDirty,
   mediaAssets,
   saving,
   error,
   onSubmit,
   onCancel,
   isEdit,
+  tenantLocales,
+  contentLocaleTab,
+  onLocaleTabChange,
+  localeDrafts,
+  setLocaleDrafts,
+  setI18nDirty,
 }: SliderFormProps) {
-  const set = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    onChange({ ...form, [k]: e.target.value });
+  const set =
+    (k: keyof FormState) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      onChange({ ...form, [k]: e.target.value });
+      onDirty();
+    };
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
@@ -241,33 +265,81 @@ function SliderForm({
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-        {/* Title */}
-        <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
-          <label style={labelStyle}>Başlık *</label>
-          <input style={inputStyle} value={form.title} onChange={set('title')} placeholder="Slider başlığı" />
-        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
+            <MultilingualContentFields
+              locales={tenantLocales}
+              fields={SLIDER_I18N_FIELDS}
+              activeLocaleId={contentLocaleTab}
+              onTabChange={onLocaleTabChange}
+              defaultLocaleId={tenantLocales.find((l) => l.isDefault)?.id}
+              getValue={(localeId, field) => {
+                const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                if (defaultLocaleId && localeId === defaultLocaleId) {
+                  return String(form[field as keyof FormState] ?? '');
+                }
+                return localeDrafts[localeId]?.[field] ?? '';
+              }}
+              setValue={(localeId, field, value) => {
+                const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                if (defaultLocaleId && localeId === defaultLocaleId) {
+                  onChange({ ...form, [field]: value });
+                  onDirty();
+                  return;
+                }
+                setLocaleDrafts((drafts) => ({
+                  ...drafts,
+                  [localeId]: { ...drafts[localeId], [field]: value },
+                }));
+                setI18nDirty(true);
+              }}
+              onCopyFromDefault={(targetId) => {
+                setLocaleDrafts((drafts) => ({
+                  ...drafts,
+                  [targetId]: {
+                    title: form.title,
+                    subtitle: form.subtitle,
+                    description: form.description,
+                    buttonText: form.buttonText,
+                  },
+                }));
+                setI18nDirty(true);
+              }}
+              disabled={saving}
+            />
+          ) : (
+            <>
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Başlık *</label>
+                <input style={inputStyle} value={form.title} onChange={set('title')} placeholder="Slider başlığı" />
+              </div>
 
-        {/* Subtitle */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Alt Başlık</label>
-          <input style={inputStyle} value={form.subtitle} onChange={set('subtitle')} placeholder="Alt başlık" />
-        </div>
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Alt Başlık</label>
+                <input style={inputStyle} value={form.subtitle} onChange={set('subtitle')} placeholder="Alt başlık" />
+              </div>
 
-        {/* Button Text */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Buton Metni</label>
-          <input style={inputStyle} value={form.buttonText} onChange={set('buttonText')} placeholder="Butona tıkla" />
-        </div>
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Buton Metni</label>
+                <input
+                  style={inputStyle}
+                  value={form.buttonText}
+                  onChange={set('buttonText')}
+                  placeholder="Butona tıkla"
+                />
+              </div>
 
-        {/* Description */}
-        <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
-          <label style={labelStyle}>Açıklama</label>
-          <textarea
-            style={{ ...inputStyle, height: 64, resize: 'vertical' }}
-            value={form.description}
-            onChange={set('description')}
-            placeholder="Slider açıklaması"
-          />
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Açıklama</label>
+                <textarea
+                  style={{ ...inputStyle, height: 64, resize: 'vertical' }}
+                  value={form.description}
+                  onChange={set('description')}
+                  placeholder="Slider açıklaması"
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Desktop Media */}
@@ -398,6 +470,7 @@ function SliderForm({
 
 export function SlidersPage() {
   const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { can } = usePermission();
 
   const [sliders, setSliders] = useState<Slider[]>([]);
   const [total, setTotal] = useState(0);
@@ -414,6 +487,11 @@ export function SlidersPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
+  const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
+  const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
+  const [i18nDirty, setI18nDirty] = useState(false);
+  const [sliderFormDirty, setSliderFormDirty] = useState(false);
 
   const tenantId = activeTenantId;
   const mallId = activeMallId ?? undefined;
@@ -456,10 +534,71 @@ export function SlidersPage() {
     void loadMedia();
   }, [loadMedia]);
 
+  useEffect(() => {
+    if (!showForm || !accessToken || !tenantId) {
+      setTenantLocales([]);
+      setContentLocaleTab(null);
+      setLocaleDrafts({});
+      return;
+    }
+    void (async () => {
+      try {
+        const locs = await apiLocalesList(accessToken, tenantId);
+        setTenantLocales(locs);
+        const activeLocales = locs.filter((l) => l.isActive);
+        const defaultLocale = locs.find((l) => l.isDefault);
+        setContentLocaleTab((prev) => {
+          if (prev && activeLocales.some((l) => l.id === prev)) return prev;
+          return defaultLocale?.id ?? activeLocales[0]?.id ?? null;
+        });
+        if (editingSlider) {
+          const translations = await apiTranslationsList(accessToken, tenantId, {
+            entityType: 'SLIDER',
+            entityId: editingSlider.id,
+          });
+          const drafts: Record<string, Record<string, string>> = {};
+          for (const loc of activeLocales) {
+            if (loc.id === defaultLocale?.id) continue;
+            drafts[loc.id] = {
+              title: '',
+              subtitle: '',
+              description: '',
+              buttonText: '',
+            };
+            for (const field of SLIDER_I18N_FIELDS) {
+              drafts[loc.id][field] =
+                translations.find((row) => row.localeId === loc.id && row.field === field)?.value ?? '';
+            }
+          }
+          setLocaleDrafts(drafts);
+          setI18nDirty(false);
+        } else {
+          setLocaleDrafts({});
+          setI18nDirty(false);
+        }
+      } catch {
+        setTenantLocales([]);
+        setLocaleDrafts({});
+      }
+    })();
+  }, [showForm, editingSlider?.id, accessToken, tenantId]);
+
+  useEffect(() => {
+    if (!showForm || (!i18nDirty && !sliderFormDirty)) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [showForm, i18nDirty, sliderFormDirty]);
+
   function openCreate() {
     setEditingSlider(null);
     setForm(EMPTY_FORM);
     setFormError(null);
+    setLocaleDrafts({});
+    setI18nDirty(false);
+    setSliderFormDirty(false);
     setShowForm(true);
   }
 
@@ -467,6 +606,7 @@ export function SlidersPage() {
     setEditingSlider(slider);
     setForm(sliderToForm(slider));
     setFormError(null);
+    setSliderFormDirty(false);
     setShowForm(true);
   }
 
@@ -474,7 +614,46 @@ export function SlidersPage() {
     setShowForm(false);
     setEditingSlider(null);
     setFormError(null);
+    setLocaleDrafts({});
+    setTenantLocales([]);
+    setContentLocaleTab(null);
+    setI18nDirty(false);
+    setSliderFormDirty(false);
   }
+
+  const flushSliderTranslations = useCallback(
+    async (sliderId: string) => {
+      if (!accessToken || !tenantId || !can('translation:create')) return;
+      const defaultLocale = tenantLocales.find((l) => l.isDefault);
+      const translations = await apiTranslationsList(accessToken, tenantId, {
+        entityType: 'SLIDER',
+        entityId: sliderId,
+      });
+      const idByKey = new Map(translations.map((t) => [`${t.localeId}:${t.field}`, t.id] as const));
+      for (const loc of tenantLocales.filter((l) => l.isActive)) {
+        if (!defaultLocale || loc.id === defaultLocale.id) continue;
+        const slice = localeDrafts[loc.id] ?? {};
+        for (const field of SLIDER_I18N_FIELDS) {
+          const value = (slice[field] ?? '').trim();
+          const prevId = idByKey.get(`${loc.id}:${field}`);
+          if (!value) {
+            if (prevId && can('translation:delete')) {
+              await apiTranslationDelete(accessToken, tenantId, prevId);
+            }
+            continue;
+          }
+          await apiTranslationUpsert(accessToken, tenantId, {
+            localeCode: loc.code,
+            entityType: 'SLIDER',
+            entityId: sliderId,
+            field,
+            value,
+          });
+        }
+      }
+    },
+    [accessToken, tenantId, tenantLocales, localeDrafts, can],
+  );
 
   async function handleSubmit() {
     if (!accessToken || !tenantId || !form.title.trim()) {
@@ -488,15 +667,16 @@ export function SlidersPage() {
       if (editingSlider) {
         const updated = await apiSliderUpdate(accessToken, tenantId, editingSlider.id, payload);
         setSliders((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        await flushSliderTranslations(updated.id);
         toast.success('Slider güncellendi');
       } else {
         const created = await apiSliderCreate(accessToken, tenantId, payload, mallId);
         setSliders((prev) => [created, ...prev]);
         setTotal((t) => t + 1);
+        await flushSliderTranslations(created.id);
         toast.success('Slider oluşturuldu');
       }
-      setShowForm(false);
-      setEditingSlider(null);
+      cancelForm();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Kayıt başarısız');
     } finally {
@@ -625,20 +805,19 @@ export function SlidersPage() {
         <SliderForm
           form={form}
           onChange={setForm}
+          onDirty={() => setSliderFormDirty(true)}
           mediaAssets={mediaAssets}
           saving={saving}
           error={formError}
           onSubmit={() => void handleSubmit()}
           onCancel={cancelForm}
           isEdit={!!editingSlider}
-        />
-      )}
-      {showForm && editingSlider && (
-        <TranslationPanel
-          entityType="SLIDER"
-          entityId={editingSlider.id}
-          fields={['title', 'subtitle', 'description', 'buttonText']}
-          title="Çeviriler"
+          tenantLocales={tenantLocales}
+          contentLocaleTab={contentLocaleTab}
+          onLocaleTabChange={(id) => setContentLocaleTab(id)}
+          localeDrafts={localeDrafts}
+          setLocaleDrafts={setLocaleDrafts}
+          setI18nDirty={setI18nDirty}
         />
       )}
 

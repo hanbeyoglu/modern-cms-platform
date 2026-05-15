@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
 import { usePermission } from '../hooks/usePermission';
+import { MultilingualContentFields, LOCATION_I18N_FIELDS } from '../components/MultilingualContentFields';
 import {
   apiLocationGet,
   apiLocationUpdate,
@@ -13,6 +14,11 @@ import {
   type LocationStatus,
   type LocationType,
   type UpdateLocationPayload,
+  apiLocalesList,
+  apiTranslationDelete,
+  apiTranslationsList,
+  apiTranslationUpsert,
+  type CmsLocale,
 } from '../lib/api';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
@@ -28,7 +34,7 @@ type Section = 'basic' | 'contact' | 'address' | 'geo' | 'hours' | 'social';
 
 export function LocationDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { accessToken } = useAuth();
+  const { accessToken, activeTenantId } = useAuth();
   const { can } = usePermission();
   const navigate = useNavigate();
 
@@ -38,6 +44,10 @@ export function LocationDetailPage() {
   const [form, setForm] = useState<UpdateLocationPayload>({});
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
+  const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
+  const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
+  const [i18nDirty, setI18nDirty] = useState(false);
 
   const reload = () => {
     if (!accessToken || !id) return;
@@ -66,6 +76,92 @@ export function LocationDetailPage() {
 
   useEffect(() => { reload(); }, [accessToken, id]);
 
+  useEffect(() => {
+    if (!accessToken || !activeTenantId || !id || !location) {
+      setTenantLocales([]);
+      setContentLocaleTab(null);
+      setLocaleDrafts({});
+      return;
+    }
+    void (async () => {
+      try {
+        const locs = await apiLocalesList(accessToken, activeTenantId);
+        setTenantLocales(locs);
+        const activeLocales = locs.filter((l) => l.isActive);
+        const defaultLocale = locs.find((l) => l.isDefault);
+        setContentLocaleTab((prev) => {
+          if (prev && activeLocales.some((l) => l.id === prev)) return prev;
+          return defaultLocale?.id ?? activeLocales[0]?.id ?? null;
+        });
+        const translations = await apiTranslationsList(accessToken, activeTenantId, {
+          entityType: 'LOCATION',
+          entityId: id,
+        });
+        const drafts: Record<string, Record<string, string>> = {};
+        for (const loc of activeLocales) {
+          if (loc.id === defaultLocale?.id) continue;
+          drafts[loc.id] = {
+            displayName: '',
+            shortDescription: '',
+            description: '',
+          };
+          for (const field of LOCATION_I18N_FIELDS) {
+            drafts[loc.id][field] =
+              translations.find((row) => row.localeId === loc.id && row.field === field)?.value ?? '';
+          }
+        }
+        setLocaleDrafts(drafts);
+        setI18nDirty(false);
+      } catch {
+        setTenantLocales([]);
+        setLocaleDrafts({});
+      }
+    })();
+  }, [accessToken, activeTenantId, id, location?.id]);
+
+  useEffect(() => {
+    if (!location || (!dirty && !i18nDirty)) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [location, dirty, i18nDirty]);
+
+  const flushLocationTranslations = useCallback(
+    async (locationId: string) => {
+      if (!accessToken || !activeTenantId || !can('translation:create')) return;
+      const defaultLocale = tenantLocales.find((l) => l.isDefault);
+      const translations = await apiTranslationsList(accessToken, activeTenantId, {
+        entityType: 'LOCATION',
+        entityId: locationId,
+      });
+      const idByKey = new Map(translations.map((t) => [`${t.localeId}:${t.field}`, t.id] as const));
+      for (const loc of tenantLocales.filter((l) => l.isActive)) {
+        if (!defaultLocale || loc.id === defaultLocale.id) continue;
+        const slice = localeDrafts[loc.id] ?? {};
+        for (const field of LOCATION_I18N_FIELDS) {
+          const value = (slice[field] ?? '').trim();
+          const prevId = idByKey.get(`${loc.id}:${field}`);
+          if (!value) {
+            if (prevId && can('translation:delete')) {
+              await apiTranslationDelete(accessToken, activeTenantId, prevId);
+            }
+            continue;
+          }
+          await apiTranslationUpsert(accessToken, activeTenantId, {
+            localeCode: loc.code,
+            entityType: 'LOCATION',
+            entityId: locationId,
+            field,
+            value,
+          });
+        }
+      }
+    },
+    [accessToken, activeTenantId, tenantLocales, localeDrafts, can],
+  );
+
   const setField = (field: keyof UpdateLocationPayload, value: unknown) => {
     setForm((p) => ({ ...p, [field]: value }));
     setDirty(true);
@@ -75,9 +171,11 @@ export function LocationDetailPage() {
     if (!accessToken || !id) return;
     setSaving(true);
     try {
-      await apiLocationUpdate(accessToken, id, form);
+      const updated = await apiLocationUpdate(accessToken, id, form);
+      await flushLocationTranslations(updated.id);
       toast.success('Lokasyon güncellendi');
       setDirty(false);
+      setI18nDirty(false);
       reload();
     } catch (e) { toast.error((e as Error).message); }
     finally { setSaving(false); }
@@ -134,7 +232,7 @@ export function LocationDetailPage() {
         subtitle={`${LOCATION_TYPE_LABELS[location.type] ?? location.type} · ${location.tenant?.name ?? ''}`}
         action={
           <div style={{ display: 'flex', gap: 8 }}>
-            {dirty && canEdit && (
+            {(dirty || i18nDirty) && canEdit && (
               <button onClick={handleSave} disabled={saving}
                 style={{ padding: '6px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 {saving ? 'Kaydediliyor…' : 'Kaydet'}
@@ -197,10 +295,6 @@ export function LocationDetailPage() {
               <input style={inputStyle} value={form.name ?? ''} onChange={(e) => setField('name', e.target.value)} disabled={!canEdit} />
             </div>
             <div style={fieldStyle}>
-              <label style={labelStyle}>Görünen Ad</label>
-              <input style={inputStyle} value={form.displayName ?? ''} onChange={(e) => setField('displayName', e.target.value)} disabled={!canEdit} />
-            </div>
-            <div style={fieldStyle}>
               <label style={labelStyle}>Slug</label>
               <input style={inputStyle} value={form.slug ?? ''} onChange={(e) => setField('slug', e.target.value)} disabled={!canEdit} />
             </div>
@@ -215,12 +309,76 @@ export function LocationDetailPage() {
               </select>
             </div>
             <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
-              <label style={labelStyle}>Kısa Açıklama</label>
-              <textarea style={{ ...inputStyle, height: 60, resize: 'vertical' }} value={form.shortDescription ?? ''} onChange={(e) => setField('shortDescription', e.target.value)} disabled={!canEdit} />
-            </div>
-            <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
-              <label style={labelStyle}>Açıklama</label>
-              <textarea style={{ ...inputStyle, height: 100, resize: 'vertical' }} value={form.description ?? ''} onChange={(e) => setField('description', e.target.value)} disabled={!canEdit} />
+              {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
+                <MultilingualContentFields
+                  locales={tenantLocales}
+                  fields={LOCATION_I18N_FIELDS}
+                  activeLocaleId={contentLocaleTab}
+                  onTabChange={(localeId) => setContentLocaleTab(localeId)}
+                  defaultLocaleId={tenantLocales.find((l) => l.isDefault)?.id}
+                  getValue={(localeId, field) => {
+                    const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                    if (defaultLocaleId && localeId === defaultLocaleId) {
+                      return String(form[field as keyof UpdateLocationPayload] ?? '');
+                    }
+                    return localeDrafts[localeId]?.[field] ?? '';
+                  }}
+                  setValue={(localeId, field, value) => {
+                    const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                    if (defaultLocaleId && localeId === defaultLocaleId) {
+                      setField(field as keyof UpdateLocationPayload, value);
+                      return;
+                    }
+                    setLocaleDrafts((drafts) => ({
+                      ...drafts,
+                      [localeId]: { ...drafts[localeId], [field]: value },
+                    }));
+                    setI18nDirty(true);
+                  }}
+                  onCopyFromDefault={(targetId) => {
+                    setLocaleDrafts((drafts) => ({
+                      ...drafts,
+                      [targetId]: {
+                        displayName: String(form.displayName ?? ''),
+                        shortDescription: String(form.shortDescription ?? ''),
+                        description: String(form.description ?? ''),
+                      },
+                    }));
+                    setI18nDirty(true);
+                  }}
+                  disabled={!canEdit || saving}
+                />
+              ) : (
+                <>
+                  <div style={fieldStyle}>
+                    <label style={labelStyle}>Görünen Ad</label>
+                    <input
+                      style={inputStyle}
+                      value={form.displayName ?? ''}
+                      onChange={(e) => setField('displayName', e.target.value)}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                  <div style={fieldStyle}>
+                    <label style={labelStyle}>Kısa Açıklama</label>
+                    <textarea
+                      style={{ ...inputStyle, height: 60, resize: 'vertical' }}
+                      value={form.shortDescription ?? ''}
+                      onChange={(e) => setField('shortDescription', e.target.value)}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                  <div style={fieldStyle}>
+                    <label style={labelStyle}>Açıklama</label>
+                    <textarea
+                      style={{ ...inputStyle, height: 100, resize: 'vertical' }}
+                      value={form.description ?? ''}
+                      onChange={(e) => setField('description', e.target.value)}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                </>
+              )}
             </div>
             <div style={fieldStyle}>
               <label style={labelStyle}>Herkese Açık</label>

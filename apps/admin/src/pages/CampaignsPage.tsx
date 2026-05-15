@@ -7,7 +7,7 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
-import { TranslationPanel } from '../components/TranslationPanel';
+import { CAMPAIGN_I18N_FIELDS, MultilingualContentFields } from '../components/MultilingualContentFields';
 import { Button } from '../components/ui/Button';
 import {
   apiCampaignArchive,
@@ -16,10 +16,16 @@ import {
   apiCampaignPublish,
   apiCampaignUpdate,
   apiCampaignsList,
+  apiLocalesList,
   apiMediaList,
   apiMallStoresList,
+  apiTranslationDelete,
+  apiTranslationsList,
+  apiTranslationUpsert,
+  type CmsLocale,
 } from '../lib/api';
 import type { CmsCampaign, ContentStatus, CreateCampaignPayload, MallStore, MediaAsset } from '../lib/api';
+import { usePermission } from '../hooks/usePermission';
 
 const STATUS_STYLE: Record<ContentStatus, { bg: string; color: string; label: string }> = {
   DRAFT: { bg: '#f3f4f6', color: '#374151', label: 'Taslak' },
@@ -129,6 +135,7 @@ function formToPayload(f: FormState): CreateCampaignPayload {
 
 export function CampaignsPage() {
   const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { can } = usePermission();
   const [items, setItems] = useState<CmsCampaign[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -142,6 +149,11 @@ export function CampaignsPage() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
+  const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
+  const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
+  const [i18nDirty, setI18nDirty] = useState(false);
+  const [campaignFormDirty, setCampaignFormDirty] = useState(false);
 
   const tenantId = activeTenantId;
   const mallId = activeMallId ?? undefined;
@@ -201,10 +213,72 @@ export function CampaignsPage() {
     void loadStores();
   }, [loadStores]);
 
+  useEffect(() => {
+    if (!showForm || !accessToken || !tenantId) {
+      setTenantLocales([]);
+      setContentLocaleTab(null);
+      setLocaleDrafts({});
+      return;
+    }
+    void (async () => {
+      try {
+        const locs = await apiLocalesList(accessToken, tenantId);
+        setTenantLocales(locs);
+        const activeLocales = locs.filter((l) => l.isActive);
+        const defaultLocale = locs.find((l) => l.isDefault);
+        setContentLocaleTab((prev) => {
+          if (prev && activeLocales.some((l) => l.id === prev)) return prev;
+          return defaultLocale?.id ?? activeLocales[0]?.id ?? null;
+        });
+        if (editing) {
+          const translations = await apiTranslationsList(accessToken, tenantId, {
+            entityType: 'CAMPAIGN',
+            entityId: editing.id,
+          });
+          const drafts: Record<string, Record<string, string>> = {};
+          for (const loc of activeLocales) {
+            if (loc.id === defaultLocale?.id) continue;
+            drafts[loc.id] = {
+              title: '',
+              shortDescription: '',
+              description: '',
+              terms: '',
+              buttonText: '',
+            };
+            for (const field of CAMPAIGN_I18N_FIELDS) {
+              drafts[loc.id][field] =
+                translations.find((row) => row.localeId === loc.id && row.field === field)?.value ?? '';
+            }
+          }
+          setLocaleDrafts(drafts);
+          setI18nDirty(false);
+        } else {
+          setLocaleDrafts({});
+          setI18nDirty(false);
+        }
+      } catch {
+        setTenantLocales([]);
+        setLocaleDrafts({});
+      }
+    })();
+  }, [showForm, editing?.id, accessToken, tenantId]);
+
+  useEffect(() => {
+    if (!showForm || (!i18nDirty && !campaignFormDirty)) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [showForm, i18nDirty, campaignFormDirty]);
+
   function openCreate() {
     setEditing(null);
     setForm(EMPTY);
     setFormError(null);
+    setLocaleDrafts({});
+    setI18nDirty(false);
+    setCampaignFormDirty(false);
     setShowForm(true);
   }
 
@@ -212,6 +286,7 @@ export function CampaignsPage() {
     setEditing(c);
     setForm(cToForm(c));
     setFormError(null);
+    setCampaignFormDirty(false);
     setShowForm(true);
   }
 
@@ -219,7 +294,46 @@ export function CampaignsPage() {
     setShowForm(false);
     setEditing(null);
     setFormError(null);
+    setLocaleDrafts({});
+    setTenantLocales([]);
+    setContentLocaleTab(null);
+    setI18nDirty(false);
+    setCampaignFormDirty(false);
   }
+
+  const flushCampaignTranslations = useCallback(
+    async (campaignId: string) => {
+      if (!accessToken || !tenantId || !can('translation:create')) return;
+      const defaultLocale = tenantLocales.find((l) => l.isDefault);
+      const translations = await apiTranslationsList(accessToken, tenantId, {
+        entityType: 'CAMPAIGN',
+        entityId: campaignId,
+      });
+      const idByKey = new Map(translations.map((t) => [`${t.localeId}:${t.field}`, t.id] as const));
+      for (const loc of tenantLocales.filter((l) => l.isActive)) {
+        if (!defaultLocale || loc.id === defaultLocale.id) continue;
+        const slice = localeDrafts[loc.id] ?? {};
+        for (const field of CAMPAIGN_I18N_FIELDS) {
+          const value = (slice[field] ?? '').trim();
+          const prevId = idByKey.get(`${loc.id}:${field}`);
+          if (!value) {
+            if (prevId && can('translation:delete')) {
+              await apiTranslationDelete(accessToken, tenantId, prevId);
+            }
+            continue;
+          }
+          await apiTranslationUpsert(accessToken, tenantId, {
+            localeCode: loc.code,
+            entityType: 'CAMPAIGN',
+            entityId: campaignId,
+            field,
+            value,
+          });
+        }
+      }
+    },
+    [accessToken, tenantId, tenantLocales, localeDrafts, can],
+  );
 
   async function handleSubmit() {
     if (!accessToken || !tenantId || !form.title.trim()) {
@@ -248,11 +362,13 @@ export function CampaignsPage() {
       if (editing) {
         const updated = await apiCampaignUpdate(accessToken, tenantId, editing.id, payload, mallId);
         setItems((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+        await flushCampaignTranslations(updated.id);
         toast.success('Kampanya güncellendi');
       } else {
         const created = await apiCampaignCreate(accessToken, tenantId, payload, mallId);
         setItems((prev) => [created, ...prev]);
         setTotal((t) => t + 1);
+        await flushCampaignTranslations(created.id);
         toast.success('Kampanya oluşturuldu');
       }
       cancelForm();
@@ -379,19 +495,25 @@ export function CampaignsPage() {
           {formError && <p style={{ color: '#b91c1c' }}>{formError}</p>}
           <div style={{ display: 'grid', gap: 10, maxWidth: 520 }}>
             <div>
-              <label style={labelStyle}>Başlık *</label>
-              <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-            </div>
-            <div>
               <label style={labelStyle}>Slug</label>
-              <input style={inputStyle} value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
+              <input
+                style={inputStyle}
+                value={form.slug}
+                onChange={(e) => {
+                  setForm({ ...form, slug: e.target.value });
+                  setCampaignFormDirty(true);
+                }}
+              />
             </div>
             <div>
               <label style={labelStyle}>Kapak medya</label>
               <select
                 style={inputStyle}
                 value={form.coverMediaId}
-                onChange={(e) => setForm({ ...form, coverMediaId: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, coverMediaId: e.target.value });
+                  setCampaignFormDirty(true);
+                }}
               >
                 <option value="">—</option>
                 {mediaAssets.map((a) => (
@@ -406,7 +528,10 @@ export function CampaignsPage() {
               <select
                 style={inputStyle}
                 value={form.storeId}
-                onChange={(e) => setForm({ ...form, storeId: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, storeId: e.target.value });
+                  setCampaignFormDirty(true);
+                }}
                 disabled={!mallId}
               >
                 <option value="">—</option>
@@ -425,7 +550,10 @@ export function CampaignsPage() {
                   type="datetime-local"
                   style={inputStyle}
                   value={form.startAt}
-                  onChange={(e) => setForm({ ...form, startAt: e.target.value })}
+                  onChange={(e) => {
+                    setForm({ ...form, startAt: e.target.value });
+                    setCampaignFormDirty(true);
+                  }}
                 />
               </div>
               <div style={{ flex: 1 }}>
@@ -434,36 +562,156 @@ export function CampaignsPage() {
                   type="datetime-local"
                   style={inputStyle}
                   value={form.endAt}
-                  onChange={(e) => setForm({ ...form, endAt: e.target.value })}
+                  onChange={(e) => {
+                    setForm({ ...form, endAt: e.target.value });
+                    setCampaignFormDirty(true);
+                  }}
                 />
               </div>
             </div>
-            <div>
-              <label style={labelStyle}>Şartlar</label>
-              <textarea style={{ ...inputStyle, minHeight: 64 }} value={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.value })} />
-            </div>
+            {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
+              <MultilingualContentFields
+                locales={tenantLocales}
+                fields={CAMPAIGN_I18N_FIELDS}
+                activeLocaleId={contentLocaleTab}
+                onTabChange={(id) => setContentLocaleTab(id)}
+                defaultLocaleId={tenantLocales.find((l) => l.isDefault)?.id}
+                getValue={(localeId, field) => {
+                  const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                  if (defaultLocaleId && localeId === defaultLocaleId) {
+                    return String(form[field as keyof FormState] ?? '');
+                  }
+                  return localeDrafts[localeId]?.[field] ?? '';
+                }}
+                setValue={(localeId, field, value) => {
+                  const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                  if (defaultLocaleId && localeId === defaultLocaleId) {
+                    setForm((prev) => ({ ...prev, [field]: value }));
+                    setCampaignFormDirty(true);
+                    return;
+                  }
+                  setLocaleDrafts((drafts) => ({
+                    ...drafts,
+                    [localeId]: { ...drafts[localeId], [field]: value },
+                  }));
+                  setI18nDirty(true);
+                }}
+                onCopyFromDefault={(targetId) => {
+                  setLocaleDrafts((drafts) => ({
+                    ...drafts,
+                    [targetId]: {
+                      title: form.title,
+                      shortDescription: form.shortDescription,
+                      description: form.description,
+                      terms: form.terms,
+                      buttonText: form.buttonText,
+                    },
+                  }));
+                  setI18nDirty(true);
+                }}
+                disabled={saving}
+              />
+            ) : (
+              <>
+                <div>
+                  <label style={labelStyle}>Başlık *</label>
+                  <input
+                    style={inputStyle}
+                    value={form.title}
+                    onChange={(e) => {
+                      setForm({ ...form, title: e.target.value });
+                      setCampaignFormDirty(true);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Kısa açıklama</label>
+                  <input
+                    style={inputStyle}
+                    value={form.shortDescription}
+                    onChange={(e) => {
+                      setForm({ ...form, shortDescription: e.target.value });
+                      setCampaignFormDirty(true);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Açıklama</label>
+                  <textarea
+                    style={{ ...inputStyle, minHeight: 72 }}
+                    value={form.description}
+                    onChange={(e) => {
+                      setForm({ ...form, description: e.target.value });
+                      setCampaignFormDirty(true);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Şartlar</label>
+                  <textarea
+                    style={{ ...inputStyle, minHeight: 64 }}
+                    value={form.terms}
+                    onChange={(e) => {
+                      setForm({ ...form, terms: e.target.value });
+                      setCampaignFormDirty(true);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Buton metni</label>
+                  <input
+                    style={inputStyle}
+                    value={form.buttonText}
+                    onChange={(e) => {
+                      setForm({ ...form, buttonText: e.target.value });
+                      setCampaignFormDirty(true);
+                    }}
+                  />
+                </div>
+              </>
+            )}
             <div>
               <label style={labelStyle}>Kupon kodu</label>
-              <input style={inputStyle} value={form.couponCode} onChange={(e) => setForm({ ...form, couponCode: e.target.value })} />
-            </div>
-            <div>
-              <label style={labelStyle}>Buton metni</label>
-              <input style={inputStyle} value={form.buttonText} onChange={(e) => setForm({ ...form, buttonText: e.target.value })} />
+              <input
+                style={inputStyle}
+                value={form.couponCode}
+                onChange={(e) => {
+                  setForm({ ...form, couponCode: e.target.value });
+                  setCampaignFormDirty(true);
+                }}
+              />
             </div>
             <div>
               <label style={labelStyle}>Link URL</label>
-              <input style={inputStyle} value={form.linkUrl} onChange={(e) => setForm({ ...form, linkUrl: e.target.value })} />
+              <input
+                style={inputStyle}
+                value={form.linkUrl}
+                onChange={(e) => {
+                  setForm({ ...form, linkUrl: e.target.value });
+                  setCampaignFormDirty(true);
+                }}
+              />
             </div>
             <div>
               <label style={labelStyle}>Sıra</label>
-              <input style={inputStyle} value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: e.target.value })} />
+              <input
+                style={inputStyle}
+                value={form.sortOrder}
+                onChange={(e) => {
+                  setForm({ ...form, sortOrder: e.target.value });
+                  setCampaignFormDirty(true);
+                }}
+              />
             </div>
             <div>
               <label style={labelStyle}>Durum</label>
               <select
                 style={inputStyle}
                 value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value as ContentStatus })}
+                onChange={(e) => {
+                  setForm({ ...form, status: e.target.value as ContentStatus });
+                  setCampaignFormDirty(true);
+                }}
               >
                 <option value="DRAFT">Taslak</option>
                 <option value="SCHEDULED">Zamanlanmış</option>
@@ -476,7 +724,10 @@ export function CampaignsPage() {
               <textarea
                 style={{ ...inputStyle, minHeight: 100, fontFamily: 'monospace' }}
                 value={form.dynamicJson}
-                onChange={(e) => setForm({ ...form, dynamicJson: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, dynamicJson: e.target.value });
+                  setCampaignFormDirty(true);
+                }}
               />
             </div>
           </div>
@@ -488,14 +739,6 @@ export function CampaignsPage() {
               İptal
             </button>
           </div>
-          {editing && (
-            <TranslationPanel
-              entityType="CAMPAIGN"
-              entityId={editing.id}
-              fields={['title', 'shortDescription', 'description', 'terms', 'buttonText']}
-              title="Çeviriler"
-            />
-          )}
         </div>
       )}
 

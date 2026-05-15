@@ -7,6 +7,7 @@ export type LocalizedEntityType =
   | 'SLIDER'
   | 'EVENT'
   | 'CAMPAIGN'
+  | 'LOCATION'
   | 'STORE'
   | 'MOVIE'
   | 'CINEMA';
