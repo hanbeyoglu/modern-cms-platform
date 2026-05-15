@@ -27,6 +27,9 @@ export type MediaAsset = {
   source: string | null;
   checksum: string | null;
   status: MediaAssetStatus;
+  usageContext: string | null;
+  suggestedWidth: number | null;
+  suggestedHeight: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -68,12 +71,24 @@ export async function apiMediaUpload(
   token: string,
   tenantId: string,
   file: File,
-  opts?: { folderId?: string; mallId?: string; altText?: string },
+  opts?: {
+    folderId?: string;
+    mallId?: string;
+    altText?: string;
+    usageContext?: string;
+    suggestedWidth?: number;
+    suggestedHeight?: number;
+    tags?: string[];
+  },
 ): Promise<MediaAsset> {
   const form = new FormData();
   form.append('file', file);
   if (opts?.folderId) form.append('folderId', opts.folderId);
   if (opts?.altText) form.append('altText', opts.altText);
+  if (opts?.usageContext) form.append('usageContext', opts.usageContext);
+  if (opts?.suggestedWidth != null) form.append('suggestedWidth', String(opts.suggestedWidth));
+  if (opts?.suggestedHeight != null) form.append('suggestedHeight', String(opts.suggestedHeight));
+  if (opts?.tags?.length) form.append('tags', JSON.stringify(opts.tags));
 
   return request<MediaAsset>('/media/upload', {
     method: 'POST',

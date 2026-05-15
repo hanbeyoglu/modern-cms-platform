@@ -59,8 +59,13 @@ export function LocalesPage() {
   const [editForm, setEditForm] = useState({ name: '', nativeName: '', isActive: true });
   const [savingEdit, setSavingEdit] = useState(false);
   const [reordering, setReordering] = useState(false);
+  const [acting, setActing] = useState<{
+    id: string;
+    action: 'activate' | 'deactivate' | 'default';
+  } | null>(null);
 
   const tenantId = activeTenantId;
+  const activeCount = items.filter((l) => l.isActive).length;
 
   const load = useCallback(async () => {
     if (!accessToken || !tenantId) return;
@@ -135,15 +140,54 @@ export function LocalesPage() {
     }
   }
 
+  function localeActionError(e: unknown, fallback: string): string {
+    if (!(e instanceof Error)) return fallback;
+    const msg = e.message;
+    if (msg.includes('En az bir aktif dil')) {
+      return 'En az bir dil aktif kalmalıdır.';
+    }
+    if (msg.includes('inactive locale as default')) {
+      return 'Pasif bir dil varsayılan yapılamaz. Önce dili aktif edin.';
+    }
+    if (msg.includes('default locale') || msg.includes('Varsayılan dil')) {
+      return 'Varsayılan dil pasifleştirilemez. Önce başka bir dili varsayılan yapın.';
+    }
+    return msg || fallback;
+  }
+
+  async function handleActivate(loc: CmsLocale) {
+    if (!accessToken || !tenantId) return;
+    setActing({ id: loc.id, action: 'activate' });
+    try {
+      await apiLocaleUpdate(accessToken, tenantId, loc.id, { isActive: true });
+      toast.success('Dil aktif edildi');
+      void load();
+    } catch (e) {
+      toast.error(localeActionError(e, 'Dil aktif edilemedi'));
+    } finally {
+      setActing(null);
+    }
+  }
+
   async function handleDeactivate(loc: CmsLocale) {
     if (!accessToken || !tenantId) return;
-    if (!window.confirm(`"${loc.code}" dilini pasifleştirmek istediğinize emin misiniz?`)) return;
+    if (loc.isDefault) {
+      toast.error('Varsayılan dil pasifleştirilemez.');
+      return;
+    }
+    if (loc.isActive && activeCount <= 1) {
+      toast.error('En az bir dil aktif kalmalıdır.');
+      return;
+    }
+    setActing({ id: loc.id, action: 'deactivate' });
     try {
       await apiLocaleDeactivate(accessToken, tenantId, loc.id);
       toast.success('Dil pasifleştirildi');
       void load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'İşlem başarısız');
+      toast.error(localeActionError(e, 'Dil pasifleştirilemedi'));
+    } finally {
+      setActing(null);
     }
   }
 
@@ -173,12 +217,19 @@ export function LocalesPage() {
 
   async function handleSetDefault(loc: CmsLocale) {
     if (!accessToken || !tenantId) return;
+    if (!loc.isActive) {
+      toast.error('Pasif bir dil varsayılan yapılamaz.');
+      return;
+    }
+    setActing({ id: loc.id, action: 'default' });
     try {
       await apiLocaleSetDefault(accessToken, tenantId, loc.id);
       toast.success('Varsayılan dil güncellendi');
       void load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Ayarlanamadı');
+      toast.error(localeActionError(e, 'Varsayılan dil ayarlanamadı'));
+    } finally {
+      setActing(null);
     }
   }
 
@@ -213,6 +264,10 @@ export function LocalesPage() {
           ) : undefined
         }
       />
+
+      <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280', maxWidth: 560 }}>
+        Aktif diller içerik formlarında ve public API&apos;de kullanılabilir.
+      </p>
 
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
@@ -338,21 +393,56 @@ export function LocalesPage() {
                     </div>
                   </td>
                   <td style={{ padding: 8 }}>
-                    {can('locale:update') && (
-                      <Button size="sm" variant="secondary" onClick={() => openEdit(loc)} style={{ marginRight: 6 }}>
-                        Düzenle
-                      </Button>
-                    )}
-                    {can('locale:set-default') && loc.isActive && !loc.isDefault && (
-                      <Button size="sm" variant="secondary" onClick={() => void handleSetDefault(loc)} style={{ marginRight: 6 }}>
-                        Varsayılan yap
-                      </Button>
-                    )}
-                    {can('locale:delete') && loc.isActive && (
-                      <Button size="sm" variant="danger" onClick={() => void handleDeactivate(loc)}>
-                        Pasifleştir
-                      </Button>
-                    )}
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {can('locale:update') && (
+                        <Button size="sm" variant="secondary" onClick={() => openEdit(loc)}>
+                          Düzenle
+                        </Button>
+                      )}
+
+                      {loc.isDefault ? (
+                        <Button size="sm" variant="secondary" disabled title="Varsayılan dil pasifleştirilemez">
+                          Varsayılan dil
+                        </Button>
+                      ) : (
+                        <>
+                          {!loc.isActive && can('locale:update') && (
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              loading={acting?.id === loc.id && acting.action === 'activate'}
+                              disabled={acting !== null}
+                              onClick={() => void handleActivate(loc)}
+                            >
+                              Aktif Et
+                            </Button>
+                          )}
+                          {loc.isActive && can('locale:delete') && (
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              loading={acting?.id === loc.id && acting.action === 'deactivate'}
+                              disabled={acting !== null || activeCount <= 1}
+                              title={activeCount <= 1 ? 'En az bir dil aktif kalmalıdır' : undefined}
+                              onClick={() => void handleDeactivate(loc)}
+                            >
+                              Pasifleştir
+                            </Button>
+                          )}
+                          {loc.isActive && can('locale:set-default') && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              loading={acting?.id === loc.id && acting.action === 'default'}
+                              disabled={acting !== null}
+                              onClick={() => void handleSetDefault(loc)}
+                            >
+                              Varsayılan Yap
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

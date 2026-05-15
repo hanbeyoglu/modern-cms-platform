@@ -10,6 +10,7 @@ import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { MultilingualContentFields, EVENT_I18N_FIELDS } from '../components/MultilingualContentFields';
 import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
 import { ContentChannelFields } from '../components/ContentChannelFields';
+import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import { validateRangeSchedule } from '../lib/publishing-workflow';
 import { DEFAULT_CONTENT_CHANNELS, formatChannels } from '../lib/content-channels';
 import { Button } from '../components/ui/Button';
@@ -20,7 +21,6 @@ import {
   apiEventPublish,
   apiEventUpdate,
   apiEventsList,
-  apiMediaList,
   apiLocalesList,
   apiTranslationUpsert,
   apiTranslationDelete,
@@ -30,7 +30,6 @@ import {
   type ContentStatus,
   type ContentChannel,
   type CreateEventPayload,
-  type MediaAsset,
 } from '../lib/api';
 
 import { usePermission } from '../hooks/usePermission';
@@ -144,7 +143,6 @@ export function EventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<ContentStatus | ''>('');
   const [filterSearch, setFilterSearch] = useState('');
-  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CmsEvent | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -179,23 +177,9 @@ export function EventsPage() {
     }
   }, [accessToken, tenantId, mallId, filterStatus, filterSearch]);
 
-  const loadMedia = useCallback(async () => {
-    if (!accessToken || !tenantId) return;
-    try {
-      const data = await apiMediaList(accessToken, tenantId, { limit: 200 });
-      setMediaAssets(data.assets);
-    } catch {
-      setMediaAssets([]);
-    }
-  }, [accessToken, tenantId]);
-
   useEffect(() => {
     void loadEvents();
   }, [loadEvents]);
-
-  useEffect(() => {
-    void loadMedia();
-  }, [loadMedia]);
 
   useEffect(() => {
     if (!showForm || !accessToken || !tenantId) {
@@ -496,22 +480,12 @@ export function EventsPage() {
               />
             </div>
             <div>
-              <label style={labelStyle}>Kapak medya</label>
-              <select
-                style={inputStyle}
+              <ContextualMediaPicker
+                context="EVENT_COVER"
                 value={form.coverMediaId}
-                onChange={(e) => {
-                  setForm({ ...form, coverMediaId: e.target.value });
-                  setEventFormDirty(true);
-                }}
-              >
-                <option value="">—</option>
-                {mediaAssets.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.originalName}
-                  </option>
-                ))}
-              </select>
+                mallId={mallId}
+                onChange={(id) => { setForm({ ...form, coverMediaId: id }); setEventFormDirty(true); }}
+              />
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
               <ContentChannelFields

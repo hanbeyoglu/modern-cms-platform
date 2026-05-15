@@ -23,37 +23,43 @@ export interface UploadOptions {
   folderId?: string;
   mallId?: string;
   altText?: string;
+  usageContext?: string;
+  suggestedWidth?: number;
+  suggestedHeight?: number;
+  tags?: string[];
 }
 
-export type MediaAssetResponse = Pick<
-  MediaAsset,
-  | 'id'
-  | 'tenantId'
-  | 'mallId'
-  | 'folderId'
-  | 'originalName'
-  | 'fileName'
-  | 'mimeType'
-  | 'extension'
-  | 'size'
-  | 'width'
-  | 'height'
-  | 'durationSeconds'
-  | 'storageKey'
-  | 'publicUrl'
-  | 'altText'
-  | 'caption'
-  | 'description'
-  | 'tags'
-  | 'focalPointX'
-  | 'focalPointY'
-  | 'dominantColor'
-  | 'source'
-  | 'checksum'
-  | 'status'
-  | 'createdAt'
-  | 'updatedAt'
->;
+export interface MediaAssetResponse {
+  id: string;
+  tenantId: string;
+  mallId: string | null;
+  folderId: string | null;
+  originalName: string;
+  fileName: string;
+  mimeType: string;
+  extension: string;
+  size: number;
+  width: number | null;
+  height: number | null;
+  durationSeconds: number | null;
+  storageKey: string;
+  publicUrl: string;
+  altText: string | null;
+  caption: string | null;
+  description: string | null;
+  tags: string[];
+  focalPointX: number | null;
+  focalPointY: number | null;
+  dominantColor: string | null;
+  source: string | null;
+  checksum: string | null;
+  status: MediaAssetStatus;
+  usageContext: string | null;
+  suggestedWidth: number | null;
+  suggestedHeight: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface MediaUsage {
   entityType: string;
@@ -108,7 +114,10 @@ export class MediaService {
         storageKey: key,
         publicUrl,
         altText: options.altText ?? null,
-        tags: [],
+        tags: options.tags ?? [],
+        usageContext: options.usageContext ?? null,
+        suggestedWidth: options.suggestedWidth ?? null,
+        suggestedHeight: options.suggestedHeight ?? null,
       },
     });
 
@@ -213,8 +222,8 @@ export class MediaService {
       action: 'media:update',
       entityType: 'media_asset',
       entityId: asset.id,
-      before,
-      after: this.toResponse(updated),
+      before: before as unknown as Record<string, unknown>,
+      after: this.toResponse(updated) as unknown as Record<string, unknown>,
     });
 
     return this.toResponse(updated);
@@ -466,6 +475,9 @@ export class MediaService {
       source: asset.source,
       checksum: asset.checksum,
       status: asset.status as MediaAssetStatus,
+      usageContext: asset.usageContext,
+      suggestedWidth: asset.suggestedWidth,
+      suggestedHeight: asset.suggestedHeight,
       createdAt: asset.createdAt,
       updatedAt: asset.updatedAt,
     };

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
 import { usePermission } from '../hooks/usePermission';
 import { MultilingualContentFields, LOCATION_I18N_FIELDS } from '../components/MultilingualContentFields';
+import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import {
   apiLocationGet,
   apiLocationUpdate,
@@ -68,6 +69,8 @@ export function LocationDetailPage() {
           workingHoursJson: loc.workingHoursJson ?? '',
           socialLinksJson: loc.socialLinksJson ?? '',
           isPublic: loc.isPublic,
+          logoMediaId: loc.logoMediaId ?? undefined,
+          coverMediaId: loc.coverMediaId ?? undefined,
         });
         setDirty(false);
       })
@@ -387,6 +390,22 @@ export function LocationDetailPage() {
                 <option value="true">Evet</option>
                 <option value="false">Hayır</option>
               </select>
+            </div>
+            <div style={fieldStyle}>
+              <ContextualMediaPicker
+                context="LOCATION_LOGO"
+                value={form.logoMediaId ?? ''}
+                disabled={!canEdit}
+                onChange={(id) => setField('logoMediaId', id || undefined)}
+              />
+            </div>
+            <div style={fieldStyle}>
+              <ContextualMediaPicker
+                context="LOCATION_COVER"
+                value={form.coverMediaId ?? ''}
+                disabled={!canEdit}
+                onChange={(id) => setField('coverMediaId', id || undefined)}
+              />
             </div>
           </div>
         )}

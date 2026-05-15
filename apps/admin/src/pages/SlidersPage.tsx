@@ -14,7 +14,6 @@ import { DEFAULT_CONTENT_CHANNELS } from '../lib/content-channels';
 import { Button } from '../components/ui/Button';
 import {
   apiLocalesList,
-  apiMediaList,
   apiSliderArchive,
   apiSliderCreate,
   apiSliderDelete,
@@ -26,7 +25,6 @@ import {
   apiTranslationUpsert,
   type CmsLocale,
   type CreateSliderPayload,
-  type MediaAsset,
   type ContentChannel,
   type Slider,
   type SliderLinkType,
@@ -34,6 +32,7 @@ import {
   type SliderTargetDevice,
 } from '../lib/api';
 import { usePermission } from '../hooks/usePermission';
+import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -175,7 +174,7 @@ interface SliderFormProps {
   form: FormState;
   onChange: (f: FormState) => void;
   onDirty: () => void;
-  mediaAssets: MediaAsset[];
+  mallId?: string;
   saving: boolean;
   error: string | null;
   onSubmit: () => void;
@@ -193,7 +192,7 @@ function SliderForm({
   form,
   onChange,
   onDirty,
-  mediaAssets,
+  mallId,
   saving,
   error,
   onSubmit,
@@ -231,17 +230,6 @@ function SliderForm({
   };
 
   const fieldStyle: React.CSSProperties = { marginBottom: 12 };
-
-  const mediaOptions = (
-    <>
-      <option value="">— Seçilmedi —</option>
-      {mediaAssets.map((a) => (
-        <option key={a.id} value={a.id}>
-          {a.originalName}
-        </option>
-      ))}
-    </>
-  );
 
   return (
     <div
@@ -353,26 +341,35 @@ function SliderForm({
 
         {/* Desktop Media */}
         <div style={fieldStyle}>
-          <label style={labelStyle}>Masaüstü Medya</label>
-          <select style={inputStyle} value={form.desktopMediaId} onChange={set('desktopMediaId')}>
-            {mediaOptions}
-          </select>
+          <ContextualMediaPicker
+            context="SLIDER_DESKTOP"
+            value={form.desktopMediaId}
+            mallId={mallId}
+            disabled={saving}
+            onChange={(id) => { onChange({ ...form, desktopMediaId: id }); onDirty(); }}
+          />
         </div>
 
         {/* Mobile Media */}
         <div style={fieldStyle}>
-          <label style={labelStyle}>Mobil Medya</label>
-          <select style={inputStyle} value={form.mobileMediaId} onChange={set('mobileMediaId')}>
-            {mediaOptions}
-          </select>
+          <ContextualMediaPicker
+            context="SLIDER_MOBILE"
+            value={form.mobileMediaId}
+            mallId={mallId}
+            disabled={saving}
+            onChange={(id) => { onChange({ ...form, mobileMediaId: id }); onDirty(); }}
+          />
         </div>
 
-        {/* Video Media */}
+        {/* Video Media — kept as plain select since it accepts video files */}
         <div style={fieldStyle}>
           <label style={labelStyle}>Video Medya</label>
-          <select style={inputStyle} value={form.videoMediaId} onChange={set('videoMediaId')}>
-            {mediaOptions}
-          </select>
+          <input
+            style={inputStyle}
+            value={form.videoMediaId}
+            placeholder="Video medya ID'si"
+            onChange={set('videoMediaId')}
+          />
         </div>
 
         {/* Link Type */}
@@ -501,7 +498,6 @@ export function SlidersPage() {
   const [filterStatus, setFilterStatus] = useState<SliderStatus | ''>('');
   const [filterSearch, setFilterSearch] = useState('');
 
-  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
 
   const [showForm, setShowForm] = useState(false);
   const [editingSlider, setEditingSlider] = useState<Slider | null>(null);
@@ -537,23 +533,9 @@ export function SlidersPage() {
     }
   }, [accessToken, tenantId, mallId, filterStatus, filterSearch]);
 
-  const loadMedia = useCallback(async () => {
-    if (!accessToken || !tenantId) return;
-    try {
-      const data = await apiMediaList(accessToken, tenantId, { limit: 200 });
-      setMediaAssets(data.assets);
-    } catch {
-      setMediaAssets([]);
-    }
-  }, [accessToken, tenantId]);
-
   useEffect(() => {
     void loadSliders();
   }, [loadSliders]);
-
-  useEffect(() => {
-    void loadMedia();
-  }, [loadMedia]);
 
   useEffect(() => {
     if (!showForm || !accessToken || !tenantId) {
@@ -832,7 +814,7 @@ export function SlidersPage() {
           form={form}
           onChange={setForm}
           onDirty={() => setSliderFormDirty(true)}
-          mediaAssets={mediaAssets}
+          mallId={mallId}
           saving={saving}
           error={formError}
           onSubmit={() => void handleSubmit()}

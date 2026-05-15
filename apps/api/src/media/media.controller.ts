@@ -59,11 +59,19 @@ export class MediaController {
     @Req() req: Request,
     @Body('folderId') folderId?: string,
     @Body('altText') altText?: string,
+    @Body('usageContext') usageContext?: string,
+    @Body('suggestedWidth') suggestedWidth?: string,
+    @Body('suggestedHeight') suggestedHeight?: string,
+    @Body('tags') rawTags?: string,
   ) {
     return this.media.uploadAsset(file, user, req.tenantId!, {
       folderId,
       mallId: req.mallId,
       altText,
+      usageContext,
+      suggestedWidth: suggestedWidth ? parseInt(suggestedWidth, 10) : undefined,
+      suggestedHeight: suggestedHeight ? parseInt(suggestedHeight, 10) : undefined,
+      tags: rawTags ? (rawTags.startsWith('[') ? (JSON.parse(rawTags) as string[]) : rawTags.split(',').map((t) => t.trim()).filter(Boolean)) : undefined,
     });
   }
 

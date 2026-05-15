@@ -8,20 +8,19 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
+import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import {
   apiGlobalStoreCreate,
   apiGlobalStoreDelete,
   apiGlobalStoreUpdate,
   apiGlobalStoresList,
   apiLocalesList,
-  apiMediaList,
   apiStoreCategoriesList,
   apiTranslationDelete,
   apiTranslationsList,
   apiTranslationUpsert,
   type CmsLocale,
   type GlobalStore,
-  type MediaAsset,
   type StoreCategory,
   type StoreStatus,
 } from '../lib/api';
@@ -46,7 +45,6 @@ export function GlobalStoresPage() {
   const { can } = usePermission();
   const [items, setItems] = useState<GlobalStore[]>([]);
   const [categories, setCategories] = useState<StoreCategory[]>([]);
-  const [media, setMedia] = useState<MediaAsset[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +74,7 @@ export function GlobalStoresPage() {
     setLoading(true);
     setError(null);
     try {
-      const [res, cats, med] = await Promise.all([
+      const [res, cats] = await Promise.all([
         apiGlobalStoresList(accessToken, tenantId, {
           search: search || undefined,
           categoryId: categoryId || undefined,
@@ -84,12 +82,10 @@ export function GlobalStoresPage() {
           limit: 100,
         }),
         apiStoreCategoriesList(accessToken, tenantId, { limit: 200 }),
-        apiMediaList(accessToken, tenantId, { limit: 200 }),
       ]);
       setItems(res.items);
       setTotal(res.total);
       setCategories(cats.items);
-      setMedia(med.assets);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Yükleme hatası');
     } finally {
@@ -387,17 +383,13 @@ export function GlobalStoresPage() {
                 ))}
               </select>
             </label>
-            <label>
-              Logo (medya)
-              <select value={logoMediaId} onChange={(e) => setLogoMediaId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }}>
-                <option value="">—</option>
-                {media.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.originalName}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div style={{ marginBottom: 8 }}>
+              <ContextualMediaPicker
+                context="STORE_LOGO"
+                value={logoMediaId}
+                onChange={setLogoMediaId}
+              />
+            </div>
             <label>
               Web sitesi
               <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} placeholder="https://..." />

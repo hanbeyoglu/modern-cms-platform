@@ -8,15 +8,14 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
+import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import {
-  apiMediaList,
   apiMovieCreate,
   apiMovieDelete,
   apiMovieUpdate,
   apiMoviesList,
   type CmsMovie,
   type CreateMoviePayload,
-  type MediaAsset,
   type MovieStatus,
 } from '../lib/api';
 
@@ -103,7 +102,6 @@ export function MoviesPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<MovieStatus | ''>('');
   const [filterSearch, setFilterSearch] = useState('');
-  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CmsMovie | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -131,23 +129,9 @@ export function MoviesPage() {
     }
   }, [accessToken, tenantId, filterStatus, filterSearch]);
 
-  const loadMedia = useCallback(async () => {
-    if (!accessToken || !tenantId) return;
-    try {
-      const data = await apiMediaList(accessToken, tenantId, { limit: 200 });
-      setMediaAssets(data.assets);
-    } catch {
-      setMediaAssets([]);
-    }
-  }, [accessToken, tenantId]);
-
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    void loadMedia();
-  }, [loadMedia]);
 
   const inputStyle: CSSProperties = {
     width: '100%',
@@ -290,19 +274,13 @@ export function MoviesPage() {
             <input style={{ ...inputStyle, marginBottom: 10 }} value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Orijinal başlık</label>
             <input style={{ ...inputStyle, marginBottom: 10 }} value={form.originalTitle} onChange={(e) => setForm({ ...form, originalTitle: e.target.value })} />
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Afiş</label>
-            <select
-              style={{ ...inputStyle, marginBottom: 10 }}
-              value={form.posterMediaId}
-              onChange={(e) => setForm({ ...form, posterMediaId: e.target.value })}
-            >
-              <option value="">—</option>
-              {mediaAssets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.originalName}
-                </option>
-              ))}
-            </select>
+            <div style={{ marginBottom: 10 }}>
+              <ContextualMediaPicker
+                context="MOVIE_POSTER"
+                value={form.posterMediaId}
+                onChange={(id) => setForm({ ...form, posterMediaId: id })}
+              />
+            </div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Özet</label>
             <textarea style={{ ...inputStyle, minHeight: 50, marginBottom: 10 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Süre (dk)</label>

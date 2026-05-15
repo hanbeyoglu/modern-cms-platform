@@ -9,6 +9,7 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
 import { ContentChannelFields } from '../components/ContentChannelFields';
+import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import { validateRangeSchedule } from '../lib/publishing-workflow';
 import { DEFAULT_CONTENT_CHANNELS, formatChannels } from '../lib/content-channels';
 import { Button } from '../components/ui/Button';
@@ -19,11 +20,9 @@ import {
   apiPopupPublish,
   apiPopupUpdate,
   apiPopupsList,
-  apiMediaList,
   type CmsPopup,
   type ContentChannel,
   type CreatePopupPayload,
-  type MediaAsset,
   type PopupStatus,
 } from '../lib/api';
 import { usePermission } from '../hooks/usePermission';
@@ -117,7 +116,6 @@ export function PopupsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<PopupStatus | ''>('');
   const [filterSearch, setFilterSearch] = useState('');
-  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CmsPopup | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -151,13 +149,6 @@ export function PopupsPage() {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    if (!accessToken || !tenantId) return;
-    void apiMediaList(accessToken, tenantId, { limit: 200, mallId }).then(
-      (d) => setMediaAssets(d.assets),
-      () => setMediaAssets([]),
-    );
-  }, [accessToken, tenantId, mallId]);
 
   const inputStyle: CSSProperties = {
     width: '100%',
@@ -324,15 +315,12 @@ export function PopupsPage() {
                 <textarea style={inputStyle} rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
               <div>
-                <label style={labelStyle}>Görsel</label>
-                <select style={inputStyle} value={form.imageMediaId} onChange={(e) => setForm({ ...form, imageMediaId: e.target.value })}>
-                  <option value="">—</option>
-                  {mediaAssets.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.originalName}
-                    </option>
-                  ))}
-                </select>
+                <ContextualMediaPicker
+                  context="POPUP_IMAGE"
+                  value={form.imageMediaId}
+                  mallId={mallId}
+                  onChange={(id) => setForm({ ...form, imageMediaId: id })}
+                />
               </div>
               <div>
                 <label style={labelStyle}>Bağlantı URL</label>

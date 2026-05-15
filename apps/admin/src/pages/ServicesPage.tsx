@@ -8,15 +8,14 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
+import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import {
   apiServiceCreate,
   apiServiceDelete,
   apiServiceUpdate,
   apiServicesList,
-  apiMediaList,
   type CmsService,
   type CreateServicePayload,
-  type MediaAsset,
   type ServiceStatus,
 } from '../lib/api';
 import { usePermission } from '../hooks/usePermission';
@@ -127,7 +126,6 @@ export function ServicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<ServiceStatus | ''>('');
   const [filterSearch, setFilterSearch] = useState('');
-  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CmsService | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -161,13 +159,6 @@ export function ServicesPage() {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    if (!accessToken || !tenantId) return;
-    void apiMediaList(accessToken, tenantId, { limit: 200, mallId }).then(
-      (d) => setMediaAssets(d.assets),
-      () => setMediaAssets([]),
-    );
-  }, [accessToken, tenantId, mallId]);
 
   const inputStyle: CSSProperties = {
     width: '100%',
@@ -305,22 +296,20 @@ export function ServicesPage() {
                 <textarea style={inputStyle} rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
               <div>
-                <label style={labelStyle}>İkon</label>
-                <select style={inputStyle} value={form.iconMediaId} onChange={(e) => setForm({ ...form, iconMediaId: e.target.value })}>
-                  <option value="">—</option>
-                  {mediaAssets.map((a) => (
-                    <option key={a.id} value={a.id}>{a.originalName}</option>
-                  ))}
-                </select>
+                <ContextualMediaPicker
+                  context="SERVICE_ICON"
+                  value={form.iconMediaId}
+                  mallId={mallId}
+                  onChange={(id) => setForm({ ...form, iconMediaId: id })}
+                />
               </div>
               <div>
-                <label style={labelStyle}>Kapak</label>
-                <select style={inputStyle} value={form.coverMediaId} onChange={(e) => setForm({ ...form, coverMediaId: e.target.value })}>
-                  <option value="">—</option>
-                  {mediaAssets.map((a) => (
-                    <option key={a.id} value={a.id}>{a.originalName}</option>
-                  ))}
-                </select>
+                <ContextualMediaPicker
+                  context="SERVICE_COVER"
+                  value={form.coverMediaId}
+                  mallId={mallId}
+                  onChange={(id) => setForm({ ...form, coverMediaId: id })}
+                />
               </div>
               <div>
                 <label style={labelStyle}>Kategori</label>

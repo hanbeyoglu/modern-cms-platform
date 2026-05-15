@@ -379,6 +379,9 @@ model MediaAsset {
   source          String?
   checksum        String?
   status          MediaAssetStatus @default(ACTIVE)
+  usageContext    String?
+  suggestedWidth  Int?
+  suggestedHeight Int?
   metadataJson    Json?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
