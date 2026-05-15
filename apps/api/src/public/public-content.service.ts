@@ -331,11 +331,17 @@ export class PublicContentService {
         deletedAt: null,
         status: 'ACTIVE',
         ...(opts.featuredOnly ? { isFeatured: true } : {}),
+        ...(opts.categoryId
+          ? {
+              categoryLinks: {
+                some: { storeCategoryId: opts.categoryId, storeCategory: { deletedAt: null } },
+              },
+            }
+          : {}),
         globalStore: {
           is: {
             deletedAt: null,
             status: 'ACTIVE',
-            ...(opts.categoryId ? { categoryId: opts.categoryId } : {}),
             ...(opts.search
               ? {
                   OR: [
@@ -349,6 +355,12 @@ export class PublicContentService {
       },
       include: {
         localLogoMedia: { select: MEDIA_SELECT },
+        categoryLinks: {
+          include: {
+            storeCategory: { select: { id: true, name: true, slug: true } },
+          },
+          orderBy: { storeCategory: { sortOrder: 'asc' } },
+        },
         globalStore: {
           include: {
             logoMedia: { select: MEDIA_SELECT },
@@ -388,6 +400,12 @@ export class PublicContentService {
       },
       include: {
         localLogoMedia: { select: MEDIA_SELECT },
+        categoryLinks: {
+          include: {
+            storeCategory: { select: { id: true, name: true, slug: true } },
+          },
+          orderBy: { storeCategory: { sortOrder: 'asc' } },
+        },
         globalStore: {
           include: {
             logoMedia: { select: MEDIA_SELECT },
@@ -1033,8 +1051,11 @@ function mapStore(r: {
   workingHoursJson: Prisma.JsonValue;
   locationJson: Prisma.JsonValue;
   isFeatured: boolean;
+  isSoon: boolean;
+  searchTags: string[];
   sortOrder: number;
   localLogoMedia: RichMediaRow;
+  categoryLinks: { storeCategory: { id: string; name: string; slug: string } }[];
   globalStore: {
     id: string;
     name: string;
@@ -1048,6 +1069,7 @@ function mapStore(r: {
   const resolvedName = r.localName ?? r.globalStore.name;
   const resolvedDesc = r.localDescription ?? r.globalStore.description;
   const logo = toMediaAsset(r.localLogoMedia) ?? toMediaAsset(r.globalStore.logoMedia);
+  const categories = r.categoryLinks.map((link) => link.storeCategory);
 
   return {
     id: r.id,
@@ -1061,15 +1083,20 @@ function mapStore(r: {
     workingHoursJson: r.workingHoursJson,
     locationJson: r.locationJson,
     isFeatured: r.isFeatured,
+    isSoon: r.isSoon,
+    searchTags: r.searchTags,
     sortOrder: r.sortOrder,
     logo,
     globalStore: {
       id: r.globalStore.id,
       name: r.globalStore.name,
       slug: r.globalStore.slug,
+      description: r.globalStore.description,
       websiteUrl: r.globalStore.websiteUrl,
+      logo: toMediaAsset(r.globalStore.logoMedia),
     },
-    category: r.globalStore.category ?? null,
+    categories,
+    category: categories[0] ?? r.globalStore.category ?? null,
     seo: buildSeo({
       title: resolvedName,
       description: resolvedDesc,

@@ -169,14 +169,21 @@ export interface PublicStore {
   workingHoursJson: unknown;
   locationJson: unknown;
   isFeatured: boolean;
+  isSoon: boolean;
+  searchTags: string[];
   sortOrder: number;
   logo: PublicMediaAsset | null;
   globalStore: {
     id: string;
     name: string;
     slug: string;
+    description: string | null;
     websiteUrl: string | null;
+    logo: PublicMediaAsset | null;
   };
+  /** Mall-specific categories (preferred). */
+  categories: { id: string; name: string; slug: string }[];
+  /** @deprecated Use categories[0]; kept for backward compatibility. */
   category: { id: string; name: string; slug: string } | null;
   seo: PublicSeoMeta;
 }

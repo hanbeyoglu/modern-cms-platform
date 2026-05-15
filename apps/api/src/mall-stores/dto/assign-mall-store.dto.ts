@@ -1,4 +1,5 @@
 import {
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsEmail,
@@ -85,4 +86,10 @@ export class AssignMallStoreDto {
   @IsOptional()
   @IsEnum(StoreStatus)
   status?: StoreStatus = StoreStatus.ACTIVE;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  categoryIds?: string[];
 }

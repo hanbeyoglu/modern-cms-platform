@@ -8,6 +8,7 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
 import {
   apiGlobalStoresList,
   apiLocalesList,
@@ -18,13 +19,16 @@ import {
   apiMallStoreUpdate,
   apiMallStoresList,
   apiMediaList,
+  apiStoreCategoriesList,
   apiTranslationDelete,
   apiTranslationsList,
   apiTranslationUpsert,
   type CmsLocale,
   type GlobalStore,
+  type GlobalStoreCategoryPreview,
   type MallStore,
   type MediaAsset,
+  type StoreCategory,
   type StoreStatus,
 } from '../lib/api';
 
@@ -40,6 +44,68 @@ function StatusBadge({ status }: { status: StoreStatus }) {
     <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: s.bg, color: s.color }}>
       {s.label}
     </span>
+  );
+}
+
+function mallStoreCategories(m: MallStore): GlobalStoreCategoryPreview[] {
+  if (m.categories?.length) return m.categories;
+  return (m.categoryLinks ?? []).map((link) => link.storeCategory);
+}
+
+function GlobalStorePreview({ store }: { store: GlobalStore }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: 10,
+        border: '1px solid #e5e7eb',
+        borderRadius: 8,
+        background: '#fff',
+        marginTop: 8,
+      }}
+    >
+      {store.logoMedia?.publicUrl ? (
+        <img
+          src={store.logoMedia.publicUrl}
+          alt=""
+          style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 6, background: '#f3f4f6' }}
+        />
+      ) : (
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 6,
+            background: '#f3f4f6',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 11,
+            color: '#9ca3af',
+          }}
+        >
+          Logo yok
+        </div>
+      )}
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: 600, fontSize: 14 }}>{store.name}</div>
+        <div style={{ fontSize: 11, color: '#6b7280' }}>{store.slug}</div>
+        {store.websiteUrl ? (
+          <a
+            href={store.websiteUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={{ fontSize: 12, color: '#2563eb' }}
+          >
+            {store.websiteUrl}
+          </a>
+        ) : (
+          <span style={{ fontSize: 12, color: '#9ca3af' }}>Web sitesi yok</span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -62,6 +128,7 @@ export function MallStoresPage() {
   const { can } = usePermission();
   const [items, setItems] = useState<MallStore[]>([]);
   const [globals, setGlobals] = useState<GlobalStore[]>([]);
+  const [categories, setCategories] = useState<StoreCategory[]>([]);
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -70,6 +137,8 @@ export function MallStoresPage() {
 
   const [showAssign, setShowAssign] = useState(false);
   const [globalStoreId, setGlobalStoreId] = useState('');
+  const [globalStoreSearch, setGlobalStoreSearch] = useState('');
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [editing, setEditing] = useState<MallStore | null>(null);
   const [localName, setLocalName] = useState('');
   const [localDescription, setLocalDescription] = useState('');
@@ -99,14 +168,16 @@ export function MallStoresPage() {
     setLoading(true);
     setError(null);
     try {
-      const [res, glob, med] = await Promise.all([
+      const [res, glob, cats, med] = await Promise.all([
         apiMallStoresList(accessToken, tenantId, mallId, { search: search || undefined, limit: 100 }),
         apiGlobalStoresList(accessToken, tenantId, { limit: 200, status: 'ACTIVE' }),
+        apiStoreCategoriesList(accessToken, tenantId, { limit: 200, status: 'ACTIVE' }),
         apiMediaList(accessToken, tenantId, { limit: 200 }),
       ]);
       setItems(res.items);
       setTotal(res.total);
       setGlobals(glob.items);
+      setCategories(cats.items);
       setMedia(med.assets);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Yükleme hatası');
@@ -206,9 +277,24 @@ export function MallStoresPage() {
     [accessToken, tenantId, tenantLocales, localeDrafts, can],
   );
 
+  const filteredGlobals = globals.filter((g) => {
+    const q = globalStoreSearch.trim().toLowerCase();
+    if (!q) return true;
+    return g.name.toLowerCase().includes(q) || g.slug.toLowerCase().includes(q);
+  });
+
+  const selectedGlobal =
+    globals.find((g) => g.id === globalStoreId) ?? (editing ? editing.globalStore : null);
+
+  function toggleCategory(id: string) {
+    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
   function openAssign() {
     setEditing(null);
     setGlobalStoreId('');
+    setGlobalStoreSearch('');
+    setCategoryIds([]);
     setLocalName('');
     setLocalDescription('');
     setLocalLogoMediaId('');
@@ -231,6 +317,8 @@ export function MallStoresPage() {
   function openEdit(m: MallStore) {
     setEditing(m);
     setGlobalStoreId(m.globalStoreId);
+    setGlobalStoreSearch('');
+    setCategoryIds(mallStoreCategories(m).map((c) => c.id));
     setLocalName(m.localName ?? '');
     setLocalDescription(m.localDescription ?? '');
     setLocalLogoMediaId(m.localLogoMediaId ?? '');
@@ -288,6 +376,7 @@ export function MallStoresPage() {
           isFeatured,
           isSoon,
           searchTags: parseSearchTags(searchTagsText),
+          categoryIds,
         });
         setItems((prev) => prev.map((x) => (x.id === u.id ? u : x)));
         await flushMallStoreTranslations(u.id);
@@ -313,6 +402,7 @@ export function MallStoresPage() {
           isFeatured,
           isSoon,
           searchTags: parseSearchTags(searchTagsText),
+          categoryIds,
         });
         setItems((prev) => [c, ...prev]);
         setTotal((t) => t + 1);
@@ -402,23 +492,71 @@ export function MallStoresPage() {
         <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, marginBottom: 16, background: '#fafafa' }}>
           <h3 style={{ marginTop: 0, fontSize: 14 }}>{editing ? 'AVM mağaza detayı' : 'Global mağazayı AVM\'ye ata'}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, maxWidth: 800 }}>
-            {!editing && (
-              <label style={{ gridColumn: '1 / -1' }}>
-                Global mağaza *
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>
+                Global Mağaza {!editing && '*'}
+              </label>
+              {!editing && (
+                <input
+                  type="search"
+                  placeholder="Marka adı veya slug ile ara…"
+                  value={globalStoreSearch}
+                  onChange={(e) => setGlobalStoreSearch(e.target.value)}
+                  style={{ display: 'block', width: '100%', marginBottom: 6, padding: 6, borderRadius: 4, border: '1px solid #d1d5db' }}
+                />
+              )}
+              {!editing ? (
                 <select
                   value={globalStoreId}
                   onChange={(e) => setGlobalStoreId(e.target.value)}
-                  style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }}
+                  style={{ display: 'block', width: '100%', padding: 6, borderRadius: 4, border: '1px solid #d1d5db' }}
                 >
-                  <option value="">— Seçin —</option>
-                  {globals.map((g) => (
+                  <option value="">— Global mağaza seçin —</option>
+                  {filteredGlobals.map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.name} ({g.slug})
                     </option>
                   ))}
                 </select>
-              </label>
-            )}
+              ) : null}
+              {selectedGlobal ? <GlobalStorePreview store={selectedGlobal} /> : null}
+            </div>
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>AVM içindeki kategori</label>
+              <p style={{ margin: '0 0 8px', fontSize: 12, color: '#6b7280' }}>
+                Aynı marka farklı AVM&apos;lerde farklı kategorilere sahip olabilir.
+              </p>
+              {categories.length === 0 ? (
+                <p style={{ fontSize: 12, color: '#9ca3af' }}>Henüz kategori tanımlı değil.</p>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {categories.map((cat) => (
+                    <label
+                      key={cat.id}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '4px 10px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: 6,
+                        background: categoryIds.includes(cat.id) ? '#eff6ff' : '#fff',
+                        cursor: 'pointer',
+                        fontSize: 13,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={categoryIds.includes(cat.id)}
+                        onChange={() => toggleCategory(cat.id)}
+                      />
+                      {cat.name}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
             <div style={{ gridColumn: '1 / -1' }}>
               {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
                 <MultilingualContentFields
@@ -553,6 +691,8 @@ export function MallStoresPage() {
           <thead>
             <tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}>
               <th style={{ padding: 8 }}>Mağaza</th>
+              <th style={{ padding: 8 }}>Global marka</th>
+              <th style={{ padding: 8 }}>Kategoriler</th>
               <th style={{ padding: 8 }}>Kat / No</th>
               <th style={{ padding: 8 }}>Öne çıkan</th>
               <th style={{ padding: 8 }}>Durum</th>
@@ -564,7 +704,49 @@ export function MallStoresPage() {
               <tr key={m.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                 <td style={{ padding: 8 }}>
                   <div style={{ fontWeight: 600 }}>{m.localName || m.globalStore.name}</div>
-                  <div style={{ fontSize: 11, color: '#6b7280' }}>{m.globalStore.slug}</div>
+                  {m.isSoon ? (
+                    <span style={{ marginTop: 4, display: 'inline-block' }}>
+                      <Badge variant="blue">Yakında</Badge>
+                    </span>
+                  ) : null}
+                </td>
+                <td style={{ padding: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {m.globalStore.logoMedia?.publicUrl ? (
+                      <img
+                        src={m.globalStore.logoMedia.publicUrl}
+                        alt=""
+                        style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 4 }}
+                      />
+                    ) : null}
+                    <div>
+                      <div style={{ fontWeight: 500 }}>{m.globalStore.name}</div>
+                      <div style={{ fontSize: 11, color: '#6b7280' }}>{m.globalStore.slug}</div>
+                      {m.globalStore.websiteUrl ? (
+                        <a
+                          href={m.globalStore.websiteUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: 11, color: '#2563eb' }}
+                        >
+                          Web sitesi
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                </td>
+                <td style={{ padding: 8 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {mallStoreCategories(m).length > 0 ? (
+                      mallStoreCategories(m).map((cat) => (
+                        <Badge key={cat.id} variant="gray">
+                          {cat.name}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span style={{ fontSize: 12, color: '#9ca3af' }}>—</span>
+                    )}
+                  </div>
                 </td>
                 <td style={{ padding: 8 }}>
                   {m.floor ?? '—'} / {m.storeNo ?? '—'}

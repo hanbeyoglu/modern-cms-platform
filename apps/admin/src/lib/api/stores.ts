@@ -85,6 +85,8 @@ export type MallStore = {
   updatedAt: string;
   globalStore: GlobalStore;
   localLogoMedia: GlobalStoreMediaPreview | null;
+  categoryLinks?: { storeCategory: GlobalStoreCategoryPreview }[];
+  categories?: GlobalStoreCategoryPreview[];
 };
 
 export type MallStoreListResponse = {
@@ -274,6 +276,7 @@ export async function apiMallStoreAssign(
     searchTags?: string[];
     sortOrder?: number;
     status?: StoreStatus;
+    categoryIds?: string[];
   },
 ): Promise<MallStore> {
   return request<MallStore>('/mall-stores/assign', {
@@ -305,6 +308,7 @@ export async function apiMallStoreUpdate(
     searchTags?: string[];
     sortOrder: number;
     status: StoreStatus;
+    categoryIds?: string[];
   }>,
 ): Promise<MallStore> {
   return request<MallStore>(`/mall-stores/${id}`, {

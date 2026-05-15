@@ -36,7 +36,26 @@ const MALL_STORE_INCLUDE = {
     },
   },
   localLogoMedia: { select: MEDIA_SELECT },
+  categoryLinks: {
+    include: {
+      storeCategory: { select: CATEGORY_SELECT },
+    },
+    orderBy: { storeCategory: { sortOrder: 'asc' as const } },
+  },
 } satisfies Prisma.MallStoreInclude;
+
+export type MallStoreCategoryLink = {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+};
+
+export function mapMallStoreCategories(
+  row: Prisma.MallStoreGetPayload<{ include: typeof MALL_STORE_INCLUDE }>,
+): MallStoreCategoryLink[] {
+  return row.categoryLinks.map((link) => link.storeCategory);
+}
 
 export type MallStoreResponse = Prisma.MallStoreGetPayload<{ include: typeof MALL_STORE_INCLUDE }>;
 
@@ -53,7 +72,10 @@ export type PublicMallStore = {
   workingHoursJson: Prisma.JsonValue | null;
   locationJson: Prisma.JsonValue | null;
   isFeatured: boolean;
+  isSoon: boolean;
+  searchTags: string[];
   sortOrder: number;
+  categories: { id: string; name: string; slug: string }[];
   globalStore: {
     id: string;
     name: string;
@@ -109,7 +131,11 @@ export class MallStoresService {
       ...(query.status ? { status: query.status } : {}),
       ...(query.isFeatured === true || query.isFeatured === false ? { isFeatured: query.isFeatured } : {}),
       ...(query.categoryId
-        ? { globalStore: { is: { categoryId: query.categoryId, deletedAt: null } } }
+        ? {
+            categoryLinks: {
+              some: { storeCategoryId: query.categoryId, storeCategory: { deletedAt: null } },
+            },
+          }
         : {}),
       ...(query.search
         ? {
@@ -213,8 +239,12 @@ export class MallStoresService {
       },
     });
 
+    if (dto.categoryIds !== undefined) {
+      await this.syncMallStoreCategories(row.id, dto.categoryIds);
+    }
+
     this.scheduleMallStoreIndex(row.id);
-    return row;
+    return this.findOne(req, user, row.id);
   }
 
   async update(req: Request, user: User, id: string, dto: UpdateMallStoreDto): Promise<MallStoreResponse> {
@@ -279,8 +309,12 @@ export class MallStoresService {
       },
     });
 
+    if (dto.categoryIds !== undefined) {
+      await this.syncMallStoreCategories(id, dto.categoryIds);
+    }
+
     this.scheduleMallStoreIndex(id);
-    return row;
+    return this.findOne(req, user, id);
   }
 
   async remove(req: Request, user: User, id: string): Promise<void> {
@@ -360,11 +394,17 @@ export class MallStoresService {
         deletedAt: null,
         status: 'ACTIVE',
         ...(opts.featuredOnly ? { isFeatured: true } : {}),
+        ...(opts.categoryId
+          ? {
+              categoryLinks: {
+                some: { storeCategoryId: opts.categoryId, storeCategory: { deletedAt: null } },
+              },
+            }
+          : {}),
         globalStore: {
           is: {
             deletedAt: null,
             status: 'ACTIVE',
-            ...(opts.categoryId ? { categoryId: opts.categoryId } : {}),
           },
         },
         ...(opts.search
@@ -376,7 +416,6 @@ export class MallStoresService {
                     is: {
                       deletedAt: null,
                       status: 'ACTIVE',
-                      ...(opts.categoryId ? { categoryId: opts.categoryId } : {}),
                       OR: [
                         { name: { contains: opts.search, mode: 'insensitive' as const } },
                         { description: { contains: opts.search, mode: 'insensitive' as const } },
@@ -389,6 +428,12 @@ export class MallStoresService {
           : {}),
       },
       include: {
+        categoryLinks: {
+          include: {
+            storeCategory: { select: { id: true, name: true, slug: true } },
+          },
+          orderBy: { storeCategory: { sortOrder: 'asc' } },
+        },
         globalStore: {
           include: {
             logoMedia: { select: MEDIA_SELECT },
@@ -399,32 +444,59 @@ export class MallStoresService {
       orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }, { globalStore: { name: 'asc' } }],
     });
 
-    return rows.map((r) => ({
-      id: r.id,
-      mallId: r.mallId,
-      tenantId: r.tenantId,
-      localName: r.localName,
-      localDescription: r.localDescription,
-      floor: r.floor,
-      storeNo: r.storeNo,
-      phone: r.phone,
-      email: r.email,
-      workingHoursJson: r.workingHoursJson,
-      locationJson: r.locationJson,
-      isFeatured: r.isFeatured,
-      isSoon: r.isSoon,
-      searchTags: r.searchTags,
-      sortOrder: r.sortOrder,
-      globalStore: {
-        id: r.globalStore.id,
-        name: r.globalStore.name,
-        slug: r.globalStore.slug,
-        description: r.globalStore.description,
-        websiteUrl: r.globalStore.websiteUrl,
-        logoMedia: r.globalStore.logoMedia,
-        category: r.globalStore.category,
-      },
-    }));
+    return rows.map((r) => {
+      const categories = r.categoryLinks.map((link) => link.storeCategory);
+      return {
+        id: r.id,
+        mallId: r.mallId,
+        tenantId: r.tenantId,
+        localName: r.localName,
+        localDescription: r.localDescription,
+        floor: r.floor,
+        storeNo: r.storeNo,
+        phone: r.phone,
+        email: r.email,
+        workingHoursJson: r.workingHoursJson,
+        locationJson: r.locationJson,
+        isFeatured: r.isFeatured,
+        isSoon: r.isSoon,
+        searchTags: r.searchTags,
+        sortOrder: r.sortOrder,
+        categories,
+        globalStore: {
+          id: r.globalStore.id,
+          name: r.globalStore.name,
+          slug: r.globalStore.slug,
+          description: r.globalStore.description,
+          websiteUrl: r.globalStore.websiteUrl,
+          logoMedia: r.globalStore.logoMedia,
+          category: r.globalStore.category,
+        },
+      };
+    });
+  }
+
+  private async syncMallStoreCategories(mallStoreId: string, categoryIds: string[]): Promise<void> {
+    const unique = [...new Set(categoryIds)];
+    if (unique.length === 0) {
+      await this.prisma.mallStoreOnCategory.deleteMany({ where: { mallStoreId } });
+      return;
+    }
+
+    const rows = await this.prisma.storeCategory.findMany({
+      where: { id: { in: unique }, deletedAt: null },
+      select: { id: true },
+    });
+    if (rows.length !== unique.length) {
+      throw new BadRequestException('Geçersiz veya silinmiş kategori kimliği');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.mallStoreOnCategory.deleteMany({ where: { mallStoreId } }),
+      this.prisma.mallStoreOnCategory.createMany({
+        data: unique.map((storeCategoryId) => ({ mallStoreId, storeCategoryId })),
+      }),
+    ]);
   }
 
   private normalizeEmail(v: string | null | undefined): string | null {

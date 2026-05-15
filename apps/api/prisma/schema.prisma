@@ -529,7 +529,8 @@ model StoreCategory {
   updatedAt DateTime            @updatedAt
   deletedAt DateTime?
 
-  globalStores GlobalStore[]
+  globalStores   GlobalStore[]
+  mallStoreLinks MallStoreOnCategory[]
 
   @@index([status])
   @@index([sortOrder])
@@ -591,12 +592,26 @@ model MallStore {
   globalStore      GlobalStore  @relation(fields: [globalStoreId], references: [id], onDelete: Restrict)
   localLogoMedia   MediaAsset?  @relation("MallStoreLocalLogo", fields: [localLogoMediaId], references: [id], onDelete: SetNull)
   createdByUser    User         @relation("MallStoreCreator", fields: [createdBy], references: [id])
-  updatedByUser    User?        @relation("MallStoreUpdater", fields: [updatedBy], references: [id])
+  updatedByUser    User?                 @relation("MallStoreUpdater", fields: [updatedBy], references: [id])
   campaigns        Campaign[]
+  categoryLinks    MallStoreOnCategory[]
 
   @@index([tenantId, mallId])
   @@index([globalStoreId])
   @@index([tenantId, mallId, status])
+}
+
+/// Per-mall category assignment (same brand may differ by mall).
+model MallStoreOnCategory {
+  mallStoreId     String
+  storeCategoryId String
+  createdAt       DateTime @default(now())
+
+  mallStore     MallStore     @relation(fields: [mallStoreId], references: [id], onDelete: Cascade)
+  storeCategory StoreCategory @relation(fields: [storeCategoryId], references: [id], onDelete: Cascade)
+
+  @@id([mallStoreId, storeCategoryId])
+  @@index([storeCategoryId])
 }
 
 // ─── Events & Campaigns (Sprint 6) ────────────────────────────────────────────

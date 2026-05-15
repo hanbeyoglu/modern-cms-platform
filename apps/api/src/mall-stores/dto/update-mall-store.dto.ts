@@ -1,4 +1,5 @@
 import {
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsEmail,
@@ -80,4 +81,10 @@ export class UpdateMallStoreDto {
   @IsOptional()
   @IsEnum(StoreStatus)
   status?: StoreStatus;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  categoryIds?: string[];
 }
