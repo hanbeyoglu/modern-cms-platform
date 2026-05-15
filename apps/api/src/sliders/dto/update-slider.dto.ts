@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
@@ -7,7 +8,7 @@ import {
   Min,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { SliderLinkType, SliderStatus, SliderTargetDevice } from '@prisma/client';
+import { Channel, SliderLinkType, SliderStatus, SliderTargetDevice } from '@prisma/client';
 
 export class UpdateSliderDto {
   @IsOptional()
@@ -67,4 +68,9 @@ export class UpdateSliderDto {
   @IsOptional()
   @IsEnum(SliderTargetDevice)
   targetDevice?: SliderTargetDevice;
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(Channel, { each: true })
+  channels?: Channel[];
 }

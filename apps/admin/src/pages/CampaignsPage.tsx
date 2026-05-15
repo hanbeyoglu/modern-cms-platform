@@ -8,6 +8,10 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { CAMPAIGN_I18N_FIELDS, MultilingualContentFields } from '../components/MultilingualContentFields';
+import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
+import { ContentChannelFields } from '../components/ContentChannelFields';
+import { validateRangeSchedule } from '../lib/publishing-workflow';
+import { DEFAULT_CONTENT_CHANNELS } from '../lib/content-channels';
 import { Button } from '../components/ui/Button';
 import {
   apiCampaignArchive,
@@ -24,7 +28,14 @@ import {
   apiTranslationUpsert,
   type CmsLocale,
 } from '../lib/api';
-import type { CmsCampaign, ContentStatus, CreateCampaignPayload, MallStore, MediaAsset } from '../lib/api';
+import type {
+  CmsCampaign,
+  ContentChannel,
+  ContentStatus,
+  CreateCampaignPayload,
+  MallStore,
+  MediaAsset,
+} from '../lib/api';
 import { usePermission } from '../hooks/usePermission';
 
 const STATUS_STYLE: Record<ContentStatus, { bg: string; color: string; label: string }> = {
@@ -73,6 +84,7 @@ type FormState = {
   storeId: string;
   sortOrder: string;
   status: ContentStatus;
+  channels: ContentChannel[];
   dynamicJson: string;
 };
 
@@ -91,6 +103,7 @@ const EMPTY: FormState = {
   storeId: '',
   sortOrder: '0',
   status: 'DRAFT',
+  channels: [...DEFAULT_CONTENT_CHANNELS],
   dynamicJson: '',
 };
 
@@ -110,6 +123,7 @@ function cToForm(c: CmsCampaign): FormState {
     storeId: c.storeId ?? '',
     sortOrder: String(c.sortOrder),
     status: c.status,
+    channels: c.channels?.length ? [...c.channels] : [...DEFAULT_CONTENT_CHANNELS],
     dynamicJson: c.dynamicFieldsJson ? JSON.stringify(c.dynamicFieldsJson, null, 2) : '',
   };
 }
@@ -130,6 +144,7 @@ function formToPayload(f: FormState): CreateCampaignPayload {
     storeId: f.storeId || undefined,
     sortOrder: parseInt(f.sortOrder, 10) || 0,
     status: f.status,
+    channels: f.channels.length ? f.channels : undefined,
   };
 }
 
@@ -340,6 +355,11 @@ export function CampaignsPage() {
       setFormError('Başlık zorunludur.');
       return;
     }
+    const scheduleError = validateRangeSchedule(form.status, form.startAt);
+    if (scheduleError) {
+      setFormError(scheduleError);
+      return;
+    }
     let dynamicFieldsJson: Record<string, unknown> | undefined;
     const raw = form.dynamicJson.trim();
     if (raw) {
@@ -460,7 +480,7 @@ export function CampaignsPage() {
           onChange={(e) => setFilterStatus(e.target.value as ContentStatus | '')}
           style={inputStyle}
         >
-          <option value="">Tüm durumlar</option>
+          <option value="">Aktif (arşiv hariç)</option>
           <option value="DRAFT">Taslak</option>
           <option value="SCHEDULED">Zamanlanmış</option>
           <option value="PUBLISHED">Yayında</option>
@@ -543,31 +563,38 @@ export function CampaignsPage() {
                 ))}
               </select>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Başlangıç</label>
-                <input
-                  type="datetime-local"
-                  style={inputStyle}
-                  value={form.startAt}
-                  onChange={(e) => {
-                    setForm({ ...form, startAt: e.target.value });
-                    setCampaignFormDirty(true);
-                  }}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Bitiş</label>
-                <input
-                  type="datetime-local"
-                  style={inputStyle}
-                  value={form.endAt}
-                  onChange={(e) => {
-                    setForm({ ...form, endAt: e.target.value });
-                    setCampaignFormDirty(true);
-                  }}
-                />
-              </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <ContentChannelFields
+                channels={form.channels}
+                onChange={(channels) => {
+                  setForm({ ...form, channels });
+                  setCampaignFormDirty(true);
+                }}
+                labelStyle={labelStyle}
+                disabled={saving}
+              />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <PublishingWorkflowFields
+                mode="range"
+                status={form.status}
+                startAt={form.startAt}
+                endAt={form.endAt}
+                onStatusChange={(status) => {
+                  setForm({ ...form, status });
+                  setCampaignFormDirty(true);
+                }}
+                onStartAtChange={(startAt) => {
+                  setForm({ ...form, startAt });
+                  setCampaignFormDirty(true);
+                }}
+                onEndAtChange={(endAt) => {
+                  setForm({ ...form, endAt });
+                  setCampaignFormDirty(true);
+                }}
+                labelStyle={labelStyle}
+                inputStyle={inputStyle}
+              />
             </div>
             {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
               <MultilingualContentFields
@@ -702,22 +729,6 @@ export function CampaignsPage() {
                   setCampaignFormDirty(true);
                 }}
               />
-            </div>
-            <div>
-              <label style={labelStyle}>Durum</label>
-              <select
-                style={inputStyle}
-                value={form.status}
-                onChange={(e) => {
-                  setForm({ ...form, status: e.target.value as ContentStatus });
-                  setCampaignFormDirty(true);
-                }}
-              >
-                <option value="DRAFT">Taslak</option>
-                <option value="SCHEDULED">Zamanlanmış</option>
-                <option value="PUBLISHED">Yayında</option>
-                <option value="ARCHIVED">Arşiv</option>
-              </select>
             </div>
             <div>
               <label style={labelStyle}>dynamicFieldsJson</label>

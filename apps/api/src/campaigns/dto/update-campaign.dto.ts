@@ -1,6 +1,7 @@
-import { ContentStatus } from '@prisma/client';
+import { Channel, ContentStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
@@ -86,6 +87,11 @@ export class UpdateCampaignDto {
   })
   @IsObject()
   dynamicFieldsJson?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(Channel, { each: true })
+  channels?: Channel[];
 
   @IsOptional()
   @IsString()

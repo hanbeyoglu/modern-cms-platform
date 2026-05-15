@@ -82,7 +82,13 @@ model User {
   updatedPages          Page[]          @relation("PageUpdater")
   createdPageBlocks     PageBlock[]     @relation("PageBlockCreator")
   updatedPageBlocks     PageBlock[]     @relation("PageBlockUpdater")
+  createdPageAttachments PageAttachment[] @relation("PageAttachmentCreator")
+  updatedPageAttachments PageAttachment[] @relation("PageAttachmentUpdater")
   notifications         Notification[]  @relation("NotificationRecipient")
+  createdPopups         Popup[]         @relation("PopupCreator")
+  updatedPopups         Popup[]         @relation("PopupUpdater")
+  createdServices       Service[]       @relation("ServiceCreator")
+  updatedServices       Service[]       @relation("ServiceUpdater")
 }
 
 model Tenant {
@@ -119,6 +125,7 @@ model Tenant {
   movieSessions MovieSession[]
   pages         Page[]
   pageBlocks    PageBlock[]
+  pageAttachments PageAttachment[]
   analyticsEvents    AnalyticsEvent[]
   locales            Locale[]
   localizedContent   LocalizedContent[]
@@ -126,6 +133,8 @@ model Tenant {
   searchIndexEntries SearchIndexEntry[]
   capabilities       TenantCapability[]
   settings           TenantSetting[]
+  popups             Popup[]
+  services           Service[]
 }
 
 model Mall {
@@ -180,9 +189,12 @@ model Mall {
   movieSessions    MovieSession[]
   pages            Page[]
   pageBlocks       PageBlock[]
+  pageAttachments  PageAttachment[]
   analyticsEvents  AnalyticsEvent[]
   notifications    Notification[]
   searchIndexEntries SearchIndexEntry[]
+  popups           Popup[]
+  services         Service[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -389,6 +401,10 @@ model MediaAsset {
   moviePosters        Movie[]     @relation("MoviePosterMedia")
   mallLogos           Mall[]      @relation("MallLogoMedia")
   mallCovers          Mall[]      @relation("MallCoverMedia")
+  pageAttachments     PageAttachment[] @relation("PageAttachmentMedia")
+  popupImages         Popup[]          @relation("PopupImageMedia")
+  serviceIcons        Service[]        @relation("ServiceIconMedia")
+  serviceCovers       Service[]        @relation("ServiceCoverMedia")
 
   @@index([tenantId, createdAt])
   @@index([tenantId, folderId])
@@ -411,6 +427,15 @@ model MediaVariant {
 
   @@unique([mediaAssetId, variantKey])
   @@index([mediaAssetId])
+}
+
+// ─── Channel Visibility (Sprint 25) ──────────────────────────────────────────
+
+enum Channel {
+  WEB
+  MOBILE
+  KIOSK
+  SIGNAGE
 }
 
 // ─── Sliders ──────────────────────────────────────────────────────────────────
@@ -455,6 +480,7 @@ model Slider {
   sortOrder      Int                @default(0)
   status         SliderStatus       @default(DRAFT)
   targetDevice   SliderTargetDevice @default(ALL)
+  channels       Channel[]
   createdBy      String
   updatedBy      String?
   createdAt      DateTime           @default(now())
@@ -547,6 +573,8 @@ model MallStore {
   workingHoursJson Json?
   locationJson     Json?
   isFeatured       Boolean     @default(false)
+  isSoon           Boolean     @default(false)
+  searchTags       String[]
   sortOrder        Int         @default(0)
   status           StoreStatus @default(ACTIVE)
   createdBy        String
@@ -594,6 +622,7 @@ model Event {
   linkUrl             String?
   status              ContentStatus @default(DRAFT)
   sortOrder           Int           @default(0)
+  channels            Channel[]
   dynamicFieldsJson   Json?
   createdBy           String
   updatedBy           String?
@@ -635,6 +664,7 @@ model Campaign {
   linkUrl             String?
   status              ContentStatus @default(DRAFT)
   sortOrder           Int           @default(0)
+  channels            Channel[]
   dynamicFieldsJson   Json?
   createdBy           String
   updatedBy           String?
@@ -792,6 +822,17 @@ enum PageType {
   LANDING
   LEGAL
   CONTACT
+  ABOUT
+  KVKK
+  PRIVACY_POLICY
+  COOKIE_POLICY
+  TERMS_OF_USE
+  CONTACT_INFO
+  FAQ
+  TRANSPORTATION
+  CERTIFICATES
+  DOCUMENTS
+  AWARDS
   CUSTOM
 }
 
@@ -807,6 +848,8 @@ model Page {
   title          String
   slug           String
   type           PageType   @default(STANDARD)
+  customTypeLabel String?
+  contentHtml    String?
   status         PageStatus @default(DRAFT)
   seoTitle       String?
   seoDescription String?
@@ -825,6 +868,7 @@ model Page {
   createdByUser User        @relation("PageCreator", fields: [createdBy], references: [id])
   updatedByUser User?       @relation("PageUpdater", fields: [updatedBy], references: [id])
   blocks        PageBlock[]
+  attachments   PageAttachment[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -832,6 +876,34 @@ model Page {
   @@index([tenantId, type])
   @@index([status, publishAt])
   @@index([status, unpublishAt])
+}
+
+model PageAttachment {
+  id           String   @id @default(cuid())
+  tenantId     String
+  mallId       String?
+  pageId       String
+  mediaId      String
+  title        String?
+  description  String?
+  sortOrder    Int      @default(0)
+  downloadable Boolean  @default(true)
+  createdBy    String
+  updatedBy    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall          Mall?      @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  page          Page       @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  media         MediaAsset @relation("PageAttachmentMedia", fields: [mediaId], references: [id], onDelete: Restrict)
+  createdByUser User      @relation("PageAttachmentCreator", fields: [createdBy], references: [id])
+  updatedByUser User?     @relation("PageAttachmentUpdater", fields: [updatedBy], references: [id])
+
+  @@index([pageId, sortOrder])
+  @@index([tenantId, pageId])
+  @@index([mediaId])
 }
 
 model PageBlock {
@@ -872,6 +944,8 @@ enum LocalizedEntityType {
   MOVIE
   CINEMA
   LOCATION
+  POPUP
+  SERVICE
 }
 
 model Locale {
@@ -928,6 +1002,8 @@ enum SearchIndexEntityType {
   CINEMA
   SLIDER
   LOCATION
+  POPUP
+  SERVICE
 }
 
 model SearchIndexEntry {
@@ -1113,4 +1189,98 @@ model Notification {
   @@index([tenantId, mallId, createdAt])
   @@index([userId, readAt, createdAt])
   @@index([readAt, createdAt])
+}
+
+// ─── Popups (Sprint 25) ───────────────────────────────────────────────────────
+
+enum PopupStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+model Popup {
+  id           String      @id @default(cuid())
+  tenantId     String
+  mallId       String?
+  title        String
+  description  String?
+  imageMediaId String?
+  linkUrl      String?
+  buttonText   String?
+  status       PopupStatus @default(DRAFT)
+  channels     Channel[]
+  startAt      DateTime?
+  endAt        DateTime?
+  sortOrder    Int         @default(0)
+  showOnce     Boolean     @default(false)
+  closable     Boolean     @default(true)
+  metadataJson Json?
+  createdBy    String
+  updatedBy    String?
+  publishedAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  deletedAt    DateTime?
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall       Mall?       @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  imageMedia MediaAsset? @relation("PopupImageMedia", fields: [imageMediaId], references: [id], onDelete: SetNull)
+  createdByUser User     @relation("PopupCreator", fields: [createdBy], references: [id])
+  updatedByUser User?    @relation("PopupUpdater", fields: [updatedBy], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, mallId])
+  @@index([tenantId, sortOrder])
+  @@index([status, startAt])
+  @@index([status, endAt])
+}
+
+// ─── Services (Sprint 25) ─────────────────────────────────────────────────────
+
+enum ServiceStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Service {
+  id            String        @id @default(cuid())
+  tenantId      String
+  mallId        String
+  name          String
+  description   String?
+  iconMediaId   String?
+  coverMediaId  String?
+  category      String?
+  floor         String?
+  unitNo        String?
+  phone         String?
+  email         String?
+  websiteUrl    String?
+  locationLabel String?
+  latitude      Float?
+  longitude     Float?
+  searchTags    String[]
+  isSoon        Boolean       @default(false)
+  status        ServiceStatus @default(ACTIVE)
+  sortOrder     Int           @default(0)
+  metadataJson  Json?
+  createdBy     String
+  updatedBy     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall          Mall        @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  iconMedia     MediaAsset? @relation("ServiceIconMedia", fields: [iconMediaId], references: [id], onDelete: SetNull)
+  coverMedia    MediaAsset? @relation("ServiceCoverMedia", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  createdByUser User        @relation("ServiceCreator", fields: [createdBy], references: [id])
+  updatedByUser User?       @relation("ServiceUpdater", fields: [updatedBy], references: [id])
+
+  @@index([tenantId, mallId])
+  @@index([tenantId, status])
+  @@index([tenantId, mallId, status])
+  @@index([tenantId, sortOrder])
 }

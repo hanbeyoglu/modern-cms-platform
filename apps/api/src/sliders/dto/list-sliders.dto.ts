@@ -1,6 +1,6 @@
 import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { SliderStatus, SliderTargetDevice } from '@prisma/client';
+import { Channel, SliderStatus, SliderTargetDevice } from '@prisma/client';
 
 export class ListSlidersDto {
   @IsOptional()
@@ -23,6 +23,10 @@ export class ListSlidersDto {
   @IsOptional()
   @IsEnum(SliderTargetDevice)
   targetDevice?: SliderTargetDevice;
+
+  @IsOptional()
+  @IsEnum(Channel)
+  channel?: Channel;
 
   @IsOptional()
   @IsString()

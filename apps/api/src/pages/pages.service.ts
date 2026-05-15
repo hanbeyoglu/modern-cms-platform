@@ -4,11 +4,11 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { Page, User } from '@prisma/client';
+import type { Page, PageType, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import { SearchIndexerService } from '../search/search-indexer.service';
-import { assertPublishAtWhenScheduled, validateStartBeforeEnd } from '../common/utils/content-validation';
+import { resolvePageSchedule } from '../common/utils/publish-workflow';
 import { slugify } from '../common/utils/slugify';
 import { uniquePageSlug } from '../common/utils/unique-content-slug';
 import type { CreatePageDto } from './dto/create-page.dto';
@@ -30,6 +30,32 @@ const PAGE_INCLUDE = {
       updatedAt: true,
     },
   },
+  attachments: {
+    where: { deletedAt: null },
+    orderBy: { sortOrder: 'asc' as const },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      mediaId: true,
+      sortOrder: true,
+      downloadable: true,
+      createdAt: true,
+      updatedAt: true,
+      media: {
+        select: {
+          id: true,
+          originalName: true,
+          mimeType: true,
+          publicUrl: true,
+          altText: true,
+          caption: true,
+          width: true,
+          height: true,
+        },
+      },
+    },
+  },
 } satisfies Prisma.PageInclude;
 
 export type PageResponse = Prisma.PageGetPayload<{ include: typeof PAGE_INCLUDE }>;
@@ -44,6 +70,12 @@ export class PagesService {
 
   private schedulePageIndex(pageId: string): void {
     void this.searchIndexer.syncPage(pageId).catch(() => undefined);
+  }
+
+  private assertPageTypeFields(type: string, customTypeLabel?: string | null): void {
+    if (type === 'CUSTOM' && !customTypeLabel?.trim()) {
+      throw new UnprocessableEntityException('customTypeLabel is required for custom pages');
+    }
   }
 
   async list(
@@ -84,8 +116,12 @@ export class PagesService {
   ): Promise<PageResponse> {
     const effectiveMallId = mallId ?? null;
     const status = dto.status ?? 'DRAFT';
-    validateStartBeforeEnd(dto.publishAt, dto.unpublishAt);
-    assertPublishAtWhenScheduled(status, dto.publishAt);
+    this.assertPageTypeFields(dto.type ?? 'STANDARD', dto.customTypeLabel);
+    const schedule = resolvePageSchedule({
+      status,
+      publishAt: dto.publishAt,
+      unpublishAt: dto.unpublishAt,
+    });
 
     const baseSlug = dto.slug?.trim() ? slugify(dto.slug) : slugify(dto.title);
     const slug = await uniquePageSlug(this.prisma, tenantId, baseSlug);
@@ -97,12 +133,14 @@ export class PagesService {
         title: dto.title,
         slug,
         type: dto.type ?? 'STANDARD',
+        customTypeLabel: dto.type === 'CUSTOM' ? dto.customTypeLabel?.trim() : null,
+        contentHtml: dto.contentHtml ?? null,
         status,
         seoTitle: dto.seoTitle ?? null,
         seoDescription: dto.seoDescription ?? null,
         seoKeywords: dto.seoKeywords ?? null,
-        publishAt: dto.publishAt ? new Date(dto.publishAt) : null,
-        unpublishAt: dto.unpublishAt ? new Date(dto.unpublishAt) : null,
+        publishAt: schedule.publishAt,
+        unpublishAt: schedule.unpublishAt,
         createdBy: user.id,
         publishedAt: status === 'PUBLISHED' ? new Date() : null,
       },
@@ -118,6 +156,12 @@ export class PagesService {
       entityId: page.id,
       after: { title: page.title, status: page.status, slug: page.slug, type: page.type },
     });
+
+    if (dto.attachments !== undefined) {
+      await this.replaceAttachments(page.id, dto.attachments, user, tenantId, effectiveMallId);
+      this.schedulePageIndex(page.id);
+      return this.findOne(page.id, tenantId, mallId);
+    }
 
     this.schedulePageIndex(page.id);
     return page;
@@ -142,25 +186,27 @@ export class PagesService {
       slug = candidate === existing.slug ? existing.slug : await uniquePageSlug(this.prisma, tenantId, candidate, id);
     }
 
-    const effectivePublish =
-      dto.publishAt !== undefined ? (dto.publishAt ? new Date(dto.publishAt) : null) : existing.publishAt;
-    const effectiveUnpublish =
-      dto.unpublishAt !== undefined
-        ? dto.unpublishAt
-          ? new Date(dto.unpublishAt)
-          : null
-        : existing.unpublishAt;
-
-    validateStartBeforeEnd(
-      effectivePublish ?? undefined,
-      effectiveUnpublish ?? undefined,
-    );
-
     const nextStatus = dto.status ?? existing.status;
-    assertPublishAtWhenScheduled(
-      nextStatus,
-      effectivePublish ? effectivePublish.toISOString() : undefined,
-    );
+    const nextType = dto.type ?? existing.type;
+    const nextCustomTypeLabel =
+      dto.customTypeLabel !== undefined ? dto.customTypeLabel : existing.customTypeLabel;
+    this.assertPageTypeFields(nextType, nextCustomTypeLabel);
+
+    const schedule = resolvePageSchedule({
+      status: nextStatus,
+      publishAt:
+        dto.publishAt !== undefined
+          ? dto.publishAt
+            ? dto.publishAt
+            : null
+          : existing.publishAt,
+      unpublishAt:
+        dto.unpublishAt !== undefined
+          ? dto.unpublishAt
+            ? dto.unpublishAt
+            : null
+          : existing.unpublishAt,
+    });
 
     const publishedPatch: { publishedAt?: Date | null } = {};
     if (nextStatus === 'PUBLISHED' && existing.status !== 'PUBLISHED') {
@@ -175,21 +221,25 @@ export class PagesService {
         ...(dto.title !== undefined && { title: dto.title }),
         slug,
         ...(dto.type !== undefined && { type: dto.type }),
+        ...(dto.customTypeLabel !== undefined || dto.type !== undefined
+          ? { customTypeLabel: nextType === 'CUSTOM' ? nextCustomTypeLabel?.trim() || null : null }
+          : {}),
+        ...(dto.contentHtml !== undefined && { contentHtml: dto.contentHtml || null }),
         ...(dto.status !== undefined && { status: dto.status }),
         ...(dto.seoTitle !== undefined && { seoTitle: dto.seoTitle || null }),
         ...(dto.seoDescription !== undefined && { seoDescription: dto.seoDescription || null }),
         ...(dto.seoKeywords !== undefined && { seoKeywords: dto.seoKeywords || null }),
-        ...(dto.publishAt !== undefined && {
-          publishAt: dto.publishAt ? new Date(dto.publishAt) : null,
-        }),
-        ...(dto.unpublishAt !== undefined && {
-          unpublishAt: dto.unpublishAt ? new Date(dto.unpublishAt) : null,
-        }),
+        publishAt: schedule.publishAt,
+        unpublishAt: schedule.unpublishAt,
         updatedBy: user.id,
         ...publishedPatch,
       },
       include: PAGE_INCLUDE,
     });
+
+    if (dto.attachments !== undefined) {
+      await this.replaceAttachments(page.id, dto.attachments, user, tenantId, page.mallId);
+    }
 
     await this.audit.logAction({
       userId: user.id,
@@ -203,7 +253,59 @@ export class PagesService {
     });
 
     this.schedulePageIndex(page.id);
-    return page;
+    return dto.attachments !== undefined ? this.findOne(page.id, tenantId, mallId) : page;
+  }
+
+  private async replaceAttachments(
+    pageId: string,
+    attachments: NonNullable<CreatePageDto['attachments']>,
+    user: User,
+    tenantId: string,
+    mallId: string | null,
+  ): Promise<void> {
+    const mediaIds = attachments.map((attachment) => attachment.mediaId);
+    if (new Set(mediaIds).size !== mediaIds.length) {
+      throw new UnprocessableEntityException('Each page attachment must use a unique media asset');
+    }
+
+    const media = await this.prisma.mediaAsset.findMany({
+      where: { id: { in: mediaIds }, tenantId, deletedAt: null, status: 'ACTIVE' },
+      select: { id: true, mallId: true },
+    });
+    const validMediaIds = new Set(media.map((asset) => asset.id));
+    const invalid = mediaIds.find((id) => !validMediaIds.has(id));
+    if (invalid) {
+      throw new UnprocessableEntityException('Attachment media not found or inactive');
+    }
+    const mediaById = new Map(media.map((asset) => [asset.id, asset]));
+    for (const attachment of attachments) {
+      const asset = mediaById.get(attachment.mediaId);
+      if (mallId && asset?.mallId && asset.mallId !== mallId) {
+        throw new UnprocessableEntityException('Attachment media must belong to the selected location');
+      }
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.pageAttachment.updateMany({
+        where: { pageId, tenantId, deletedAt: null },
+        data: { deletedAt: new Date(), updatedBy: user.id },
+      }),
+      ...attachments.map((attachment, index) =>
+        this.prisma.pageAttachment.create({
+          data: {
+            tenantId,
+            mallId,
+            pageId,
+            mediaId: attachment.mediaId,
+            title: attachment.title?.trim() || null,
+            description: attachment.description?.trim() || null,
+            sortOrder: attachment.sortOrder ?? index * 10,
+            downloadable: attachment.downloadable ?? true,
+            createdBy: user.id,
+          },
+        }),
+      ),
+    ]);
   }
 
   async remove(id: string, user: User, tenantId: string, mallId: string | undefined): Promise<void> {
@@ -233,13 +335,13 @@ export class PagesService {
       throw new UnprocessableEntityException('Title is required to publish a page');
     }
 
+    const now = new Date();
     const page = await this.prisma.page.update({
       where: { id },
       data: {
         status: 'PUBLISHED',
-        publishedAt: new Date(),
-        publishAt: null,
-        unpublishAt: null,
+        publishedAt: now,
+        publishAt: existing.publishAt ?? now,
         updatedBy: user.id,
       },
       include: PAGE_INCLUDE,
@@ -264,9 +366,14 @@ export class PagesService {
     const existing = await this.assertExists(id, tenantId);
     this.assertMallVisibility(existing, mallId);
 
+    const now = new Date();
     const page = await this.prisma.page.update({
       where: { id },
-      data: { status: 'ARCHIVED', updatedBy: user.id },
+      data: {
+        status: 'ARCHIVED',
+        unpublishAt: existing.unpublishAt ?? now,
+        updatedBy: user.id,
+      },
       include: PAGE_INCLUDE,
     });
 
@@ -311,6 +418,7 @@ export class PagesService {
         ],
       },
       include: {
+        attachments: PAGE_INCLUDE.attachments,
         blocks: {
           where: { deletedAt: null, status: 'ACTIVE' },
           orderBy: { sortOrder: 'asc' },
@@ -324,7 +432,7 @@ export class PagesService {
   async getPublishedPagesForPublic(opts: {
     tenantId: string;
     mallId?: string;
-    type?: string;
+    type?: PageType;
   }): Promise<PageResponse[]> {
     const now = new Date();
     const mallScope: Prisma.PageWhereInput =
@@ -342,9 +450,10 @@ export class PagesService {
           { OR: [{ publishAt: null }, { publishAt: { lte: now } }] },
           { OR: [{ unpublishAt: null }, { unpublishAt: { gte: now } }] },
         ],
-        ...(opts.type ? { type: opts.type as any } : {}),
+        ...(opts.type ? { type: opts.type } : {}),
       },
       include: {
+        attachments: PAGE_INCLUDE.attachments,
         blocks: {
           where: { deletedAt: null, status: 'ACTIVE' },
           orderBy: { sortOrder: 'asc' },
@@ -368,13 +477,14 @@ export class PagesService {
       tenantId,
       deletedAt: null,
       ...mallScope,
-      ...(query.status ? { status: query.status } : {}),
+      ...(query.status ? { status: query.status } : { status: { not: 'ARCHIVED' } }),
       ...(query.type ? { type: query.type } : {}),
       ...(query.search
         ? {
             OR: [
               { title: { contains: query.search, mode: 'insensitive' as const } },
               { slug: { contains: query.search, mode: 'insensitive' as const } },
+              { customTypeLabel: { contains: query.search, mode: 'insensitive' as const } },
             ],
           }
         : {}),

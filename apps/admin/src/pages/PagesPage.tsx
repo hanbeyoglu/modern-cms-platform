@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
+import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
+import { validatePageSchedule } from '../lib/publishing-workflow';
 import {
   apiPagesList,
   apiPageCreate,
@@ -29,10 +31,17 @@ const STATUS_COLORS: Record<PageStatus, string> = {
 };
 
 const TYPE_LABELS: Record<PageType, string> = {
-  STANDARD: 'Standart',
-  LANDING: 'Açılış',
-  LEGAL: 'Hukuki',
-  CONTACT: 'İletişim',
+  ABOUT: 'Hakkımızda',
+  KVKK: 'KVKK',
+  PRIVACY_POLICY: 'Gizlilik Politikası',
+  COOKIE_POLICY: 'Çerez Politikası',
+  TERMS_OF_USE: 'Kullanım Şartları',
+  CONTACT_INFO: 'İletişim Bilgileri',
+  FAQ: 'SSS',
+  TRANSPORTATION: 'Ulaşım',
+  CERTIFICATES: 'Sertifikalar',
+  DOCUMENTS: 'Belgeler',
+  AWARDS: 'Ödüller',
   CUSTOM: 'Özel',
 };
 
@@ -40,6 +49,7 @@ type FormState = {
   title: string;
   slug: string;
   type: PageType;
+  customTypeLabel: string;
   status: PageStatus;
   seoTitle: string;
   seoDescription: string;
@@ -51,7 +61,8 @@ type FormState = {
 const EMPTY_FORM: FormState = {
   title: '',
   slug: '',
-  type: 'STANDARD',
+  type: 'ABOUT',
+  customTypeLabel: '',
   status: 'DRAFT',
   seoTitle: '',
   seoDescription: '',
@@ -111,12 +122,22 @@ export function PagesPage() {
       toast.error('Başlık zorunludur');
       return;
     }
+    if (formState.type === 'CUSTOM' && !formState.customTypeLabel.trim()) {
+      toast.error('Özel sayfa etiketi zorunludur');
+      return;
+    }
+    const scheduleError = validatePageSchedule(formState.status, formState.publishAt);
+    if (scheduleError) {
+      toast.error(scheduleError);
+      return;
+    }
     setSaving(true);
     try {
       const payload: CreatePagePayload = {
         title: formState.title,
         slug: formState.slug || undefined,
         type: formState.type,
+        customTypeLabel: formState.type === 'CUSTOM' ? formState.customTypeLabel : undefined,
         status: formState.status,
         seoTitle: formState.seoTitle || undefined,
         seoDescription: formState.seoDescription || undefined,
@@ -203,7 +224,7 @@ export function PagesPage() {
           style={inputStyle({ width: 200 })}
         />
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as PageStatus | '')} style={inputStyle()}>
-          <option value="">Tüm Durumlar</option>
+          <option value="">Aktif (arşiv hariç)</option>
           {(Object.keys(STATUS_LABELS) as PageStatus[]).map((s) => (
             <option key={s} value={s}>{STATUS_LABELS[s]}</option>
           ))}
@@ -237,21 +258,24 @@ export function PagesPage() {
                 ))}
               </select>
             </div>
-            <div>
-              <label style={labelStyle}>Durum</label>
-              <select {...field('status')} style={inputStyle({ width: '100%' })}>
-                {(Object.keys(STATUS_LABELS) as PageStatus[]).map((s) => (
-                  <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                ))}
-              </select>
-            </div>
+            {formState.type === 'CUSTOM' && (
+              <div>
+                <label style={labelStyle}>Özel Tip Etiketi *</label>
+                <input {...field('customTypeLabel')} style={inputStyle({ width: '100%' })} placeholder="Diplomamız" />
+              </div>
+            )}
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={labelStyle}>Yayın zamanı (publishAt)</label>
-              <input type="datetime-local" {...field('publishAt')} style={inputStyle({ width: '100%', maxWidth: 280 })} />
-            </div>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={labelStyle}>Yayından kalkma (unpublishAt)</label>
-              <input type="datetime-local" {...field('unpublishAt')} style={inputStyle({ width: '100%', maxWidth: 280 })} />
+              <PublishingWorkflowFields
+                mode="page"
+                status={formState.status}
+                publishAt={formState.publishAt}
+                unpublishAt={formState.unpublishAt}
+                onStatusChange={(status) => setFormState((f) => ({ ...f, status }))}
+                onPublishAtChange={(publishAt) => setFormState((f) => ({ ...f, publishAt }))}
+                onUnpublishAtChange={(unpublishAt) => setFormState((f) => ({ ...f, unpublishAt }))}
+                labelStyle={labelStyle}
+                inputStyle={inputStyle()}
+              />
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={labelStyle}>SEO Başlığı</label>
@@ -317,7 +341,9 @@ export function PagesPage() {
                 </td>
                 <td style={{ ...tdStyle, color: '#6b7280', fontFamily: 'monospace', fontSize: 12 }}>{p.slug}</td>
                 <td style={tdStyle}>
-                  <span style={badgeStyle('#e5e7eb', '#374151')}>{TYPE_LABELS[p.type]}</span>
+                  <span style={badgeStyle('#e5e7eb', '#374151')}>
+                    {p.type === 'CUSTOM' ? p.customTypeLabel || TYPE_LABELS[p.type] : TYPE_LABELS[p.type]}
+                  </span>
                 </td>
                 <td style={tdStyle}>
                   <span style={badgeStyle(STATUS_COLORS[p.status] + '22', STATUS_COLORS[p.status])}>

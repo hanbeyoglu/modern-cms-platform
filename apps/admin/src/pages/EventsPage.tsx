@@ -8,6 +8,10 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { MultilingualContentFields, EVENT_I18N_FIELDS } from '../components/MultilingualContentFields';
+import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
+import { ContentChannelFields } from '../components/ContentChannelFields';
+import { validateRangeSchedule } from '../lib/publishing-workflow';
+import { DEFAULT_CONTENT_CHANNELS, formatChannels } from '../lib/content-channels';
 import { Button } from '../components/ui/Button';
 import {
   apiEventArchive,
@@ -24,6 +28,7 @@ import {
   type CmsLocale,
   type CmsEvent,
   type ContentStatus,
+  type ContentChannel,
   type CreateEventPayload,
   type MediaAsset,
 } from '../lib/api';
@@ -69,6 +74,7 @@ type FormState = {
   linkUrl: string;
   sortOrder: string;
   status: ContentStatus;
+  channels: ContentChannel[];
   dynamicJson: string;
 };
 
@@ -86,6 +92,7 @@ const EMPTY: FormState = {
   linkUrl: '',
   sortOrder: '0',
   status: 'DRAFT',
+  channels: [...DEFAULT_CONTENT_CHANNELS],
   dynamicJson: '',
 };
 
@@ -104,6 +111,7 @@ function evToForm(e: CmsEvent): FormState {
     linkUrl: e.linkUrl ?? '',
     sortOrder: String(e.sortOrder),
     status: e.status,
+    channels: e.channels?.length ? [...e.channels] : [...DEFAULT_CONTENT_CHANNELS],
     dynamicJson: e.dynamicFieldsJson ? JSON.stringify(e.dynamicFieldsJson, null, 2) : '',
   };
 }
@@ -123,6 +131,7 @@ function formToPayload(f: FormState): CreateEventPayload {
     linkUrl: f.linkUrl || undefined,
     sortOrder: parseInt(f.sortOrder, 10) || 0,
     status: f.status,
+    channels: f.channels.length ? f.channels : undefined,
   };
 }
 
@@ -309,6 +318,11 @@ export function EventsPage() {
       setFormError('Başlık zorunludur.');
       return;
     }
+    const scheduleError = validateRangeSchedule(form.status, form.startAt);
+    if (scheduleError) {
+      setFormError(scheduleError);
+      return;
+    }
     let dynamicFieldsJson: Record<string, unknown> | undefined;
     const raw = form.dynamicJson.trim();
     if (raw) {
@@ -442,7 +456,7 @@ export function EventsPage() {
           onChange={(e) => setFilterStatus(e.target.value as ContentStatus | '')}
           style={inputStyle}
         >
-          <option value="">Tüm durumlar</option>
+          <option value="">Aktif (arşiv hariç)</option>
           <option value="DRAFT">Taslak</option>
           <option value="SCHEDULED">Zamanlanmış</option>
           <option value="PUBLISHED">Yayında</option>
@@ -499,31 +513,38 @@ export function EventsPage() {
                 ))}
               </select>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Başlangıç</label>
-                <input
-                  type="datetime-local"
-                  style={inputStyle}
-                  value={form.startAt}
-                  onChange={(e) => {
-                    setForm({ ...form, startAt: e.target.value });
-                    setEventFormDirty(true);
-                  }}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Bitiş</label>
-                <input
-                  type="datetime-local"
-                  style={inputStyle}
-                  value={form.endAt}
-                  onChange={(e) => {
-                    setForm({ ...form, endAt: e.target.value });
-                    setEventFormDirty(true);
-                  }}
-                />
-              </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <ContentChannelFields
+                channels={form.channels}
+                onChange={(channels) => {
+                  setForm({ ...form, channels });
+                  setEventFormDirty(true);
+                }}
+                labelStyle={labelStyle}
+                disabled={saving}
+              />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <PublishingWorkflowFields
+                mode="range"
+                status={form.status}
+                startAt={form.startAt}
+                endAt={form.endAt}
+                onStatusChange={(status) => {
+                  setForm({ ...form, status });
+                  setEventFormDirty(true);
+                }}
+                onStartAtChange={(startAt) => {
+                  setForm({ ...form, startAt });
+                  setEventFormDirty(true);
+                }}
+                onEndAtChange={(endAt) => {
+                  setForm({ ...form, endAt });
+                  setEventFormDirty(true);
+                }}
+                labelStyle={labelStyle}
+                inputStyle={inputStyle}
+              />
             </div>
             <div>
               <label style={labelStyle}>Konum</label>
@@ -658,22 +679,6 @@ export function EventsPage() {
               />
             </div>
             <div>
-              <label style={labelStyle}>Durum</label>
-              <select
-                style={inputStyle}
-                value={form.status}
-                onChange={(e) => {
-                  setForm({ ...form, status: e.target.value as ContentStatus });
-                  setEventFormDirty(true);
-                }}
-              >
-                <option value="DRAFT">Taslak</option>
-                <option value="SCHEDULED">Zamanlanmış</option>
-                <option value="PUBLISHED">Yayında</option>
-                <option value="ARCHIVED">Arşiv</option>
-              </select>
-            </div>
-            <div>
               <label style={labelStyle}>dynamicFieldsJson</label>
               <textarea
                 style={{ ...inputStyle, minHeight: 100, fontFamily: 'monospace' }}
@@ -701,6 +706,7 @@ export function EventsPage() {
         <thead>
           <tr style={{ textAlign: 'left', borderBottom: '2px solid #e5e7eb' }}>
             <th style={{ padding: 8 }}>Başlık</th>
+            <th style={{ padding: 8 }}>Kanallar</th>
             <th style={{ padding: 8 }}>Durum</th>
             <th style={{ padding: 8 }}>Tarih</th>
             <th style={{ padding: 8 }}>İşlem</th>
@@ -713,6 +719,7 @@ export function EventsPage() {
                 <strong>{e.title}</strong>
                 <div style={{ color: '#9ca3af', fontSize: 11 }}>{e.slug}</div>
               </td>
+              <td style={{ padding: 8, color: '#6b7280', fontSize: 12 }}>{formatChannels(e.channels)}</td>
               <td style={{ padding: 8 }}>
                 <StatusBadge status={e.status} />
                 {e.status === 'SCHEDULED' && e.startAt && (

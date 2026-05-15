@@ -1,16 +1,81 @@
-export interface PublicMediaRef {
+// ── Media ─────────────────────────────────────────────────────────────────────
+
+export interface PublicMediaAsset {
+  id: string;
   url: string;
-  altText: string | null;
+  mimeType: string | null;
+  width: number | null;
+  height: number | null;
+  alt: string | null;
+  caption: string | null;
+  dominantColor: string | null;
 }
+
+/** @deprecated Use PublicMediaAsset */
+export type PublicMediaRef = PublicMediaAsset;
+
+// ── SEO ───────────────────────────────────────────────────────────────────────
+
+export interface PublicSeoMeta {
+  title: string | null;
+  description: string | null;
+  keywords: string[] | null;
+  image: string | null;
+  canonicalUrl: string | null;
+  locale: string | null;
+}
+
+// ── Response Envelope ─────────────────────────────────────────────────────────
+
+export interface PublicEnvelopeTenant {
+  id: string;
+  mallId: string | null;
+}
+
+export interface PublicEnvelope<T> {
+  success: true;
+  locale: string | null;
+  tenant: PublicEnvelopeTenant;
+  data: T;
+}
+
+export interface PublicPaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PublicPaginatedEnvelope<T> {
+  success: true;
+  locale: string | null;
+  tenant: PublicEnvelopeTenant;
+  pagination: PublicPaginationMeta;
+  data: T[];
+}
+
+export function makeEnvelope<T>(
+  data: T,
+  context: { tenantId: string; mallId?: string | null; locale: string | null },
+): PublicEnvelope<T> {
+  return {
+    success: true,
+    locale: context.locale,
+    tenant: { id: context.tenantId, mallId: context.mallId ?? null },
+    data,
+  };
+}
+
+// ── Entity Types ──────────────────────────────────────────────────────────────
 
 export interface PublicSlider {
   id: string;
   title: string;
   subtitle: string | null;
   description: string | null;
-  desktopMedia: PublicMediaRef | null;
-  mobileMedia: PublicMediaRef | null;
-  videoMedia: { url: string } | null;
+  desktopMedia: PublicMediaAsset | null;
+  mobileMedia: PublicMediaAsset | null;
+  videoMedia: PublicMediaAsset | null;
   linkType: string;
   linkValue: string | null;
   buttonText: string | null;
@@ -26,7 +91,7 @@ export interface PublicEvent {
   title: string;
   shortDescription: string | null;
   description: string | null;
-  coverMedia: PublicMediaRef | null;
+  coverMedia: PublicMediaAsset | null;
   startAt: string | null;
   endAt: string | null;
   location: string | null;
@@ -35,6 +100,7 @@ export interface PublicEvent {
   linkUrl: string | null;
   sortOrder: number;
   publishedAt: string | null;
+  seo: PublicSeoMeta;
 }
 
 export interface PublicCampaign {
@@ -43,7 +109,7 @@ export interface PublicCampaign {
   title: string;
   shortDescription: string | null;
   description: string | null;
-  coverMedia: PublicMediaRef | null;
+  coverMedia: PublicMediaAsset | null;
   startAt: string | null;
   endAt: string | null;
   terms: string | null;
@@ -53,6 +119,7 @@ export interface PublicCampaign {
   sortOrder: number;
   publishedAt: string | null;
   store: { id: string; name: string; slug: string } | null;
+  seo: PublicSeoMeta;
 }
 
 export interface PublicPageBlock {
@@ -63,16 +130,31 @@ export interface PublicPageBlock {
   sortOrder: number;
 }
 
+export interface PublicPageAttachment {
+  id: string;
+  title: string | null;
+  description: string | null;
+  mediaId: string;
+  sortOrder: number;
+  downloadable: boolean;
+  media: PublicMediaAsset | null;
+}
+
 export interface PublicPage {
   id: string;
   slug: string;
   title: string;
   type: string;
+  customTypeLabel: string | null;
+  contentHtml: string | null;
+  renderMode: 'HTML' | 'SINGLE_PDF' | 'DOCUMENT_LIST';
   seoTitle: string | null;
   seoDescription: string | null;
   seoKeywords: string | null;
   publishedAt: string | null;
+  attachments: PublicPageAttachment[];
   blocks: PublicPageBlock[];
+  seo: PublicSeoMeta;
 }
 
 export interface PublicStore {
@@ -88,7 +170,7 @@ export interface PublicStore {
   locationJson: unknown;
   isFeatured: boolean;
   sortOrder: number;
-  logo: { url: string } | null;
+  logo: PublicMediaAsset | null;
   globalStore: {
     id: string;
     name: string;
@@ -96,6 +178,7 @@ export interface PublicStore {
     websiteUrl: string | null;
   };
   category: { id: string; name: string; slug: string } | null;
+  seo: PublicSeoMeta;
 }
 
 export interface PublicCinema {
@@ -103,7 +186,7 @@ export interface PublicCinema {
   name: string;
   slug: string;
   description: string | null;
-  logo: { url: string } | null;
+  logo: PublicMediaAsset | null;
 }
 
 export interface PublicMovieSession {
@@ -117,6 +200,42 @@ export interface PublicMovieSession {
   subtitle: string | null;
   format: string | null;
   ticketUrl: string | null;
+}
+
+export interface PublicPopup {
+  id: string;
+  title: string;
+  description: string | null;
+  image: PublicMediaAsset | null;
+  linkUrl: string | null;
+  buttonText: string | null;
+  channels: string[];
+  showOnce: boolean;
+  closable: boolean;
+  startAt: string | null;
+  endAt: string | null;
+  sortOrder: number;
+}
+
+export interface PublicLocationService {
+  id: string;
+  mallId: string;
+  name: string;
+  description: string | null;
+  icon: PublicMediaAsset | null;
+  cover: PublicMediaAsset | null;
+  category: string | null;
+  floor: string | null;
+  unitNo: string | null;
+  phone: string | null;
+  email: string | null;
+  websiteUrl: string | null;
+  locationLabel: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  searchTags: string[];
+  isSoon: boolean;
+  sortOrder: number;
 }
 
 export interface PublicHomeResponse {
@@ -138,8 +257,8 @@ export interface PublicLocationInfo {
   websiteUrl: string | null;
   phone: string | null;
   supportEmail: string | null;
-  logo: { url: string } | null;
-  cover: { url: string } | null;
+  logo: PublicMediaAsset | null;
+  cover: PublicMediaAsset | null;
   address: {
     line1: string | null;
     line2: string | null;
@@ -168,7 +287,7 @@ export interface PublicSiteConfig {
   mallName: string | null;
   mallSlug: string | null;
   location: PublicLocationInfo | null;
-  /** Enabled tenant locales for public language switchers (Sprint 21). */
+  /** Enabled tenant locales for public language switchers. */
   supportedLocales: PublicSiteSupportedLocale[];
   defaultLocale: string | null;
   activeLocale: string | null;

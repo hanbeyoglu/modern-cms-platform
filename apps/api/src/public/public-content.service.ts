@@ -10,9 +10,13 @@ import type {
   PublicCinema,
   PublicEvent,
   PublicHomeResponse,
+  PublicLocationService,
+  PublicMediaAsset,
   PublicMovieSession,
   PublicPage,
   PublicPageBlock,
+  PublicPopup,
+  PublicSeoMeta,
   PublicSlider,
   PublicStore,
 } from './public-response.types';
@@ -22,10 +26,13 @@ import type {
 const MEDIA_SELECT = {
   id: true,
   publicUrl: true,
-  originalName: true,
+  mimeType: true,
+  altText: true,
+  caption: true,
+  width: true,
+  height: true,
+  dominantColor: true,
 } as const;
-
-const MEDIA_URL_ONLY = { id: true, publicUrl: true } as const;
 
 // ── Service ──────────────────────────────────────────────────────────────────
 
@@ -42,6 +49,7 @@ export class PublicContentService {
     tenantId: string;
     mallId?: string;
     targetDevice?: string;
+    channel?: string;
     limit?: number;
     localeId?: string;
   }): Promise<PublicSlider[]> {
@@ -55,6 +63,8 @@ export class PublicContentService {
         ...(opts.targetDevice
           ? { targetDevice: opts.targetDevice as Prisma.EnumSliderTargetDeviceFilter['equals'] }
           : {}),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(opts.channel ? { channels: { has: opts.channel as any } } : {}),
         AND: [
           { OR: [{ startAt: null }, { startAt: { lte: now } }] },
           { OR: [{ endAt: null }, { endAt: { gte: now } }] },
@@ -63,7 +73,7 @@ export class PublicContentService {
       include: {
         desktopMedia: { select: MEDIA_SELECT },
         mobileMedia: { select: MEDIA_SELECT },
-        videoMedia: { select: MEDIA_URL_ONLY },
+        videoMedia: { select: MEDIA_SELECT },
       },
       orderBy: { sortOrder: 'asc' },
       take: opts.limit ?? 10,
@@ -304,8 +314,6 @@ export class PublicContentService {
   }
 
   // ── Stores ───────────────────────────────────────────────────────────────
-  // Translation entity is the MallStore (tenant-scoped).
-  // Translatable fields: `name` (overrides resolved name), `description` (overrides resolved description).
 
   async getStores(opts: {
     tenantId: string;
@@ -340,10 +348,10 @@ export class PublicContentService {
         },
       },
       include: {
-        localLogoMedia: { select: MEDIA_URL_ONLY },
+        localLogoMedia: { select: MEDIA_SELECT },
         globalStore: {
           include: {
-            logoMedia: { select: MEDIA_URL_ONLY },
+            logoMedia: { select: MEDIA_SELECT },
             category: { select: { id: true, name: true, slug: true } },
           },
         },
@@ -379,10 +387,10 @@ export class PublicContentService {
         globalStore: { is: { slug: opts.slug, deletedAt: null, status: 'ACTIVE' } },
       },
       include: {
-        localLogoMedia: { select: MEDIA_URL_ONLY },
+        localLogoMedia: { select: MEDIA_SELECT },
         globalStore: {
           include: {
-            logoMedia: { select: MEDIA_URL_ONLY },
+            logoMedia: { select: MEDIA_SELECT },
             category: { select: { id: true, name: true, slug: true } },
           },
         },
@@ -403,15 +411,13 @@ export class PublicContentService {
   }
 
   // ── Pages ────────────────────────────────────────────────────────────────
-  // Page fields: title, seoTitle, seoDescription
-  // PageBlock fields: title; dataJson top-level keys: title, subtitle, buttonText, text, html
-  // stored as translation fields `dataJson.title`, `dataJson.subtitle`, etc.
 
   async getPageBySlug(opts: {
     tenantId: string;
     mallId?: string;
     slug: string;
     localeId?: string;
+    localeCode?: string;
   }): Promise<PublicPage | null> {
     const now = new Date();
     const mallScope: Prisma.PageWhereInput =
@@ -432,6 +438,11 @@ export class PublicContentService {
         ],
       },
       include: {
+        attachments: {
+          where: { deletedAt: null },
+          orderBy: { sortOrder: 'asc' },
+          include: { media: { select: MEDIA_SELECT } },
+        },
         blocks: {
           where: { deletedAt: null, status: 'ACTIVE' },
           orderBy: { sortOrder: 'asc' },
@@ -441,7 +452,7 @@ export class PublicContentService {
     });
     if (!row) return null;
 
-    const page = mapPage(row);
+    const page = mapPage(row, opts.localeCode ?? null);
     if (!opts.localeId) return page;
 
     const blockIds = page.blocks.map((b) => b.id);
@@ -459,6 +470,8 @@ export class PublicContentService {
 
     const translatedPage = this.applyFromMap(page, pageTMap, page.id, [
       'title',
+      'customTypeLabel',
+      'contentHtml',
       'seoTitle',
       'seoDescription',
     ]);
@@ -482,7 +495,7 @@ export class PublicContentService {
         deletedAt: null,
         status: 'ACTIVE',
       },
-      include: { logoMedia: { select: MEDIA_URL_ONLY } },
+      include: { logoMedia: { select: MEDIA_SELECT } },
       orderBy: { name: 'asc' },
     });
 
@@ -499,7 +512,6 @@ export class PublicContentService {
   }
 
   // ── Movie Sessions ────────────────────────────────────────────────────────
-  // Movie title is translated via entityType=MOVIE using the embedded movie.id.
 
   async getMovieSessions(opts: {
     tenantId: string;
@@ -540,7 +552,6 @@ export class PublicContentService {
     const sessions = rows.map(mapMovieSession);
     if (!opts.localeId || sessions.length === 0) return sessions;
 
-    // Deduplicate movie IDs before fetching translations
     const movieIds = [...new Set(sessions.map((s) => s.movie.id))];
     const movieTMap = await this.resolver.getTranslationsForEntities(
       opts.tenantId,
@@ -618,6 +629,98 @@ export class PublicContentService {
     };
   }
 
+  // ── Popups ────────────────────────────────────────────────────────────────
+
+  async getPopups(opts: {
+    tenantId: string;
+    mallId?: string;
+    channel?: string;
+    localeId?: string;
+  }): Promise<PublicPopup[]> {
+    const now = new Date();
+    const rows = await this.prisma.popup.findMany({
+      where: {
+        tenantId: opts.tenantId,
+        deletedAt: null,
+        status: 'PUBLISHED',
+        ...(opts.mallId !== undefined ? { mallId: opts.mallId } : {}),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(opts.channel ? { channels: { has: opts.channel as any } } : {}),
+        AND: [
+          { OR: [{ startAt: null }, { startAt: { lte: now } }] },
+          { OR: [{ endAt: null }, { endAt: { gte: now } }] },
+        ],
+      },
+      include: { imageMedia: { select: MEDIA_SELECT } },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    const popups = rows.map(mapPopup);
+    if (!opts.localeId || popups.length === 0) return popups;
+
+    const tMap = await this.resolver.getTranslationsForEntities(
+      opts.tenantId,
+      opts.localeId,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      'POPUP' as any,
+      popups.map((p) => p.id),
+    );
+    return popups.map((p) =>
+      this.applyFromMap(p, tMap, p.id, ['title', 'description', 'buttonText']),
+    );
+  }
+
+  // ── Location Services ─────────────────────────────────────────────────────
+
+  async getLocationServiceById(opts: {
+    tenantId: string;
+    id: string;
+  }): Promise<PublicLocationService | null> {
+    const row = await this.prisma.service.findFirst({
+      where: { id: opts.id, tenantId: opts.tenantId, deletedAt: null, status: 'ACTIVE' },
+      include: {
+        iconMedia: { select: MEDIA_SELECT },
+        coverMedia: { select: MEDIA_SELECT },
+      },
+    });
+    if (!row) return null;
+    return mapLocationService(row);
+  }
+
+  async getLocationServices(opts: {
+    tenantId: string;
+    mallId: string;
+    localeId?: string;
+  }): Promise<PublicLocationService[]> {
+    const rows = await this.prisma.service.findMany({
+      where: {
+        tenantId: opts.tenantId,
+        mallId: opts.mallId,
+        deletedAt: null,
+        status: 'ACTIVE',
+      },
+      include: {
+        iconMedia: { select: MEDIA_SELECT },
+        coverMedia: { select: MEDIA_SELECT },
+      },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+
+    const services = rows.map(mapLocationService);
+    if (!opts.localeId || services.length === 0) return services;
+
+    const tMap = await this.resolver.getTranslationsForEntities(
+      opts.tenantId,
+      opts.localeId,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      'SERVICE' as any,
+      services.map((s) => s.id),
+    );
+    return services.map((s) =>
+      this.applyFromMap(s, tMap, s.id, ['name', 'description', 'locationLabel']),
+    );
+  }
+
   // ── Private helpers ───────────────────────────────────────────────────────
 
   private applyFromMap<T extends object>(
@@ -635,10 +738,6 @@ export class PublicContentService {
     return result as unknown as T;
   }
 
-  // Applies block-level translations including top-level title and selected
-  // dataJson subfields (title, subtitle, buttonText, text, html).
-  // Translation field names for dataJson use dot notation: `dataJson.title`.
-  // If dataJson is not a plain object the nested translation step is skipped.
   private applyBlockFromMap(block: PublicPageBlock, map: EntityTranslationMap): PublicPageBlock {
     const t = map[block.id];
     if (!t) return block;
@@ -670,18 +769,51 @@ export class PublicContentService {
 }
 
 // ── Response Mappers ──────────────────────────────────────────────────────────
-// These functions strip all admin-only fields (createdBy, updatedBy, deletedAt,
-// providerConfigJson, etc.) and expose only public-safe content.
 
-type MediaRow = { publicUrl: string; originalName?: string | null } | null;
+type RichMediaRow = {
+  id: string;
+  publicUrl: string;
+  mimeType?: string | null;
+  altText?: string | null;
+  caption?: string | null;
+  width?: number | null;
+  height?: number | null;
+  dominantColor?: string | null;
+} | null;
 
-function toMediaRef(m: MediaRow): { url: string; altText: string | null } | null {
+function toMediaAsset(m: RichMediaRow): PublicMediaAsset | null {
   if (!m) return null;
-  return { url: m.publicUrl, altText: m.originalName ?? null };
+  return {
+    id: m.id,
+    url: m.publicUrl,
+    mimeType: m.mimeType ?? null,
+    width: m.width ?? null,
+    height: m.height ?? null,
+    alt: m.altText ?? null,
+    caption: m.caption ?? null,
+    dominantColor: m.dominantColor ?? null,
+  };
 }
 
 function toDate(d: Date | null | undefined): string | null {
   return d ? d.toISOString() : null;
+}
+
+function buildSeo(opts: {
+  title: string | null;
+  description: string | null;
+  keywords?: string[] | null;
+  image?: string | null;
+  locale?: string | null;
+}): PublicSeoMeta {
+  return {
+    title: opts.title,
+    description: opts.description,
+    keywords: opts.keywords ?? null,
+    image: opts.image ?? null,
+    canonicalUrl: null,
+    locale: opts.locale ?? null,
+  };
 }
 
 function mapSlider(s: {
@@ -689,9 +821,9 @@ function mapSlider(s: {
   title: string;
   subtitle: string | null;
   description: string | null;
-  desktopMedia: MediaRow;
-  mobileMedia: MediaRow;
-  videoMedia: { publicUrl: string } | null;
+  desktopMedia: RichMediaRow;
+  mobileMedia: RichMediaRow;
+  videoMedia: RichMediaRow;
   linkType: string;
   linkValue: string | null;
   buttonText: string | null;
@@ -705,9 +837,9 @@ function mapSlider(s: {
     title: s.title,
     subtitle: s.subtitle,
     description: s.description,
-    desktopMedia: toMediaRef(s.desktopMedia),
-    mobileMedia: toMediaRef(s.mobileMedia),
-    videoMedia: s.videoMedia ? { url: s.videoMedia.publicUrl } : null,
+    desktopMedia: toMediaAsset(s.desktopMedia),
+    mobileMedia: toMediaAsset(s.mobileMedia),
+    videoMedia: toMediaAsset(s.videoMedia),
     linkType: s.linkType,
     linkValue: s.linkValue,
     buttonText: s.buttonText,
@@ -724,7 +856,7 @@ function mapEvent(e: {
   title: string;
   shortDescription: string | null;
   description: string | null;
-  coverMedia: MediaRow;
+  coverMedia: RichMediaRow;
   startAt: Date | null;
   endAt: Date | null;
   location: string | null;
@@ -740,7 +872,7 @@ function mapEvent(e: {
     title: e.title,
     shortDescription: e.shortDescription,
     description: e.description,
-    coverMedia: toMediaRef(e.coverMedia),
+    coverMedia: toMediaAsset(e.coverMedia),
     startAt: toDate(e.startAt),
     endAt: toDate(e.endAt),
     location: e.location,
@@ -749,6 +881,12 @@ function mapEvent(e: {
     linkUrl: e.linkUrl,
     sortOrder: e.sortOrder,
     publishedAt: toDate(e.publishedAt),
+    seo: buildSeo({
+      title: e.title,
+      description: e.shortDescription,
+      keywords: e.category ? [e.category] : null,
+      image: e.coverMedia?.publicUrl ?? null,
+    }),
   };
 }
 
@@ -758,7 +896,7 @@ function mapCampaign(c: {
   title: string;
   shortDescription: string | null;
   description: string | null;
-  coverMedia: MediaRow;
+  coverMedia: RichMediaRow;
   startAt: Date | null;
   endAt: Date | null;
   terms: string | null;
@@ -779,7 +917,7 @@ function mapCampaign(c: {
     title: c.title,
     shortDescription: c.shortDescription,
     description: c.description,
-    coverMedia: toMediaRef(c.coverMedia),
+    coverMedia: toMediaAsset(c.coverMedia),
     startAt: toDate(c.startAt),
     endAt: toDate(c.endAt),
     terms: c.terms,
@@ -795,35 +933,78 @@ function mapCampaign(c: {
           slug: c.store.globalStore.slug,
         }
       : null,
+    seo: buildSeo({
+      title: c.title,
+      description: c.shortDescription,
+      image: c.coverMedia?.publicUrl ?? null,
+    }),
   };
 }
 
-function mapPage(p: {
-  id: string;
-  slug: string;
-  title: string;
-  type: string;
-  seoTitle: string | null;
-  seoDescription: string | null;
-  seoKeywords: string | null;
-  publishedAt: Date | null;
-  blocks: Array<{
+function mapPage(
+  p: {
     id: string;
+    slug: string;
+    title: string;
     type: string;
-    title: string | null;
-    dataJson: Prisma.JsonValue;
-    sortOrder: number;
-  }>;
-}): PublicPage {
+    customTypeLabel: string | null;
+    contentHtml: string | null;
+    seoTitle: string | null;
+    seoDescription: string | null;
+    seoKeywords: string | null;
+    publishedAt: Date | null;
+    attachments: Array<{
+      id: string;
+      title: string | null;
+      description: string | null;
+      mediaId: string;
+      sortOrder: number;
+      downloadable: boolean;
+      media: RichMediaRow;
+    }>;
+    blocks: Array<{
+      id: string;
+      type: string;
+      title: string | null;
+      dataJson: Prisma.JsonValue;
+      sortOrder: number;
+    }>;
+  },
+  localeCode: string | null,
+): PublicPage {
+  const keywords = p.seoKeywords
+    ? p.seoKeywords
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean)
+    : null;
+
   return {
     id: p.id,
     slug: p.slug,
     title: p.title,
     type: p.type,
+    customTypeLabel: p.customTypeLabel,
+    contentHtml: p.contentHtml,
+    renderMode:
+      p.attachments.length === 1 && p.attachments[0].media?.mimeType === 'application/pdf'
+        ? 'SINGLE_PDF'
+        : p.attachments.length > 0
+          ? 'DOCUMENT_LIST'
+          : 'HTML',
     seoTitle: p.seoTitle,
     seoDescription: p.seoDescription,
     seoKeywords: p.seoKeywords,
     publishedAt: toDate(p.publishedAt),
+    attachments: p.attachments.map((attachment) => ({
+      id: attachment.id,
+      title: attachment.title,
+      description: attachment.description,
+      mediaId: attachment.mediaId,
+      sortOrder: attachment.sortOrder,
+      downloadable: attachment.downloadable,
+      media: toMediaAsset(attachment.media),
+    })),
     blocks: p.blocks.map((b) => ({
       id: b.id,
       type: b.type,
@@ -831,6 +1012,12 @@ function mapPage(p: {
       dataJson: b.dataJson,
       sortOrder: b.sortOrder,
     })),
+    seo: buildSeo({
+      title: p.seoTitle ?? p.title,
+      description: p.seoDescription,
+      keywords: keywords && keywords.length > 0 ? keywords : null,
+      locale: localeCode,
+    }),
   };
 }
 
@@ -847,29 +1034,26 @@ function mapStore(r: {
   locationJson: Prisma.JsonValue;
   isFeatured: boolean;
   sortOrder: number;
-  localLogoMedia: { publicUrl: string } | null;
+  localLogoMedia: RichMediaRow;
   globalStore: {
     id: string;
     name: string;
     slug: string;
     description: string | null;
     websiteUrl: string | null;
-    logoMedia: { publicUrl: string } | null;
+    logoMedia: RichMediaRow;
     category: { id: string; name: string; slug: string } | null;
   };
 }): PublicStore {
-  const logo =
-    r.localLogoMedia?.publicUrl
-      ? { url: r.localLogoMedia.publicUrl }
-      : r.globalStore.logoMedia?.publicUrl
-        ? { url: r.globalStore.logoMedia.publicUrl }
-        : null;
+  const resolvedName = r.localName ?? r.globalStore.name;
+  const resolvedDesc = r.localDescription ?? r.globalStore.description;
+  const logo = toMediaAsset(r.localLogoMedia) ?? toMediaAsset(r.globalStore.logoMedia);
 
   return {
     id: r.id,
     mallId: r.mallId,
-    name: r.localName ?? r.globalStore.name,
-    description: r.localDescription ?? r.globalStore.description,
+    name: resolvedName,
+    description: resolvedDesc,
     floor: r.floor,
     storeNo: r.storeNo,
     phone: r.phone,
@@ -886,6 +1070,11 @@ function mapStore(r: {
       websiteUrl: r.globalStore.websiteUrl,
     },
     category: r.globalStore.category ?? null,
+    seo: buildSeo({
+      title: resolvedName,
+      description: resolvedDesc,
+      image: logo?.url ?? null,
+    }),
   };
 }
 
@@ -894,14 +1083,14 @@ function mapCinema(c: {
   name: string;
   slug: string;
   description: string | null;
-  logoMedia: { publicUrl: string } | null;
+  logoMedia: RichMediaRow;
 }): PublicCinema {
   return {
     id: c.id,
     name: c.name,
     slug: c.slug,
     description: c.description,
-    logo: c.logoMedia?.publicUrl ? { url: c.logoMedia.publicUrl } : null,
+    logo: toMediaAsset(c.logoMedia),
   };
 }
 
@@ -928,5 +1117,77 @@ function mapMovieSession(s: {
     subtitle: s.subtitle,
     format: s.format,
     ticketUrl: s.ticketUrl,
+  };
+}
+
+function mapPopup(r: {
+  id: string;
+  title: string;
+  description: string | null;
+  imageMedia: RichMediaRow | null;
+  linkUrl: string | null;
+  buttonText: string | null;
+  channels: string[];
+  showOnce: boolean;
+  closable: boolean;
+  startAt: Date | null;
+  endAt: Date | null;
+  sortOrder: number;
+}): PublicPopup {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    image: toMediaAsset(r.imageMedia),
+    linkUrl: r.linkUrl,
+    buttonText: r.buttonText,
+    channels: r.channels,
+    showOnce: r.showOnce,
+    closable: r.closable,
+    startAt: r.startAt ? r.startAt.toISOString() : null,
+    endAt: r.endAt ? r.endAt.toISOString() : null,
+    sortOrder: r.sortOrder,
+  };
+}
+
+function mapLocationService(r: {
+  id: string;
+  mallId: string;
+  name: string;
+  description: string | null;
+  iconMedia: RichMediaRow | null;
+  coverMedia: RichMediaRow | null;
+  category: string | null;
+  floor: string | null;
+  unitNo: string | null;
+  phone: string | null;
+  email: string | null;
+  websiteUrl: string | null;
+  locationLabel: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  searchTags: string[];
+  isSoon: boolean;
+  sortOrder: number;
+}): PublicLocationService {
+  return {
+    id: r.id,
+    mallId: r.mallId,
+    name: r.name,
+    description: r.description,
+    icon: toMediaAsset(r.iconMedia),
+    cover: toMediaAsset(r.coverMedia),
+    category: r.category,
+    floor: r.floor,
+    unitNo: r.unitNo,
+    phone: r.phone,
+    email: r.email,
+    websiteUrl: r.websiteUrl,
+    locationLabel: r.locationLabel,
+    latitude: r.latitude,
+    longitude: r.longitude,
+    searchTags: r.searchTags,
+    isSoon: r.isSoon,
+    sortOrder: r.sortOrder,
   };
 }

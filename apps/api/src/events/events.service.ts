@@ -10,11 +10,8 @@ import { AuditLogService } from '../audit/audit.service';
 import { SearchIndexerService } from '../search/search-indexer.service';
 import { TranslationResolverService } from '../translation-resolver/translation-resolver.service';
 import { slugify } from '../common/utils/slugify';
-import {
-  assertOptionalHttpUrl,
-  assertStartAtWhenScheduled,
-  validateStartBeforeEnd,
-} from '../common/utils/content-validation';
+import { assertOptionalHttpUrl, validateStartBeforeEnd } from '../common/utils/content-validation';
+import { resolveRangeSchedule } from '../common/utils/publish-workflow';
 import { uniqueEventSlug } from '../common/utils/unique-content-slug';
 import type { CreateEventDto } from './dto/create-event.dto';
 import type { UpdateEventDto } from './dto/update-event.dto';
@@ -94,16 +91,26 @@ export class EventsService {
     tenantId: string,
     mallId: string | undefined,
   ): Promise<EventResponse> {
-    validateStartBeforeEnd(dto.startAt, dto.endAt);
     assertOptionalHttpUrl(dto.linkUrl);
 
     const status = dto.status ?? 'DRAFT';
-    assertStartAtWhenScheduled(status, dto.startAt);
+    const schedule = resolveRangeSchedule({
+      status,
+      startAt: dto.startAt,
+      endAt: dto.endAt,
+    });
     if (dto.coverMediaId) {
       await this.assertCoverMediaInScope(tenantId, mallId ?? null, dto.coverMediaId);
     }
     if (status === 'PUBLISHED') {
-      await this.assertPublishable(dto.title, dto.coverMediaId, tenantId, mallId ?? null, dto.startAt, dto.endAt);
+      await this.assertPublishable(
+        dto.title,
+        dto.coverMediaId,
+        tenantId,
+        mallId ?? null,
+        schedule.startAt?.toISOString(),
+        schedule.endAt?.toISOString(),
+      );
     }
 
     const baseSlug = dto.slug?.trim() ? slugify(dto.slug) : slugify(dto.title);
@@ -120,14 +127,15 @@ export class EventsService {
         shortDescription: dto.shortDescription ?? null,
         description: dto.description ?? null,
         coverMediaId: dto.coverMediaId ?? null,
-        startAt: dto.startAt ? new Date(dto.startAt) : null,
-        endAt: dto.endAt ? new Date(dto.endAt) : null,
+        startAt: schedule.startAt,
+        endAt: schedule.endAt,
         location: dto.location ?? null,
         category: dto.category ?? null,
         buttonText: dto.buttonText ?? null,
         linkUrl: dto.linkUrl ?? null,
         sortOrder: dto.sortOrder ?? 0,
         status,
+        channels: dto.channels ?? ['WEB', 'MOBILE'],
         dynamicFieldsJson: dynamicFieldsJson ?? undefined,
         createdBy: user.id,
         publishedAt: status === 'PUBLISHED' ? new Date() : null,
@@ -159,20 +167,20 @@ export class EventsService {
     const existing = await this.assertExists(id, tenantId);
     this.assertMallVisibility(existing, mallId);
 
-    const nextStart = dto.startAt !== undefined ? dto.startAt : existing.startAt?.toISOString();
-    const nextEnd = dto.endAt !== undefined ? dto.endAt : existing.endAt?.toISOString();
-    validateStartBeforeEnd(
-      nextStart ?? undefined,
-      nextEnd ?? undefined,
-    );
-
     const nextLink = dto.linkUrl !== undefined ? dto.linkUrl : existing.linkUrl;
     assertOptionalHttpUrl(nextLink);
 
     const nextTitle = dto.title ?? existing.title;
     const nextCover = dto.coverMediaId !== undefined ? dto.coverMediaId : existing.coverMediaId;
     const nextStatus = dto.status ?? existing.status;
-    assertStartAtWhenScheduled(nextStatus, nextStart);
+    const schedule = resolveRangeSchedule({
+      status: nextStatus,
+      startAt:
+        dto.startAt !== undefined ? (dto.startAt ? dto.startAt : null) : existing.startAt,
+      endAt: dto.endAt !== undefined ? (dto.endAt ? dto.endAt : null) : existing.endAt,
+    });
+    const nextStart = schedule.startAt?.toISOString();
+    const nextEnd = schedule.endAt?.toISOString();
 
     const nextMallId = dto.mallId !== undefined ? dto.mallId : existing.mallId;
 
@@ -219,14 +227,15 @@ export class EventsService {
         ...(dto.shortDescription !== undefined && { shortDescription: dto.shortDescription || null }),
         ...(dto.description !== undefined && { description: dto.description || null }),
         ...(dto.coverMediaId !== undefined && { coverMediaId: dto.coverMediaId || null }),
-        ...(dto.startAt !== undefined && { startAt: dto.startAt ? new Date(dto.startAt) : null }),
-        ...(dto.endAt !== undefined && { endAt: dto.endAt ? new Date(dto.endAt) : null }),
+        startAt: schedule.startAt,
+        endAt: schedule.endAt,
         ...(dto.location !== undefined && { location: dto.location || null }),
         ...(dto.category !== undefined && { category: dto.category || null }),
         ...(dto.buttonText !== undefined && { buttonText: dto.buttonText || null }),
         ...(dto.linkUrl !== undefined && { linkUrl: dto.linkUrl || null }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
         ...(dto.status !== undefined && { status: dto.status }),
+        ...(dto.channels !== undefined && { channels: dto.channels }),
         ...(dto.dynamicFieldsJson !== undefined
           ? {
               dynamicFieldsJson:
@@ -305,9 +314,15 @@ export class EventsService {
       },
     );
 
+    const now = new Date();
     const event = await this.prisma.event.update({
       where: { id },
-      data: { status: 'PUBLISHED', publishedAt: new Date(), updatedBy: user.id },
+      data: {
+        status: 'PUBLISHED',
+        publishedAt: now,
+        startAt: existing.startAt ?? now,
+        updatedBy: user.id,
+      },
       include: EVENT_INCLUDE,
     });
 
@@ -330,9 +345,14 @@ export class EventsService {
     const existing = await this.assertExists(id, tenantId);
     this.assertMallVisibility(existing, mallId);
 
+    const now = new Date();
     const event = await this.prisma.event.update({
       where: { id },
-      data: { status: 'ARCHIVED', updatedBy: user.id },
+      data: {
+        status: 'ARCHIVED',
+        endAt: existing.endAt ?? now,
+        updatedBy: user.id,
+      },
       include: EVENT_INCLUDE,
     });
 
@@ -356,6 +376,7 @@ export class EventsService {
     mallId?: string;
     search?: string;
     category?: string;
+    channel?: string;
   }): Promise<EventResponse[]> {
     const now = new Date();
     const where: Prisma.EventWhereInput = {
@@ -375,6 +396,8 @@ export class EventsService {
         ? { title: { contains: opts.search, mode: 'insensitive' as const } }
         : {}),
       ...(opts.category ? { category: opts.category } : {}),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(opts.channel ? { channels: { has: opts.channel as any } } : {}),
     };
 
     return this.prisma.event.findMany({
@@ -400,7 +423,7 @@ export class EventsService {
       tenantId,
       deletedAt: null,
       ...mallScope,
-      ...(query.status ? { status: query.status } : {}),
+      ...(query.status ? { status: query.status } : { status: { not: 'ARCHIVED' } }),
       ...(query.search ? { title: { contains: query.search, mode: 'insensitive' as const } } : {}),
       ...(query.category ? { category: query.category } : {}),
       ...(query.startFrom || query.startTo

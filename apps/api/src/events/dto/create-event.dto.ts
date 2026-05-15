@@ -1,6 +1,7 @@
-import { ContentStatus } from '@prisma/client';
+import { Channel, ContentStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
@@ -65,6 +66,11 @@ export class CreateEventDto {
   @IsOptional()
   @IsEnum(ContentStatus)
   status?: ContentStatus = ContentStatus.DRAFT;
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(Channel, { each: true })
+  channels?: Channel[];
 
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => {

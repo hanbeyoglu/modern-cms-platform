@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsBoolean,
   IsEmail,
   IsEnum,
@@ -60,6 +61,15 @@ export class UpdateMallStoreDto {
   @IsOptional()
   @IsBoolean()
   isFeatured?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isSoon?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  searchTags?: string[];
 
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (value !== undefined && value !== null ? Number(value) : undefined))

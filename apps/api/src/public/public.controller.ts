@@ -10,9 +10,9 @@ import {
 import { Public } from '../common/decorators/public.decorator';
 import { PublicCacheService } from './cache/public-cache.service';
 import { PublicContentService } from './public-content.service';
-import { PublicContextService } from './public-context.service';
+import { PublicContextService, type PublicContext } from './public-context.service';
 import { PublicSearchService } from '../search/public-search.service';
-import type { PublicSiteConfig } from './public-response.types';
+import { makeEnvelope, type PublicEnvelope, type PublicSiteConfig } from './public-response.types';
 import { PrismaService } from '../prisma/prisma.service';
 
 // Cache TTLs in seconds
@@ -29,6 +29,14 @@ function lseg(code: string | undefined | null): string {
   return code ? `:l:${code}` : ':l:none';
 }
 
+function envelop<T>(data: T, ctx: PublicContext): PublicEnvelope<T> {
+  return makeEnvelope(data, {
+    tenantId: ctx.tenantId,
+    mallId: ctx.mallId,
+    locale: ctx.locale?.code ?? ctx.defaultLocale?.code ?? null,
+  });
+}
+
 @Public()
 @Controller('public')
 export class PublicController {
@@ -41,19 +49,18 @@ export class PublicController {
   ) {}
 
   // ── Site Config ───────────────────────────────────────────────────────────
-  // Site config is locale-independent; no locale param here.
 
   @Get('site-config')
   async getSiteConfig(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
     @Query('locale') locale: string | undefined,
-  ): Promise<PublicSiteConfig> {
+  ): Promise<PublicEnvelope<PublicSiteConfig>> {
     const context = await this.ctx.resolve(tenantId, mallId, locale);
     const cacheKey =
       `public:${context.tenantId}:${context.mallId ?? 'none'}:site-config` + lseg(context.locale?.code);
 
-    const cached = await this.cache.get<PublicSiteConfig>(cacheKey);
+    const cached = await this.cache.get<PublicEnvelope<PublicSiteConfig>>(cacheKey);
     if (cached) return cached;
 
     const supportedLocalesRows = await this.prisma.locale.findMany({
@@ -67,8 +74,8 @@ export class PublicController {
       const mall = await this.prisma.mall.findFirst({
         where: { id: context.mallId, deletedAt: null, isPublic: true },
         include: {
-          logoMedia: { select: { publicUrl: true } },
-          coverMedia: { select: { publicUrl: true } },
+          logoMedia: { select: { id: true, publicUrl: true, mimeType: true, altText: true, caption: true, width: true, height: true, dominantColor: true } },
+          coverMedia: { select: { id: true, publicUrl: true, mimeType: true, altText: true, caption: true, width: true, height: true, dominantColor: true } },
         },
       });
       if (mall) {
@@ -83,8 +90,12 @@ export class PublicController {
           websiteUrl: mall.websiteUrl,
           phone: mall.phone,
           supportEmail: mall.supportEmail,
-          logo: mall.logoMedia ? { url: mall.logoMedia.publicUrl } : null,
-          cover: mall.coverMedia ? { url: mall.coverMedia.publicUrl } : null,
+          logo: mall.logoMedia
+            ? { id: mall.logoMedia.id, url: mall.logoMedia.publicUrl, mimeType: mall.logoMedia.mimeType ?? null, alt: mall.logoMedia.altText ?? null, caption: mall.logoMedia.caption ?? null, width: mall.logoMedia.width ?? null, height: mall.logoMedia.height ?? null, dominantColor: mall.logoMedia.dominantColor ?? null }
+            : null,
+          cover: mall.coverMedia
+            ? { id: mall.coverMedia.id, url: mall.coverMedia.publicUrl, mimeType: mall.coverMedia.mimeType ?? null, alt: mall.coverMedia.altText ?? null, caption: mall.coverMedia.caption ?? null, width: mall.coverMedia.width ?? null, height: mall.coverMedia.height ?? null, dominantColor: mall.coverMedia.dominantColor ?? null }
+            : null,
           address: hasAddress
             ? {
                 line1: mall.addressLine1,
@@ -105,7 +116,7 @@ export class PublicController {
       }
     }
 
-    const result: PublicSiteConfig = {
+    const siteConfig: PublicSiteConfig = {
       tenantId: context.tenantId,
       tenantName: context.tenant.name,
       tenantSlug: context.tenant.slug,
@@ -123,6 +134,7 @@ export class PublicController {
       rtl: context.locale?.rtl ?? false,
     };
 
+    const result = envelop(siteConfig, context);
     await this.cache.set(cacheKey, result, TTL.siteConfig);
     return result;
   }
@@ -142,13 +154,14 @@ export class PublicController {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = await this.content.getHome({
+    const data = await this.content.getHome({
       tenantId: context.tenantId,
       mallId: context.mallId,
       localeId: context.locale?.id,
       localeCode: context.locale?.code,
       defaultLocaleCode: context.defaultLocale?.code,
     });
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.home);
     return result;
   }
@@ -170,12 +183,13 @@ export class PublicController {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = await this.content.getSliders({
+    const data = await this.content.getSliders({
       tenantId: context.tenantId,
       mallId: context.mallId,
       targetDevice,
       localeId: context.locale?.id,
     });
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }
@@ -200,7 +214,7 @@ export class PublicController {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = await this.content.getEvents({
+    const data = await this.content.getEvents({
       tenantId: context.tenantId,
       mallId: context.mallId,
       category,
@@ -208,6 +222,7 @@ export class PublicController {
       limit,
       localeId: context.locale?.id,
     });
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }
@@ -227,14 +242,15 @@ export class PublicController {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = await this.content.getEventBySlug({
+    const data = await this.content.getEventBySlug({
       tenantId: context.tenantId,
       mallId: context.mallId,
       slug,
       localeId: context.locale?.id,
     });
-    if (!result) throw new NotFoundException('Event not found');
+    if (!data) throw new NotFoundException('Event not found');
 
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.detail);
     return result;
   }
@@ -259,7 +275,7 @@ export class PublicController {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = await this.content.getCampaigns({
+    const data = await this.content.getCampaigns({
       tenantId: context.tenantId,
       mallId: context.mallId,
       storeId,
@@ -267,6 +283,7 @@ export class PublicController {
       limit,
       localeId: context.locale?.id,
     });
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }
@@ -286,14 +303,15 @@ export class PublicController {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = await this.content.getCampaignBySlug({
+    const data = await this.content.getCampaignBySlug({
       tenantId: context.tenantId,
       mallId: context.mallId,
       slug,
       localeId: context.locale?.id,
     });
-    if (!result) throw new NotFoundException('Campaign not found');
+    if (!data) throw new NotFoundException('Campaign not found');
 
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.detail);
     return result;
   }
@@ -323,7 +341,7 @@ export class PublicController {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = await this.content.getStores({
+    const data = await this.content.getStores({
       tenantId: context.tenantId,
       mallId: context.mallId,
       categoryId,
@@ -332,6 +350,7 @@ export class PublicController {
       limit,
       localeId: context.locale?.id,
     });
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }
@@ -354,14 +373,15 @@ export class PublicController {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = await this.content.getStoreBySlug({
+    const data = await this.content.getStoreBySlug({
       tenantId: context.tenantId,
       mallId: context.mallId,
       slug,
       localeId: context.locale?.id,
     });
-    if (!result) throw new NotFoundException('Store not found');
+    if (!data) throw new NotFoundException('Store not found');
 
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.detail);
     return result;
   }
@@ -383,14 +403,16 @@ export class PublicController {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = await this.content.getPageBySlug({
+    const data = await this.content.getPageBySlug({
       tenantId: context.tenantId,
       mallId: context.mallId,
       slug,
       localeId: context.locale?.id,
+      localeCode: context.locale?.code ?? context.defaultLocale?.code,
     });
-    if (!result) throw new NotFoundException('Page not found');
+    if (!data) throw new NotFoundException('Page not found');
 
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.detail);
     return result;
   }
@@ -413,11 +435,12 @@ export class PublicController {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = await this.content.getCinemas({
+    const data = await this.content.getCinemas({
       tenantId: context.tenantId,
       mallId: context.mallId,
       localeId: context.locale?.id,
     });
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }
@@ -446,7 +469,7 @@ export class PublicController {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = await this.content.getMovieSessions({
+    const data = await this.content.getMovieSessions({
       tenantId: context.tenantId,
       mallId: context.mallId,
       date,
@@ -455,9 +478,96 @@ export class PublicController {
       limit,
       localeId: context.locale?.id,
     });
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }
+
+  // ── Search ────────────────────────────────────────────────────────────────
+
+  // ── Popups ─────────────────────────────────────────────────────────────────
+
+  @Get('popups')
+  async getPopups(
+    @Headers('x-tenant-id') tenantId: string | undefined,
+    @Headers('x-mall-id') mallId: string | undefined,
+    @Query('locale') locale: string | undefined,
+    @Query('channel') channel: string | undefined,
+  ) {
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:popups:${channel ?? 'all'}` +
+      lseg(context.locale?.code);
+
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
+    const data = await this.content.getPopups({
+      tenantId: context.tenantId,
+      mallId: context.mallId,
+      channel,
+      localeId: context.locale?.id,
+    });
+    const result = envelop(data, context);
+    await this.cache.set(cacheKey, result, TTL.list);
+    return result;
+  }
+
+  // ── Location Services ──────────────────────────────────────────────────────
+
+  @Get('services')
+  async getLocationServices(
+    @Headers('x-tenant-id') tenantId: string | undefined,
+    @Headers('x-mall-id') mallId: string | undefined,
+    @Query('locale') locale: string | undefined,
+  ) {
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
+    if (!context.mallId) {
+      throw new BadRequestException('x-mall-id header is required for /public/services');
+    }
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId}:services` + lseg(context.locale?.code);
+
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
+    const data = await this.content.getLocationServices({
+      tenantId: context.tenantId,
+      mallId: context.mallId,
+      localeId: context.locale?.id,
+    });
+    const result = envelop(data, context);
+    await this.cache.set(cacheKey, result, TTL.list);
+    return result;
+  }
+
+  @Get('services/:id')
+  async getServiceById(
+    @Headers('x-tenant-id') tenantId: string | undefined,
+    @Headers('x-mall-id') mallId: string | undefined,
+    @Query('locale') locale: string | undefined,
+    @Param('id') id: string,
+  ) {
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
+    const cacheKey =
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:service:${id}` +
+      lseg(context.locale?.code);
+
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
+    const service = await this.content.getLocationServiceById({
+      tenantId: context.tenantId,
+      id,
+    });
+    if (!service) throw new NotFoundException('Service not found');
+
+    const result = envelop(service, context);
+    await this.cache.set(cacheKey, result, TTL.detail);
+    return result;
+  }
+
+  // ── Search ─────────────────────────────────────────────────────────────────
 
   @Get('search')
   async search(
@@ -478,14 +588,16 @@ export class PublicController {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const result = await this.publicSearch.search({
+    const data = await this.publicSearch.search({
       tenantId: context.tenantId,
       mallId: context.mallId,
       q,
       type,
       limit,
       localeId: context.locale?.id ?? null,
+      localeCode: context.locale?.code ?? context.defaultLocale?.code ?? null,
     });
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.search);
     return result;
   }

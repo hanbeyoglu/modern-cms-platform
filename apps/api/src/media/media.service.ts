@@ -273,6 +273,7 @@ export class MediaService {
       moviePosters,
       mallLogos,
       mallCovers,
+      pageAttachments,
     ] = await Promise.all([
       this.prisma.slider.findMany({
         where: { desktopMediaId: id, tenantId, deletedAt: null },
@@ -318,6 +319,10 @@ export class MediaService {
         where: { coverMediaId: id, tenantId, deletedAt: null },
         select: { id: true, name: true, slug: true },
       }),
+      this.prisma.pageAttachment.findMany({
+        where: { mediaId: id, tenantId, deletedAt: null, page: { deletedAt: null } },
+        select: { id: true, title: true, page: { select: { id: true, title: true, slug: true } } },
+      }),
     ]);
 
     for (const s of slidersDesktop) {
@@ -353,6 +358,15 @@ export class MediaService {
     }
     for (const m of mallCovers) {
       usages.push({ entityType: 'location', entityId: m.id, entityName: m.name, field: 'cover', route: `/locations/${m.slug}` });
+    }
+    for (const attachment of pageAttachments) {
+      usages.push({
+        entityType: 'page',
+        entityId: attachment.page.id,
+        entityName: attachment.page.title,
+        field: attachment.title ? `attachment:${attachment.title}` : 'attachment',
+        route: `/pages/${attachment.page.id}`,
+      });
     }
 
     return usages;

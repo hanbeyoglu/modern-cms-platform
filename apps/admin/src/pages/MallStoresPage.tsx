@@ -83,6 +83,8 @@ export function MallStoresPage() {
   const [sortOrder, setSortOrder] = useState('0');
   const [formStatus, setFormStatus] = useState<StoreStatus>('ACTIVE');
   const [isFeatured, setIsFeatured] = useState(false);
+  const [isSoon, setIsSoon] = useState(false);
+  const [searchTagsText, setSearchTagsText] = useState('');
   const [saving, setSaving] = useState(false);
   const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
   const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
@@ -219,6 +221,8 @@ export function MallStoresPage() {
     setSortOrder('0');
     setFormStatus('ACTIVE');
     setIsFeatured(false);
+    setIsSoon(false);
+    setSearchTagsText('');
     setLocaleDrafts({});
     setI18nDirty(false);
     setShowAssign(true);
@@ -239,8 +243,17 @@ export function MallStoresPage() {
     setSortOrder(String(m.sortOrder));
     setFormStatus(m.status);
     setIsFeatured(m.isFeatured);
+    setIsSoon(m.isSoon);
+    setSearchTagsText(m.searchTags?.join(', ') ?? '');
     setI18nDirty(false);
     setShowAssign(true);
+  }
+
+  function parseSearchTags(raw: string): string[] {
+    return raw
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
   }
 
   async function save() {
@@ -273,6 +286,8 @@ export function MallStoresPage() {
           sortOrder: parseInt(sortOrder, 10) || 0,
           status: formStatus,
           isFeatured,
+          isSoon,
+          searchTags: parseSearchTags(searchTagsText),
         });
         setItems((prev) => prev.map((x) => (x.id === u.id ? u : x)));
         await flushMallStoreTranslations(u.id);
@@ -296,6 +311,8 @@ export function MallStoresPage() {
           sortOrder: parseInt(sortOrder, 10) || 0,
           status: formStatus,
           isFeatured,
+          isSoon,
+          searchTags: parseSearchTags(searchTagsText),
         });
         setItems((prev) => [c, ...prev]);
         setTotal((t) => t + 1);
@@ -495,6 +512,19 @@ export function MallStoresPage() {
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} />
               Öne çıkan
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="checkbox" checked={isSoon} onChange={(e) => setIsSoon(e.target.checked)} />
+              Yakında açılacak
+            </label>
+            <label style={{ gridColumn: '1 / -1' }}>
+              Arama etiketleri (virgülle)
+              <input
+                value={searchTagsText}
+                onChange={(e) => setSearchTagsText(e.target.value)}
+                placeholder="ör. kahve, fast-food"
+                style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }}
+              />
             </label>
             <label style={{ gridColumn: '1 / -1' }}>
               Çalışma saatleri (JSON nesnesi, opsiyonel)

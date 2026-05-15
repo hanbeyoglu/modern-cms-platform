@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MultilingualContentFields, PAGE_I18N_FIELDS } from '../components/MultilingualContentFields';
+import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
+import { validatePageSchedule } from '../lib/publishing-workflow';
 import { AuditTimeline } from '../components/AuditTimeline';
 import { useAuth } from '../auth/useAuth';
 import {
@@ -9,7 +11,9 @@ import {
   apiTranslationDelete,
   apiTranslationsList,
   apiTranslationUpsert,
+  apiMediaList,
   type CmsLocale,
+  type MediaAsset,
 } from '../lib/api';
 import { usePermission } from '../hooks/usePermission';
 import {
@@ -28,6 +32,7 @@ import {
   type PageStatus,
   type PageType,
   type PageBlockStatus,
+  type CmsPageAttachment,
 } from '../lib/api/pages';
 
 const STATUS_LABELS: Record<PageStatus, string> = {
@@ -45,10 +50,17 @@ const STATUS_COLORS: Record<PageStatus, string> = {
 };
 
 const TYPE_LABELS: Record<PageType, string> = {
-  STANDARD: 'Standart',
-  LANDING: 'Açılış',
-  LEGAL: 'Hukuki',
-  CONTACT: 'İletişim',
+  ABOUT: 'Hakkımızda',
+  KVKK: 'KVKK',
+  PRIVACY_POLICY: 'Gizlilik Politikası',
+  COOKIE_POLICY: 'Çerez Politikası',
+  TERMS_OF_USE: 'Kullanım Şartları',
+  CONTACT_INFO: 'İletişim Bilgileri',
+  FAQ: 'SSS',
+  TRANSPORTATION: 'Ulaşım',
+  CERTIFICATES: 'Sertifikalar',
+  DOCUMENTS: 'Belgeler',
+  AWARDS: 'Ödüller',
   CUSTOM: 'Özel',
 };
 
@@ -101,12 +113,23 @@ type PageFormState = {
   title: string;
   slug: string;
   type: PageType;
+  customTypeLabel: string;
+  contentHtml: string;
   status: PageStatus;
   seoTitle: string;
   seoDescription: string;
   seoKeywords: string;
   publishAt: string;
   unpublishAt: string;
+  attachments: AttachmentFormState[];
+};
+
+type AttachmentFormState = {
+  title: string;
+  description: string;
+  mediaId: string;
+  sortOrder: number;
+  downloadable: boolean;
 };
 
 type BlockFormState = {
@@ -123,6 +146,28 @@ const EMPTY_BLOCK_FORM: BlockFormState = {
   status: 'ACTIVE',
 };
 
+function pageAttachmentsToForm(attachments: CmsPageAttachment[]): AttachmentFormState[] {
+  return attachments.map((attachment, index) => ({
+    title: attachment.title ?? '',
+    description: attachment.description ?? '',
+    mediaId: attachment.mediaId,
+    sortOrder: attachment.sortOrder ?? index * 10,
+    downloadable: attachment.downloadable,
+  }));
+}
+
+function isDocumentAttachmentCandidate(asset: MediaAsset): boolean {
+  return (
+    asset.mimeType === 'application/pdf' ||
+    asset.mimeType.startsWith('image/') ||
+    asset.mimeType.includes('word') ||
+    asset.mimeType.includes('excel') ||
+    asset.mimeType.includes('powerpoint') ||
+    asset.mimeType.includes('officedocument') ||
+    asset.mimeType === 'text/plain'
+  );
+}
+
 export function PageDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { accessToken, activeTenantId, activeMallId } = useAuth();
@@ -138,6 +183,7 @@ export function PageDetailPage() {
   const [pageForm, setPageForm] = useState<PageFormState | null>(null);
   const [savingPage, setSavingPage] = useState(false);
   const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
+  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
   const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
   const [i18nDirty, setI18nDirty] = useState(false);
@@ -156,22 +202,27 @@ export function PageDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const [p, b] = await Promise.all([
+      const [p, b, media] = await Promise.all([
         apiPageGet(accessToken, activeTenantId, id, activeMallId ?? undefined),
         apiPageBlocksList(accessToken, activeTenantId, id, activeMallId ?? undefined),
+        apiMediaList(accessToken, activeTenantId, { limit: 200, mallId: activeMallId ?? undefined }),
       ]);
       setPage(p);
       setBlocks(b);
+      setMediaAssets(media.assets);
       setPageForm({
         title: p.title,
         slug: p.slug,
         type: p.type,
+        customTypeLabel: p.customTypeLabel ?? '',
+        contentHtml: p.contentHtml ?? '',
         status: p.status,
         seoTitle: p.seoTitle ?? '',
         seoDescription: p.seoDescription ?? '',
         seoKeywords: p.seoKeywords ?? '',
         publishAt: p.publishAt ? p.publishAt.slice(0, 16) : '',
         unpublishAt: p.unpublishAt ? p.unpublishAt.slice(0, 16) : '',
+        attachments: pageAttachmentsToForm(p.attachments),
       });
       setPageFormDirty(false);
     } catch (e) {
@@ -184,7 +235,8 @@ export function PageDetailPage() {
   useEffect(() => { void loadPage(); }, [loadPage]);
 
   useEffect(() => {
-    if (!accessToken || !activeTenantId || !id || !page) {
+    const pageId = page?.id;
+    if (!accessToken || !activeTenantId || !id || !pageId) {
       setTenantLocales([]);
       setContentLocaleTab(null);
       setLocaleDrafts({});
@@ -272,18 +324,40 @@ export function PageDetailPage() {
   async function handleSavePage() {
     if (!accessToken || !activeTenantId || !id || !pageForm) return;
     if (!pageForm.title.trim()) { toast.error('Başlık zorunludur'); return; }
+    if (pageForm.type === 'CUSTOM' && !pageForm.customTypeLabel.trim()) {
+      toast.error('Özel sayfa etiketi zorunludur');
+      return;
+    }
+    if (pageForm.attachments.some((attachment) => !attachment.mediaId)) {
+      toast.error('Her doküman eki için medya seçilmelidir');
+      return;
+    }
+    const scheduleError = validatePageSchedule(pageForm.status, pageForm.publishAt);
+    if (scheduleError) {
+      toast.error(scheduleError);
+      return;
+    }
     setSavingPage(true);
     try {
       const updated = await apiPageUpdate(accessToken, activeTenantId, id, {
         title: pageForm.title,
         slug: pageForm.slug || undefined,
         type: pageForm.type,
+        customTypeLabel: pageForm.type === 'CUSTOM' ? pageForm.customTypeLabel : undefined,
+        contentHtml: pageForm.contentHtml,
         status: pageForm.status,
         seoTitle: pageForm.seoTitle || undefined,
         seoDescription: pageForm.seoDescription || undefined,
         seoKeywords: pageForm.seoKeywords || undefined,
         publishAt: pageForm.publishAt ? new Date(pageForm.publishAt).toISOString() : undefined,
         unpublishAt: pageForm.unpublishAt ? new Date(pageForm.unpublishAt).toISOString() : undefined,
+        attachments: pageForm.attachments.map((attachment, index) => ({
+          title: attachment.title || undefined,
+          description: attachment.description || undefined,
+          mediaId: attachment.mediaId,
+          sortOrder: index * 10,
+          downloadable: attachment.downloadable,
+        })),
       }, activeMallId ?? undefined);
       await flushPageTranslations(updated.id);
       setPageFormDirty(false);
@@ -427,6 +501,62 @@ export function PageDetailPage() {
     }
   }
 
+  function updateAttachment(index: number, patch: Partial<AttachmentFormState>) {
+    setPageForm((form) => {
+      if (!form) return form;
+      return {
+        ...form,
+        attachments: form.attachments.map((attachment, i) =>
+          i === index ? { ...attachment, ...patch } : attachment,
+        ),
+      };
+    });
+    setPageFormDirty(true);
+  }
+
+  function addAttachment() {
+    setPageForm((form) =>
+      form
+        ? {
+            ...form,
+            attachments: [
+              ...form.attachments,
+              {
+                title: '',
+                description: '',
+                mediaId: '',
+                sortOrder: form.attachments.length * 10,
+                downloadable: true,
+              },
+            ],
+          }
+        : form,
+    );
+    setPageFormDirty(true);
+  }
+
+  function removeAttachment(index: number) {
+    setPageForm((form) =>
+      form ? { ...form, attachments: form.attachments.filter((_, i) => i !== index) } : form,
+    );
+    setPageFormDirty(true);
+  }
+
+  function moveAttachment(index: number, direction: 'up' | 'down') {
+    setPageForm((form) => {
+      if (!form) return form;
+      const target = direction === 'up' ? index - 1 : index + 1;
+      if (target < 0 || target >= form.attachments.length) return form;
+      const reordered = [...form.attachments];
+      [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+      return {
+        ...form,
+        attachments: reordered.map((attachment, i) => ({ ...attachment, sortOrder: i * 10 })),
+      };
+    });
+    setPageFormDirty(true);
+  }
+
   if (loading) return <div style={{ padding: 32, color: '#6b7280', fontSize: 13 }}>Yükleniyor…</div>;
   if (error) return (
     <div style={{ padding: 32 }}>
@@ -503,6 +633,8 @@ export function PageDetailPage() {
                     ...drafts,
                     [targetId]: {
                       title: pageForm.title,
+                      customTypeLabel: pageForm.customTypeLabel,
+                      contentHtml: pageForm.contentHtml,
                       seoTitle: pageForm.seoTitle,
                       seoDescription: pageForm.seoDescription,
                     },
@@ -575,48 +707,55 @@ export function PageDetailPage() {
               ))}
             </select>
           </div>
-          <div>
-            <label style={labelStyle}>Durum</label>
-            <select
-              value={pageForm.status}
-              onChange={(e) => {
-                setPageForm((f) => f && { ...f, status: e.target.value as PageStatus });
+          {pageForm.type === 'CUSTOM' && (
+            <div>
+              <label style={labelStyle}>Özel Tip Etiketi *</label>
+              <input
+                value={pageForm.customTypeLabel}
+                onChange={(e) => {
+                  setPageForm((f) => f && { ...f, customTypeLabel: e.target.value });
+                  setPageFormDirty(true);
+                }}
+                style={inputStyle({ width: '100%' })}
+                placeholder="Diplomamız"
+              />
+            </div>
+          )}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <PublishingWorkflowFields
+              mode="page"
+              status={pageForm.status}
+              publishAt={pageForm.publishAt}
+              unpublishAt={pageForm.unpublishAt}
+              onStatusChange={(status) => {
+                setPageForm((f) => f && { ...f, status });
                 setPageFormDirty(true);
               }}
-              style={inputStyle({ width: '100%' })}
-            >
-              {(Object.keys(STATUS_LABELS) as PageStatus[]).map((s) => (
-                <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-              ))}
-            </select>
+              onPublishAtChange={(publishAt) => {
+                setPageForm((f) => f && { ...f, publishAt });
+                setPageFormDirty(true);
+              }}
+              onUnpublishAtChange={(unpublishAt) => {
+                setPageForm((f) => f && { ...f, unpublishAt });
+                setPageFormDirty(true);
+              }}
+              labelStyle={labelStyle}
+              inputStyle={inputStyle()}
+            />
           </div>
 
           <div style={{ gridColumn: '1 / -1' }}>
-            <label style={labelStyle}>Yayın zamanı (publishAt)</label>
-            <input
-              type="datetime-local"
-              value={pageForm.publishAt}
+            <label style={labelStyle}>İçerik HTML</label>
+            <textarea
+              value={pageForm.contentHtml}
               onChange={(e) => {
-                setPageForm((f) => f && { ...f, publishAt: e.target.value });
+                setPageForm((f) => f && { ...f, contentHtml: e.target.value });
                 setPageFormDirty(true);
               }}
-              style={inputStyle({ width: '100%', maxWidth: 280 })}
+              rows={8}
+              style={{ ...inputStyle({ width: '100%' }), fontFamily: 'monospace', resize: 'vertical' }}
+              placeholder="<p>Sayfa içeriği...</p>"
             />
-          </div>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={labelStyle}>Yayından kalkma (unpublishAt)</label>
-            <input
-              type="datetime-local"
-              value={pageForm.unpublishAt}
-              onChange={(e) => {
-                setPageForm((f) => f && { ...f, unpublishAt: e.target.value });
-                setPageFormDirty(true);
-              }}
-              style={inputStyle({ width: '100%', maxWidth: 280 })}
-            />
-            <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
-              Slider, etkinlik ve kampanyalarda yayın penceresi için başlangıç/bitiş alanları (startAt / endAt) kullanılır.
-            </div>
           </div>
 
           <div style={{ gridColumn: '1 / -1' }}>
@@ -638,6 +777,77 @@ export function PageDetailPage() {
         <button onClick={handleSavePage} disabled={savingPage} style={{ ...btnStyle('#2563eb'), marginTop: 16 }}>
           {savingPage ? 'Kaydediliyor…' : 'Kaydet'}
         </button>
+      </div>
+
+      {/* Document attachments */}
+      <div style={cardStyle({ marginBottom: 24 })}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Doküman Ekleri ({pageForm.attachments.length})</h3>
+          <button onClick={addAttachment} style={btnStyle('#2563eb')}>+ Doküman Ekle</button>
+        </div>
+
+        {pageForm.attachments.length === 0 ? (
+          <div style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center', padding: 18 }}>
+            PDF veya doküman eki yok.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 12 }}>
+            {pageForm.attachments.map((attachment, index) => (
+              <div key={`${attachment.mediaId}-${index}`} style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label style={labelStyle}>Medya / PDF *</label>
+                    <select
+                      value={attachment.mediaId}
+                      onChange={(e) => updateAttachment(index, { mediaId: e.target.value })}
+                      style={inputStyle({ width: '100%' })}
+                    >
+                      <option value="">Medya seç</option>
+                      {mediaAssets
+                        .filter(isDocumentAttachmentCandidate)
+                        .map((asset) => (
+                          <option key={asset.id} value={asset.id}>
+                            {asset.originalName} · {asset.mimeType}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Başlık</label>
+                    <input
+                      value={attachment.title}
+                      onChange={(e) => updateAttachment(index, { title: e.target.value })}
+                      style={inputStyle({ width: '100%' })}
+                      placeholder="Kalite Belgesi"
+                    />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={labelStyle}>Açıklama</label>
+                    <textarea
+                      value={attachment.description}
+                      onChange={(e) => updateAttachment(index, { description: e.target.value })}
+                      rows={2}
+                      style={{ ...inputStyle({ width: '100%' }), resize: 'vertical' }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#374151' }}>
+                    <input
+                      type="checkbox"
+                      checked={attachment.downloadable}
+                      onChange={(e) => updateAttachment(index, { downloadable: e.target.checked })}
+                    />
+                    İndirilebilir
+                  </label>
+                  <button onClick={() => moveAttachment(index, 'up')} disabled={index === 0} style={smallBtn('#6b7280')}>Yukarı</button>
+                  <button onClick={() => moveAttachment(index, 'down')} disabled={index === pageForm.attachments.length - 1} style={smallBtn('#6b7280')}>Aşağı</button>
+                  <button onClick={() => removeAttachment(index)} style={smallBtn('#dc2626')}>Kaldır</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Blocks section */}

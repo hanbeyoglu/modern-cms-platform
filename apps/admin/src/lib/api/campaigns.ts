@@ -1,5 +1,5 @@
 import { request } from './client';
-import type { ContentStatus, EventMediaPreview } from './events';
+import type { ContentStatus, ContentChannel, EventMediaPreview } from './events';
 import type { GlobalStore } from './stores';
 
 export type MallStoreSummary = {
@@ -27,6 +27,7 @@ export type CmsCampaign = {
   buttonText: string | null;
   linkUrl: string | null;
   status: ContentStatus;
+  channels: ContentChannel[];
   sortOrder: number;
   dynamicFieldsJson: Record<string, unknown> | null;
   createdBy: string;
@@ -60,6 +61,7 @@ export type CreateCampaignPayload = {
   storeId?: string;
   sortOrder?: number;
   status?: ContentStatus;
+  channels?: ContentChannel[];
   dynamicFieldsJson?: Record<string, unknown>;
 };
 

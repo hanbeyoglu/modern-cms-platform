@@ -47,6 +47,7 @@ export class PublicSearchService {
     type?: string;
     limit: number;
     localeId?: string | null;
+    localeCode?: string | null;
   }): Promise<PublicSearchResponseDto> {
     if (this.queryBuilder.isEmptyQuery(opts.q)) {
       return { results: [] };
@@ -101,7 +102,9 @@ export class PublicSearchService {
     const visible = await this.filterPublished(rows, opts.tenantId, opts.mallId ?? null, now);
     const trimmed = visible.slice(0, take);
     const titled = await this.applyLocaleTitles(opts.tenantId, opts.localeId ?? null, trimmed);
-    return { results: titled.map((r) => this.mapper.toPublicHit(r)) };
+    const enriched = await this.enrichSearchHits(titled, opts.tenantId, opts.mallId ?? null);
+    const localeCode = opts.localeCode ?? null;
+    return { results: enriched.map((r) => this.mapper.toPublicHit(r, localeCode)) };
   }
 
   private async filterPublished(
@@ -252,6 +255,157 @@ export class PublicSearchService {
       const title = maps.get(`${lt}:${r.entityId}`);
       if (!title) return r;
       return { ...r, title };
+    });
+  }
+
+  /** Enriches search hits with description and image URL for richer frontend rendering. */
+  private async enrichSearchHits(
+    rows: IndexHitRow[],
+    tenantId: string,
+    mallId: string | null,
+  ): Promise<IndexHitRow[]> {
+    if (rows.length === 0) return rows;
+
+    const byType = new Map<SearchIndexEntityType, string[]>();
+    for (const r of rows) {
+      const list = byType.get(r.entityType) ?? [];
+      list.push(r.entityId);
+      byType.set(r.entityType, list);
+    }
+
+    // detail map: entityId → { description, imageUrl }
+    const detail = new Map<string, { description: string | null; imageUrl: string | null }>();
+
+    await Promise.all([
+      // Pages — seoDescription as description, no cover image in schema
+      byType.get('PAGE')?.length
+        ? this.prisma.page
+            .findMany({
+              where: { id: { in: byType.get('PAGE') }, tenantId, deletedAt: null },
+              select: { id: true, seoDescription: true },
+            })
+            .then((rows) =>
+              rows.forEach((r) =>
+                detail.set(r.id, { description: r.seoDescription, imageUrl: null }),
+              ),
+            )
+        : Promise.resolve(),
+
+      // Events — shortDescription + cover image
+      byType.get('EVENT')?.length
+        ? this.prisma.event
+            .findMany({
+              where: { id: { in: byType.get('EVENT') }, tenantId, deletedAt: null },
+              select: {
+                id: true,
+                shortDescription: true,
+                coverMedia: { select: { publicUrl: true } },
+              },
+            })
+            .then((rows) =>
+              rows.forEach((r) =>
+                detail.set(r.id, {
+                  description: r.shortDescription,
+                  imageUrl: r.coverMedia?.publicUrl ?? null,
+                }),
+              ),
+            )
+        : Promise.resolve(),
+
+      // Campaigns — shortDescription + cover image
+      byType.get('CAMPAIGN')?.length
+        ? this.prisma.campaign
+            .findMany({
+              where: { id: { in: byType.get('CAMPAIGN') }, tenantId, deletedAt: null },
+              select: {
+                id: true,
+                shortDescription: true,
+                coverMedia: { select: { publicUrl: true } },
+              },
+            })
+            .then((rows) =>
+              rows.forEach((r) =>
+                detail.set(r.id, {
+                  description: r.shortDescription,
+                  imageUrl: r.coverMedia?.publicUrl ?? null,
+                }),
+              ),
+            )
+        : Promise.resolve(),
+
+      // MallStores — localDescription or globalStore description + logo
+      byType.get('MALL_STORE')?.length && mallId
+        ? this.prisma.mallStore
+            .findMany({
+              where: { id: { in: byType.get('MALL_STORE') }, tenantId, mallId, deletedAt: null },
+              select: {
+                id: true,
+                localDescription: true,
+                localLogoMedia: { select: { publicUrl: true } },
+                globalStore: {
+                  select: {
+                    description: true,
+                    logoMedia: { select: { publicUrl: true } },
+                  },
+                },
+              },
+            })
+            .then((rows) =>
+              rows.forEach((r) =>
+                detail.set(r.id, {
+                  description: r.localDescription ?? r.globalStore.description,
+                  imageUrl:
+                    r.localLogoMedia?.publicUrl ?? r.globalStore.logoMedia?.publicUrl ?? null,
+                }),
+              ),
+            )
+        : Promise.resolve(),
+
+      // Movies — description, no poster relation resolved here
+      byType.get('MOVIE')?.length
+        ? this.prisma.movie
+            .findMany({
+              where: { id: { in: byType.get('MOVIE') }, tenantId, deletedAt: null },
+              select: { id: true, description: true },
+            })
+            .then((rows) =>
+              rows.forEach((r) =>
+                detail.set(r.id, { description: r.description, imageUrl: null }),
+              ),
+            )
+        : Promise.resolve(),
+
+      // Cinemas — description + logo
+      byType.get('CINEMA')?.length
+        ? this.prisma.cinema
+            .findMany({
+              where: {
+                id: { in: byType.get('CINEMA') },
+                tenantId,
+                ...(mallId ? { mallId } : {}),
+                deletedAt: null,
+              },
+              select: {
+                id: true,
+                description: true,
+                logoMedia: { select: { publicUrl: true } },
+              },
+            })
+            .then((rows) =>
+              rows.forEach((r) =>
+                detail.set(r.id, {
+                  description: r.description,
+                  imageUrl: r.logoMedia?.publicUrl ?? null,
+                }),
+              ),
+            )
+        : Promise.resolve(),
+    ]);
+
+    return rows.map((r) => {
+      const d = detail.get(r.entityId);
+      if (!d) return r;
+      return { ...r, description: d.description, imageUrl: d.imageUrl };
     });
   }
 }

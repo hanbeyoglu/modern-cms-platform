@@ -1,5 +1,7 @@
 import { PageStatus, PageType } from '@prisma/client';
-import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsDateString, IsEnum, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { PageAttachmentDto } from './page-attachment.dto';
 
 export class UpdatePageDto {
   @IsOptional()
@@ -13,6 +15,14 @@ export class UpdatePageDto {
   @IsOptional()
   @IsEnum(PageType)
   type?: PageType;
+
+  @IsOptional()
+  @IsString()
+  customTypeLabel?: string;
+
+  @IsOptional()
+  @IsString()
+  contentHtml?: string;
 
   @IsOptional()
   @IsEnum(PageStatus)
@@ -37,4 +47,10 @@ export class UpdatePageDto {
   @IsOptional()
   @IsDateString()
   unpublishAt?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PageAttachmentDto)
+  attachments?: PageAttachmentDto[];
 }

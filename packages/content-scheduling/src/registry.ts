@@ -9,4 +9,5 @@ export const SCHEDULER_REGISTRY: Record<
   event: { publishField: 'startAt', unpublishField: 'endAt', statusEnum: 'ContentStatus' },
   campaign: { publishField: 'startAt', unpublishField: 'endAt', statusEnum: 'ContentStatus' },
   page: { publishField: 'publishAt', unpublishField: 'unpublishAt', statusEnum: 'PageStatus' },
+  popup: { publishField: 'startAt', unpublishField: 'endAt', statusEnum: 'PopupStatus' },
 };

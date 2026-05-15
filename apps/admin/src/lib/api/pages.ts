@@ -1,8 +1,35 @@
 import { request } from './client';
 
 export type PageStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED';
-export type PageType = 'STANDARD' | 'LANDING' | 'LEGAL' | 'CONTACT' | 'CUSTOM';
+export type PageType =
+  | 'ABOUT'
+  | 'KVKK'
+  | 'PRIVACY_POLICY'
+  | 'COOKIE_POLICY'
+  | 'TERMS_OF_USE'
+  | 'CONTACT_INFO'
+  | 'FAQ'
+  | 'TRANSPORTATION'
+  | 'CERTIFICATES'
+  | 'DOCUMENTS'
+  | 'AWARDS'
+  | 'CUSTOM';
 export type PageBlockStatus = 'ACTIVE' | 'PASSIVE';
+
+export type CmsPageAttachment = {
+  id?: string;
+  title: string | null;
+  description: string | null;
+  mediaId: string;
+  sortOrder: number;
+  downloadable: boolean;
+  media?: {
+    id: string;
+    originalName?: string;
+    mimeType: string;
+    publicUrl: string;
+  } | null;
+};
 
 export type CmsPageBlock = {
   id: string;
@@ -22,6 +49,8 @@ export type CmsPage = {
   title: string;
   slug: string;
   type: PageType;
+  customTypeLabel: string | null;
+  contentHtml: string | null;
   status: PageStatus;
   seoTitle: string | null;
   seoDescription: string | null;
@@ -33,6 +62,7 @@ export type CmsPage = {
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  attachments: CmsPageAttachment[];
   blocks: CmsPageBlock[];
 };
 
@@ -47,12 +77,22 @@ export type CreatePagePayload = {
   title: string;
   slug?: string;
   type?: PageType;
+  customTypeLabel?: string;
+  contentHtml?: string;
   status?: PageStatus;
   seoTitle?: string;
   seoDescription?: string;
   seoKeywords?: string;
   publishAt?: string;
   unpublishAt?: string;
+  attachments?: Array<{
+    id?: string;
+    title?: string;
+    description?: string;
+    mediaId: string;
+    sortOrder?: number;
+    downloadable?: boolean;
+  }>;
 };
 
 export type CreatePageBlockPayload = {

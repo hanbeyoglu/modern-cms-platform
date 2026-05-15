@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 
-/** Slider / Event / Campaign use `startAt` / `endAt` as publish & unpublish instants. Page uses `publishAt` / `unpublishAt`. */
-export type ScheduledEntityKind = 'slider' | 'event' | 'campaign' | 'page';
+/** Slider / Event / Campaign / Popup use `startAt` / `endAt`. Page uses `publishAt` / `unpublishAt`. */
+export type ScheduledEntityKind = 'slider' | 'event' | 'campaign' | 'page' | 'popup';
 
 export type ScheduleTransition = {
   kind: ScheduledEntityKind;
@@ -297,6 +297,76 @@ export async function runContentSchedulingTick(
     if (r.count === 1) {
       transitions.push({
         kind: 'page',
+        id: row.id,
+        tenantId: row.tenantId,
+        mallId: row.mallId,
+        action: 'archive',
+        previousStatus: PUBLISHED,
+        nextStatus: ARCHIVED,
+      });
+    }
+  }
+
+  // ── Popup: SCHEDULED → PUBLISHED ─────────────────────────────────────────
+
+  const popupPub = await prisma.popup.findMany({
+    where: {
+      deletedAt: null,
+      status: SCHEDULED,
+      startAt: { not: null, lte: now },
+    },
+    select: { id: true, tenantId: true, mallId: true },
+    take: batchSize,
+    orderBy: { startAt: 'asc' },
+  });
+  for (const row of popupPub) {
+    const r = await prisma.popup.updateMany({
+      where: {
+        id: row.id,
+        status: SCHEDULED,
+        deletedAt: null,
+        startAt: { not: null, lte: now },
+      },
+      data: { status: PUBLISHED, publishedAt: now },
+    });
+    if (r.count === 1) {
+      transitions.push({
+        kind: 'popup',
+        id: row.id,
+        tenantId: row.tenantId,
+        mallId: row.mallId,
+        action: 'publish',
+        previousStatus: SCHEDULED,
+        nextStatus: PUBLISHED,
+      });
+    }
+  }
+
+  // ── Popup: PUBLISHED → ARCHIVED ───────────────────────────────────────────
+
+  const popupArch = await prisma.popup.findMany({
+    where: {
+      deletedAt: null,
+      status: PUBLISHED,
+      endAt: { not: null, lte: now },
+    },
+    select: { id: true, tenantId: true, mallId: true },
+    take: batchSize,
+    orderBy: { endAt: 'asc' },
+  });
+  for (const row of popupArch) {
+    const r = await prisma.popup.updateMany({
+      where: {
+        id: row.id,
+        status: PUBLISHED,
+        deletedAt: null,
+        endAt: { not: null, lte: now },
+      },
+      data: { status: ARCHIVED },
+    });
+    if (r.count === 1) {
+      transitions.push({
+        kind: 'popup',
         id: row.id,
         tenantId: row.tenantId,
         mallId: row.mallId,

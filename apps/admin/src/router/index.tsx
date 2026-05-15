@@ -36,6 +36,8 @@ import { LocationsPage } from '../pages/LocationsPage';
 import { LocationDetailPage } from '../pages/LocationDetailPage';
 import { AuditLogsPage } from '../pages/AuditLogsPage';
 import { AuditLogDetailPage } from '../pages/AuditLogDetailPage';
+import { PopupsPage } from '../pages/PopupsPage';
+import { ServicesPage } from '../pages/ServicesPage';
 
 export const router = createBrowserRouter([
   {
@@ -63,6 +65,8 @@ export const router = createBrowserRouter([
           { path: '/sliders', element: <SlidersPage /> },
           { path: '/events', element: <EventsPage /> },
           { path: '/campaigns', element: <CampaignsPage /> },
+          { path: '/popups', element: <PopupsPage /> },
+          { path: '/services', element: <ServicesPage /> },
           { path: '/pages', element: <PagesPage /> },
           { path: '/pages/:id', element: <PageDetailPage /> },
           { path: '/locales', element: <Navigate to="/settings/localization" replace /> },

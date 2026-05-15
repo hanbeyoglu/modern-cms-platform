@@ -103,6 +103,8 @@ export class SearchIndexerService {
     const document = this.normalizer.buildDocument([
       page.title,
       page.slug,
+      page.customTypeLabel,
+      page.contentHtml,
       page.seoTitle,
       page.seoDescription,
       page.seoKeywords,
@@ -325,6 +327,58 @@ export class SearchIndexerService {
     });
   }
 
+  async syncPopup(popupId: string): Promise<void> {
+    const row = await this.prisma.popup.findFirst({
+      where: { id: popupId },
+      select: { id: true, tenantId: true, mallId: true, title: true, description: true, status: true, publishedAt: true, deletedAt: true },
+    });
+    if (!row || row.deletedAt) {
+      await this.remove('POPUP', popupId);
+      return;
+    }
+    const loc = await this.translationBlob(row.tenantId, 'POPUP', row.id);
+    const document = this.normalizer.buildDocument([row.title, row.description, loc]);
+    await this.upsertRow('POPUP', row.id, {
+      tenantId: row.tenantId,
+      mallId: row.mallId,
+      title: row.title,
+      status: row.status,
+      slug: null,
+      document,
+      isFeatured: false,
+      publishedAt: row.publishedAt,
+    });
+  }
+
+  async syncService(serviceId: string): Promise<void> {
+    const row = await this.prisma.service.findFirst({
+      where: { id: serviceId },
+      select: { id: true, tenantId: true, mallId: true, name: true, description: true, category: true, searchTags: true, status: true, deletedAt: true },
+    });
+    if (!row || row.deletedAt) {
+      await this.remove('SERVICE', serviceId);
+      return;
+    }
+    const loc = await this.translationBlob(row.tenantId, 'SERVICE', row.id);
+    const document = this.normalizer.buildDocument([
+      row.name,
+      row.description,
+      row.category,
+      row.searchTags.join(' '),
+      loc,
+    ]);
+    await this.upsertRow('SERVICE', row.id, {
+      tenantId: row.tenantId,
+      mallId: row.mallId,
+      title: row.name,
+      status: row.status,
+      slug: null,
+      document,
+      isFeatured: false,
+      publishedAt: null,
+    });
+  }
+
   /** Re-sync search row when translations change (entity type from LocalizedEntityType). */
   async syncFromLocalizedEntity(
     _tenantId: string,
@@ -344,6 +398,8 @@ export class SearchIndexerService {
       MOVIE: () => this.syncMovie(entityId),
       CINEMA: () => this.syncCinema(entityId),
       LOCATION: async () => { /* Location search sync reserved for future sprint */ },
+      POPUP: () => this.syncPopup(entityId),
+      SERVICE: () => this.syncService(entityId),
     };
     const fn = map[entityType];
     if (!fn) return;

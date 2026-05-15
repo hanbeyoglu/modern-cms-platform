@@ -7,6 +7,10 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { MultilingualContentFields, SLIDER_I18N_FIELDS } from '../components/MultilingualContentFields';
+import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
+import { ContentChannelFields } from '../components/ContentChannelFields';
+import { validateRangeSchedule } from '../lib/publishing-workflow';
+import { DEFAULT_CONTENT_CHANNELS } from '../lib/content-channels';
 import { Button } from '../components/ui/Button';
 import {
   apiLocalesList,
@@ -23,6 +27,7 @@ import {
   type CmsLocale,
   type CreateSliderPayload,
   type MediaAsset,
+  type ContentChannel,
   type Slider,
   type SliderLinkType,
   type SliderStatus,
@@ -105,6 +110,7 @@ type FormState = {
   sortOrder: string;
   status: SliderStatus;
   targetDevice: SliderTargetDevice;
+  channels: ContentChannel[];
 };
 
 const EMPTY_FORM: FormState = {
@@ -122,6 +128,7 @@ const EMPTY_FORM: FormState = {
   sortOrder: '0',
   status: 'DRAFT',
   targetDevice: 'ALL',
+  channels: [...DEFAULT_CONTENT_CHANNELS],
 };
 
 function sliderToForm(s: Slider): FormState {
@@ -140,6 +147,7 @@ function sliderToForm(s: Slider): FormState {
     sortOrder: String(s.sortOrder),
     status: s.status,
     targetDevice: s.targetDevice,
+    channels: s.channels?.length ? [...s.channels] : [...DEFAULT_CONTENT_CHANNELS],
   };
 }
 
@@ -159,6 +167,7 @@ function formToPayload(f: FormState): CreateSliderPayload {
     sortOrder: parseInt(f.sortOrder, 10) || 0,
     status: f.status,
     targetDevice: f.targetDevice,
+    channels: f.channels.length ? f.channels : undefined,
   };
 }
 
@@ -389,16 +398,38 @@ function SliderForm({
           </div>
         )}
 
-        {/* Start At */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Başlangıç Tarihi</label>
-          <input type="datetime-local" style={inputStyle} value={form.startAt} onChange={set('startAt')} />
+        <div style={{ gridColumn: '1 / -1', marginBottom: 12 }}>
+          <ContentChannelFields
+            channels={form.channels}
+            onChange={(channels) => {
+              onChange({ ...form, channels });
+              onDirty();
+            }}
+            labelStyle={labelStyle}
+            disabled={saving}
+          />
         </div>
-
-        {/* End At */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Bitiş Tarihi</label>
-          <input type="datetime-local" style={inputStyle} value={form.endAt} onChange={set('endAt')} />
+        <div style={{ gridColumn: '1 / -1', marginBottom: 12 }}>
+          <PublishingWorkflowFields
+            mode="range"
+            status={form.status}
+            startAt={form.startAt}
+            endAt={form.endAt}
+            onStatusChange={(status) => {
+              onChange({ ...form, status });
+              onDirty();
+            }}
+            onStartAtChange={(startAt) => {
+              onChange({ ...form, startAt });
+              onDirty();
+            }}
+            onEndAtChange={(endAt) => {
+              onChange({ ...form, endAt });
+              onDirty();
+            }}
+            labelStyle={labelStyle}
+            inputStyle={inputStyle}
+          />
         </div>
 
         {/* Target Device */}
@@ -417,16 +448,6 @@ function SliderForm({
           <input type="number" min={0} style={inputStyle} value={form.sortOrder} onChange={set('sortOrder')} />
         </div>
 
-        {/* Status */}
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Durum</label>
-          <select style={inputStyle} value={form.status} onChange={set('status')}>
-            <option value="DRAFT">Taslak</option>
-            <option value="SCHEDULED">Zamanlanmış</option>
-            <option value="PUBLISHED">Yayında</option>
-            <option value="ARCHIVED">Arşivlendi</option>
-          </select>
-        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
@@ -660,6 +681,11 @@ export function SlidersPage() {
       setFormError('Başlık zorunludur.');
       return;
     }
+    const scheduleError = validateRangeSchedule(form.status, form.startAt);
+    if (scheduleError) {
+      setFormError(scheduleError);
+      return;
+    }
     setSaving(true);
     setFormError(null);
     try {
@@ -773,7 +799,7 @@ export function SlidersPage() {
             borderRadius: 6,
           }}
         >
-          <option value="">Tüm Durumlar</option>
+          <option value="">Aktif (arşiv hariç)</option>
           <option value="DRAFT">Taslak</option>
           <option value="SCHEDULED">Zamanlanmış</option>
           <option value="PUBLISHED">Yayında</option>

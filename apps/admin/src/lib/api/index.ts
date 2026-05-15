@@ -54,6 +54,7 @@ export type {
   SliderStatus,
   SliderTargetDevice,
   SliderLinkType,
+  SliderChannel,
   SliderMediaPreview,
   Slider,
   SliderListResponse,
@@ -70,6 +71,14 @@ export {
   apiEventPublish,
   apiEventArchive,
 } from './events';
+export type { ContentChannel } from '../content-channels';
+export {
+  CONTENT_CHANNELS,
+  CONTENT_CHANNEL_LABELS,
+  DEFAULT_CONTENT_CHANNELS,
+  formatChannels,
+} from '../content-channels';
+
 export type {
   ContentStatus,
   EventMediaPreview,
@@ -358,3 +367,33 @@ export type {
   AuditLogListResponse,
   AuditLogFilters,
 } from './audit-logs';
+
+export {
+  apiPopupsList,
+  apiPopupGet,
+  apiPopupCreate,
+  apiPopupUpdate,
+  apiPopupDelete,
+  apiPopupPublish,
+  apiPopupArchive,
+} from './popups';
+export type {
+  PopupStatus,
+  CmsPopup,
+  PopupListResponse,
+  CreatePopupPayload,
+} from './popups';
+
+export {
+  apiServicesList,
+  apiServiceGet,
+  apiServiceCreate,
+  apiServiceUpdate,
+  apiServiceDelete,
+} from './services';
+export type {
+  ServiceStatus,
+  CmsService,
+  ServiceListResponse,
+  CreateServicePayload,
+} from './services';

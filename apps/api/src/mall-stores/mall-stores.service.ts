@@ -190,6 +190,8 @@ export class MallStoresService {
         locationJson:
           dto.locationJson !== undefined ? (dto.locationJson as Prisma.InputJsonValue) : undefined,
         isFeatured: dto.isFeatured ?? false,
+        isSoon: dto.isSoon ?? false,
+        searchTags: dto.searchTags ?? [],
         sortOrder: dto.sortOrder ?? 0,
         status: dto.status ?? 'ACTIVE',
         createdBy: user.id,
@@ -236,6 +238,8 @@ export class MallStoresService {
       ...(dto.phone !== undefined && { phone: dto.phone }),
       ...(dto.email !== undefined && { email: this.normalizeEmail(dto.email) }),
       ...(dto.isFeatured !== undefined && { isFeatured: dto.isFeatured }),
+      ...(dto.isSoon !== undefined && { isSoon: dto.isSoon }),
+      ...(dto.searchTags !== undefined && { searchTags: dto.searchTags }),
       ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
       ...(dto.status !== undefined && { status: dto.status }),
       ...(dto.localLogoMediaId !== undefined && { localLogoMediaId: dto.localLogoMediaId }),
@@ -408,6 +412,8 @@ export class MallStoresService {
       workingHoursJson: r.workingHoursJson,
       locationJson: r.locationJson,
       isFeatured: r.isFeatured,
+      isSoon: r.isSoon,
+      searchTags: r.searchTags,
       sortOrder: r.sortOrder,
       globalStore: {
         id: r.globalStore.id,

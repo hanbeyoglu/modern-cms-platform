@@ -1,6 +1,8 @@
 import { request } from './client';
 import type { MediaAsset } from './media';
+import type { ContentChannel } from '../content-channels';
 
+export type { ContentChannel } from '../content-channels';
 export type ContentStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED';
 
 export type EventMediaPreview = Pick<MediaAsset, 'id' | 'publicUrl' | 'originalName' | 'mimeType'>;
@@ -22,6 +24,7 @@ export type CmsEvent = {
   linkUrl: string | null;
   status: ContentStatus;
   sortOrder: number;
+  channels: ContentChannel[];
   dynamicFieldsJson: Record<string, unknown> | null;
   createdBy: string;
   updatedBy: string | null;
@@ -47,6 +50,7 @@ export type CreateEventPayload = {
   linkUrl?: string;
   sortOrder?: number;
   status?: ContentStatus;
+  channels?: ContentChannel[];
   dynamicFieldsJson?: Record<string, unknown>;
 };
 

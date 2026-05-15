@@ -4,11 +4,11 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import type { Prisma, Slider, SliderStatus, User } from '@prisma/client';
+import type { Channel, Prisma, Slider, SliderStatus, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import { SearchIndexerService } from '../search/search-indexer.service';
-import { assertStartAtWhenScheduled } from '../common/utils/content-validation';
+import { resolveRangeSchedule } from '../common/utils/publish-workflow';
 import type { CreateSliderDto } from './dto/create-slider.dto';
 import type { UpdateSliderDto } from './dto/update-slider.dto';
 import type { ListSlidersDto } from './dto/list-sliders.dto';
@@ -54,8 +54,9 @@ export class SlidersService {
       tenantId,
       deletedAt: null,
       ...(mallId !== undefined ? { mallId } : {}),
-      ...(query.status ? { status: query.status } : {}),
+      ...(query.status ? { status: query.status } : { status: { not: 'ARCHIVED' } }),
       ...(query.targetDevice ? { targetDevice: query.targetDevice } : {}),
+      ...(query.channel ? { channels: { has: query.channel } } : {}),
       ...(query.search
         ? { title: { contains: query.search, mode: 'insensitive' as const } }
         : {}),
@@ -90,10 +91,12 @@ export class SlidersService {
     tenantId: string,
     mallId: string | undefined,
   ): Promise<SliderResponse> {
-    this.validateDates(dto.startAt, dto.endAt);
-
     const status = dto.status ?? 'DRAFT';
-    assertStartAtWhenScheduled(status, dto.startAt);
+    const schedule = resolveRangeSchedule({
+      status,
+      startAt: dto.startAt,
+      endAt: dto.endAt,
+    });
     if (status === 'PUBLISHED') {
       this.assertHasMedia(dto.desktopMediaId, dto.mobileMediaId, dto.videoMediaId);
     }
@@ -114,11 +117,12 @@ export class SlidersService {
         linkType: dto.linkType ?? 'NONE',
         linkValue: dto.linkValue ?? null,
         buttonText: dto.buttonText ?? null,
-        startAt: dto.startAt ? new Date(dto.startAt) : null,
-        endAt: dto.endAt ? new Date(dto.endAt) : null,
+        startAt: schedule.startAt,
+        endAt: schedule.endAt,
         sortOrder: dto.sortOrder ?? 0,
         status,
         targetDevice: dto.targetDevice ?? 'ALL',
+        channels: (dto.channels as Channel[]) ?? ['WEB', 'MOBILE'],
         createdBy: user.id,
       },
       include: SLIDER_INCLUDE,
@@ -146,11 +150,13 @@ export class SlidersService {
   ): Promise<SliderResponse> {
     const existing = await this.assertExists(id, tenantId);
 
-    this.validateDates(dto.startAt, dto.endAt);
-
     const nextStatus = dto.status ?? existing.status;
-    const nextStartRaw = dto.startAt !== undefined ? dto.startAt : existing.startAt?.toISOString();
-    assertStartAtWhenScheduled(nextStatus, nextStartRaw);
+    const schedule = resolveRangeSchedule({
+      status: nextStatus,
+      startAt:
+        dto.startAt !== undefined ? (dto.startAt ? dto.startAt : null) : existing.startAt,
+      endAt: dto.endAt !== undefined ? (dto.endAt ? dto.endAt : null) : existing.endAt,
+    });
     const nextDesktopMediaId = dto.desktopMediaId !== undefined ? dto.desktopMediaId : existing.desktopMediaId;
     const nextMobileMediaId = dto.mobileMediaId !== undefined ? dto.mobileMediaId : existing.mobileMediaId;
     const nextVideoMediaId = dto.videoMediaId !== undefined ? dto.videoMediaId : existing.videoMediaId;
@@ -176,11 +182,12 @@ export class SlidersService {
         ...(dto.linkType !== undefined && { linkType: dto.linkType }),
         ...(dto.linkValue !== undefined && { linkValue: dto.linkValue || null }),
         ...(dto.buttonText !== undefined && { buttonText: dto.buttonText || null }),
-        ...(dto.startAt !== undefined && { startAt: dto.startAt ? new Date(dto.startAt) : null }),
-        ...(dto.endAt !== undefined && { endAt: dto.endAt ? new Date(dto.endAt) : null }),
+        startAt: schedule.startAt,
+        endAt: schedule.endAt,
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
         ...(dto.status !== undefined && { status: dto.status }),
         ...(dto.targetDevice !== undefined && { targetDevice: dto.targetDevice }),
+        ...(dto.channels !== undefined && { channels: dto.channels as Channel[] }),
         updatedBy: user.id,
       },
       include: SLIDER_INCLUDE,
@@ -231,9 +238,14 @@ export class SlidersService {
       existing.videoMediaId ?? undefined,
     );
 
+    const now = new Date();
     const slider = await this.prisma.slider.update({
       where: { id },
-      data: { status: 'PUBLISHED', updatedBy: user.id },
+      data: {
+        status: 'PUBLISHED',
+        startAt: existing.startAt ?? now,
+        updatedBy: user.id,
+      },
       include: SLIDER_INCLUDE,
     });
 
@@ -255,9 +267,14 @@ export class SlidersService {
   async archive(id: string, user: User, tenantId: string): Promise<SliderResponse> {
     const existing = await this.assertExists(id, tenantId);
 
+    const now = new Date();
     const slider = await this.prisma.slider.update({
       where: { id },
-      data: { status: 'ARCHIVED', updatedBy: user.id },
+      data: {
+        status: 'ARCHIVED',
+        endAt: existing.endAt ?? now,
+        updatedBy: user.id,
+      },
       include: SLIDER_INCLUDE,
     });
 
@@ -330,6 +347,7 @@ export class SlidersService {
     tenantId: string;
     mallId?: string;
     targetDevice?: string;
+    channel?: string;
   }): Promise<SliderResponse[]> {
     const now = new Date();
 
@@ -340,6 +358,7 @@ export class SlidersService {
         status: 'PUBLISHED' as SliderStatus,
         ...(opts.mallId !== undefined ? { mallId: opts.mallId } : {}),
         ...(opts.targetDevice ? { targetDevice: opts.targetDevice as Slider['targetDevice'] } : {}),
+        ...(opts.channel ? { channels: { has: opts.channel as Channel } } : {}),
         AND: [
           { OR: [{ startAt: null }, { startAt: { lte: now } }] },
           { OR: [{ endAt: null }, { endAt: { gte: now } }] },
@@ -383,9 +402,4 @@ export class SlidersService {
     }
   }
 
-  private validateDates(startAt?: string, endAt?: string): void {
-    if (startAt && endAt && new Date(startAt) >= new Date(endAt)) {
-      throw new BadRequestException('startAt must be before endAt');
-    }
-  }
 }

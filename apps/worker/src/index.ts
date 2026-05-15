@@ -91,6 +91,7 @@ async function writeSchedulingNotification(
     event: 'Etkinlik',
     campaign: 'Kampanya',
     page: 'Sayfa',
+    popup: 'Popup',
   };
   const label = kindLabel[t.kind];
   const isPublish = t.action === 'publish';

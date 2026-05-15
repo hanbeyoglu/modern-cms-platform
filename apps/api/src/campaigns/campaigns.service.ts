@@ -10,7 +10,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import { SearchIndexerService } from '../search/search-indexer.service';
 import { slugify } from '../common/utils/slugify';
-import { assertOptionalHttpUrl, assertStartAtWhenScheduled, validateStartBeforeEnd } from '../common/utils/content-validation';
+import { assertOptionalHttpUrl, validateStartBeforeEnd } from '../common/utils/content-validation';
+import { resolveRangeSchedule } from '../common/utils/publish-workflow';
 import { uniqueCampaignSlug } from '../common/utils/unique-content-slug';
 import type { CreateCampaignDto } from './dto/create-campaign.dto';
 import type { UpdateCampaignDto } from './dto/update-campaign.dto';
@@ -92,11 +93,14 @@ export class CampaignsService {
     tenantId: string,
     mallId: string | undefined,
   ): Promise<CampaignResponse> {
-    validateStartBeforeEnd(dto.startAt, dto.endAt);
     assertOptionalHttpUrl(dto.linkUrl);
 
     const status = dto.status ?? 'DRAFT';
-    assertStartAtWhenScheduled(status, dto.startAt);
+    const schedule = resolveRangeSchedule({
+      status,
+      startAt: dto.startAt,
+      endAt: dto.endAt,
+    });
     const effectiveMallId = mallId ?? null;
 
     if (dto.storeId) {
@@ -113,8 +117,8 @@ export class CampaignsService {
         dto.coverMediaId,
         tenantId,
         effectiveMallId,
-        dto.startAt,
-        dto.endAt,
+        schedule.startAt?.toISOString(),
+        schedule.endAt?.toISOString(),
         dto.storeId,
       );
     }
@@ -133,14 +137,15 @@ export class CampaignsService {
         shortDescription: dto.shortDescription ?? null,
         description: dto.description ?? null,
         coverMediaId: dto.coverMediaId ?? null,
-        startAt: dto.startAt ? new Date(dto.startAt) : null,
-        endAt: dto.endAt ? new Date(dto.endAt) : null,
+        startAt: schedule.startAt,
+        endAt: schedule.endAt,
         terms: dto.terms ?? null,
         couponCode: dto.couponCode ?? null,
         buttonText: dto.buttonText ?? null,
         linkUrl: dto.linkUrl ?? null,
         sortOrder: dto.sortOrder ?? 0,
         status,
+        channels: dto.channels ?? ['WEB', 'MOBILE'],
         dynamicFieldsJson: dynamicFieldsJson ?? undefined,
         createdBy: user.id,
         publishedAt: status === 'PUBLISHED' ? new Date() : null,
@@ -172,17 +177,20 @@ export class CampaignsService {
     const existing = await this.assertExists(id, tenantId);
     this.assertMallVisibility(existing, mallId);
 
-    const nextStart = dto.startAt !== undefined ? dto.startAt : existing.startAt?.toISOString();
-    const nextEnd = dto.endAt !== undefined ? dto.endAt : existing.endAt?.toISOString();
-    validateStartBeforeEnd(nextStart ?? undefined, nextEnd ?? undefined);
-
     const nextLink = dto.linkUrl !== undefined ? dto.linkUrl : existing.linkUrl;
     assertOptionalHttpUrl(nextLink);
 
     const nextTitle = dto.title ?? existing.title;
     const nextCover = dto.coverMediaId !== undefined ? dto.coverMediaId : existing.coverMediaId;
     const nextStatus = dto.status ?? existing.status;
-    assertStartAtWhenScheduled(nextStatus, nextStart);
+    const schedule = resolveRangeSchedule({
+      status: nextStatus,
+      startAt:
+        dto.startAt !== undefined ? (dto.startAt ? dto.startAt : null) : existing.startAt,
+      endAt: dto.endAt !== undefined ? (dto.endAt ? dto.endAt : null) : existing.endAt,
+    });
+    const nextStart = schedule.startAt?.toISOString();
+    const nextEnd = schedule.endAt?.toISOString();
     const nextMallId = dto.mallId !== undefined ? dto.mallId : existing.mallId;
     const nextStoreId = dto.storeId !== undefined ? dto.storeId : existing.storeId;
 
@@ -235,8 +243,8 @@ export class CampaignsService {
         ...(dto.shortDescription !== undefined && { shortDescription: dto.shortDescription || null }),
         ...(dto.description !== undefined && { description: dto.description || null }),
         ...(dto.coverMediaId !== undefined && { coverMediaId: dto.coverMediaId || null }),
-        ...(dto.startAt !== undefined && { startAt: dto.startAt ? new Date(dto.startAt) : null }),
-        ...(dto.endAt !== undefined && { endAt: dto.endAt ? new Date(dto.endAt) : null }),
+        startAt: schedule.startAt,
+        endAt: schedule.endAt,
         ...(dto.terms !== undefined && { terms: dto.terms || null }),
         ...(dto.couponCode !== undefined && { couponCode: dto.couponCode || null }),
         ...(dto.buttonText !== undefined && { buttonText: dto.buttonText || null }),
@@ -244,6 +252,7 @@ export class CampaignsService {
         ...(dto.storeId !== undefined && { storeId: dto.storeId || null }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
         ...(dto.status !== undefined && { status: dto.status }),
+        ...(dto.channels !== undefined && { channels: dto.channels }),
         ...(dto.dynamicFieldsJson !== undefined
           ? {
               dynamicFieldsJson:
@@ -310,9 +319,15 @@ export class CampaignsService {
       existing.storeId ?? undefined,
     );
 
+    const now = new Date();
     const campaign = await this.prisma.campaign.update({
       where: { id },
-      data: { status: 'PUBLISHED', publishedAt: new Date(), updatedBy: user.id },
+      data: {
+        status: 'PUBLISHED',
+        publishedAt: now,
+        startAt: existing.startAt ?? now,
+        updatedBy: user.id,
+      },
       include: CAMPAIGN_INCLUDE,
     });
 
@@ -335,9 +350,14 @@ export class CampaignsService {
     const existing = await this.assertExists(id, tenantId);
     this.assertMallVisibility(existing, mallId);
 
+    const now = new Date();
     const campaign = await this.prisma.campaign.update({
       where: { id },
-      data: { status: 'ARCHIVED', updatedBy: user.id },
+      data: {
+        status: 'ARCHIVED',
+        endAt: existing.endAt ?? now,
+        updatedBy: user.id,
+      },
       include: CAMPAIGN_INCLUDE,
     });
 
@@ -361,6 +381,7 @@ export class CampaignsService {
     mallId?: string;
     storeId?: string;
     search?: string;
+    channel?: string;
   }): Promise<CampaignResponse[]> {
     const now = new Date();
     const where: Prisma.CampaignWhereInput = {
@@ -380,6 +401,8 @@ export class CampaignsService {
       ...(opts.search
         ? { title: { contains: opts.search, mode: 'insensitive' as const } }
         : {}),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(opts.channel ? { channels: { has: opts.channel as any } } : {}),
     };
 
     return this.prisma.campaign.findMany({
@@ -405,7 +428,7 @@ export class CampaignsService {
       tenantId,
       deletedAt: null,
       ...mallScope,
-      ...(query.status ? { status: query.status } : {}),
+      ...(query.status ? { status: query.status } : { status: { not: 'ARCHIVED' } }),
       ...(query.storeId ? { storeId: query.storeId } : {}),
       ...(query.search ? { title: { contains: query.search, mode: 'insensitive' as const } } : {}),
       ...(query.startFrom || query.startTo

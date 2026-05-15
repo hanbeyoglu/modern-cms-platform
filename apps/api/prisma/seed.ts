@@ -25,6 +25,8 @@ const CAPABILITIES: Array<{
   { code: 'events', name: 'Etkinlikler', description: 'Etkinlik yönetimi', category: 'CONTENT' },
   { code: 'campaigns', name: 'Kampanyalar', description: 'Kampanya yönetimi', category: 'CONTENT' },
   { code: 'cinema', name: 'Sinema', description: 'Sinema ve film yönetimi', category: 'CONTENT' },
+  { code: 'popups', name: 'Popup Yönetimi', description: 'Popup ve duyuru yönetimi', category: 'CONTENT' },
+  { code: 'location_services', name: 'Lokasyon Hizmetleri', description: 'WC, ATM, vale gibi lokasyon hizmetleri', category: 'CONTENT' },
   // OPERATIONS
   { code: 'scheduling', name: 'Zamanlama', description: 'İçerik zamanlama ve otomasyonu', category: 'OPERATIONS' },
   { code: 'notifications', name: 'Bildirimler', description: 'In-app bildirim sistemi', category: 'OPERATIONS' },
@@ -52,6 +54,7 @@ const CAPABILITIES: Array<{
 const DEMO_TENANT_CAPABILITIES = [
   'cms_core', 'media', 'public_api',
   'sliders', 'pages', 'stores', 'events', 'campaigns', 'cinema',
+  'popups', 'location_services',
   'scheduling', 'notifications', 'analytics', 'localization', 'search',
 ];
 
@@ -158,6 +161,15 @@ const PERMISSIONS = [
   'audit:read',
   'audit:security',
   'audit:export',
+  'popup:read',
+  'popup:create',
+  'popup:update',
+  'popup:delete',
+  'popup:publish',
+  'service:read',
+  'service:create',
+  'service:update',
+  'service:delete',
 ] as const;
 
 async function main(): Promise<void> {
@@ -269,6 +281,15 @@ async function main(): Promise<void> {
         'notification:update',
         'settings:read',
         'audit:read',
+        'popup:read',
+        'popup:create',
+        'popup:update',
+        'popup:delete',
+        'popup:publish',
+        'service:read',
+        'service:create',
+        'service:update',
+        'service:delete',
       ],
     },
     {
@@ -321,6 +342,12 @@ async function main(): Promise<void> {
         'translation:update',
         'notification:read',
         'notification:update',
+        'popup:read',
+        'popup:create',
+        'popup:update',
+        'service:read',
+        'service:create',
+        'service:update',
       ],
     },
     {

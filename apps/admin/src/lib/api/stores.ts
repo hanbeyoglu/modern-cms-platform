@@ -75,6 +75,8 @@ export type MallStore = {
   workingHoursJson: Record<string, unknown> | null;
   locationJson: Record<string, unknown> | null;
   isFeatured: boolean;
+  isSoon: boolean;
+  searchTags: string[];
   sortOrder: number;
   status: StoreStatus;
   createdBy: string;
@@ -268,6 +270,8 @@ export async function apiMallStoreAssign(
     workingHoursJson?: Record<string, unknown>;
     locationJson?: Record<string, unknown>;
     isFeatured?: boolean;
+    isSoon?: boolean;
+    searchTags?: string[];
     sortOrder?: number;
     status?: StoreStatus;
   },
@@ -297,6 +301,8 @@ export async function apiMallStoreUpdate(
     workingHoursJson: Record<string, unknown> | null;
     locationJson: Record<string, unknown> | null;
     isFeatured: boolean;
+    isSoon?: boolean;
+    searchTags?: string[];
     sortOrder: number;
     status: StoreStatus;
   }>,

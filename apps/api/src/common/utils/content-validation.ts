@@ -24,7 +24,7 @@ export function assertOptionalHttpUrl(linkUrl?: string | null): void {
   }
 }
 
-/** Slider / Event / Campaign use `startAt` as the worker publish trigger when status is SCHEDULED. */
+/** @deprecated Use assertScheduledAtInFuture from publish-workflow */
 export function assertStartAtWhenScheduled(
   status: string,
   startAt: string | Date | null | undefined,
@@ -35,7 +35,7 @@ export function assertStartAtWhenScheduled(
   }
 }
 
-/** Page model uses `publishAt` / `unpublishAt` instead of start/end. */
+/** @deprecated Use assertScheduledAtInFuture from publish-workflow */
 export function assertPublishAtWhenScheduled(
   status: string,
   publishAt: string | Date | null | undefined,

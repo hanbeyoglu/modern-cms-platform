@@ -14,7 +14,25 @@ export interface IndexHitRow {
   score: number;
   mallId: string | null;
   tenantId: string | null;
+  /** Enriched description (populated by PublicSearchService.enrichSearchHits) */
+  description?: string | null;
+  /** Enriched image URL (populated by PublicSearchService.enrichSearchHits) */
+  imageUrl?: string | null;
 }
+
+const ENTITY_TYPE_LABEL: Partial<Record<SearchIndexEntityType, string>> = {
+  PAGE: 'page',
+  EVENT: 'event',
+  CAMPAIGN: 'campaign',
+  MALL_STORE: 'store',
+  GLOBAL_STORE: 'store',
+  MOVIE: 'movie',
+  CINEMA: 'cinema',
+  SLIDER: 'slider',
+  LOCATION: 'location',
+  POPUP: 'popup',
+  SERVICE: 'service',
+};
 
 @Injectable()
 export class SearchResultMapperService {
@@ -34,14 +52,16 @@ export class SearchResultMapperService {
     };
   }
 
-  toPublicHit(row: IndexHitRow): PublicSearchHitDto {
+  toPublicHit(row: IndexHitRow, localeCode: string | null = null): PublicSearchHitDto {
     return {
+      type: ENTITY_TYPE_LABEL[row.entityType] ?? row.entityType.toLowerCase(),
       id: row.entityId,
-      title: row.title,
-      entityType: row.entityType,
-      score: Math.round(row.score * 1000) / 1000,
-      path: this.publicPath(row),
       slug: row.slug,
+      title: row.title,
+      description: row.description ?? null,
+      image: row.imageUrl ?? null,
+      url: this.publicUrl(row),
+      locale: localeCode,
     };
   }
 
@@ -56,12 +76,14 @@ export class SearchResultMapperService {
       CINEMA: `/cinemas?focus=${encodeURIComponent(id)}`,
       SLIDER: `/sliders?focus=${encodeURIComponent(id)}`,
       LOCATION: `/locations/${id}`,
+      POPUP: `/popups?focus=${encodeURIComponent(id)}`,
+      SERVICE: `/services?focus=${encodeURIComponent(id)}`,
     };
     return map[entityType];
   }
 
-  /** Relative paths aligned with existing `/public/*` HTTP surface. */
-  publicPath(row: IndexHitRow): string {
+  /** Relative API path aligned with the /public/* HTTP surface. */
+  publicUrl(row: IndexHitRow): string {
     const slug = row.slug ?? '';
     switch (row.entityType) {
       case 'PAGE':
@@ -76,8 +98,10 @@ export class SearchResultMapperService {
         return `/public/movie-sessions?movieId=${encodeURIComponent(row.entityId)}`;
       case 'CINEMA':
         return `/public/cinema`;
-      case 'SLIDER':
-        return `/public/sliders`;
+      case 'POPUP':
+        return `/public/popups/${encodeURIComponent(row.entityId)}`;
+      case 'SERVICE':
+        return `/public/services/${encodeURIComponent(row.entityId)}`;
       default:
         return '/public';
     }

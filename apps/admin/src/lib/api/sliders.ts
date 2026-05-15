@@ -1,6 +1,9 @@
 import { request } from './client';
 import type { MediaAsset } from './media';
+import type { ContentChannel } from '../content-channels';
 
+export type { ContentChannel } from '../content-channels';
+export type SliderChannel = ContentChannel;
 export type SliderStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED';
 export type SliderTargetDevice = 'ALL' | 'DESKTOP' | 'MOBILE';
 export type SliderLinkType = 'NONE' | 'EXTERNAL_URL' | 'INTERNAL_PAGE' | 'EVENT' | 'CAMPAIGN' | 'STORE';
@@ -25,6 +28,7 @@ export type Slider = {
   sortOrder: number;
   status: SliderStatus;
   targetDevice: SliderTargetDevice;
+  channels: SliderChannel[];
   createdBy: string;
   updatedBy: string | null;
   createdAt: string;
@@ -51,6 +55,7 @@ export type CreateSliderPayload = {
   sortOrder?: number;
   status?: SliderStatus;
   targetDevice?: SliderTargetDevice;
+  channels?: SliderChannel[];
 };
 
 export type ReorderItem = { id: string; sortOrder: number };

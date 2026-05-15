@@ -13,7 +13,7 @@ export const CAMPAIGN_I18N_FIELDS = [
 export type CampaignI18nField = (typeof CAMPAIGN_I18N_FIELDS)[number];
 export const SLIDER_I18N_FIELDS = ['title', 'subtitle', 'description', 'buttonText'] as const;
 export type SliderI18nField = (typeof SLIDER_I18N_FIELDS)[number];
-export const PAGE_I18N_FIELDS = ['title', 'seoTitle', 'seoDescription'] as const;
+export const PAGE_I18N_FIELDS = ['title', 'customTypeLabel', 'contentHtml', 'seoTitle', 'seoDescription'] as const;
 export type PageI18nField = (typeof PAGE_I18N_FIELDS)[number];
 export const LOCATION_I18N_FIELDS = ['displayName', 'shortDescription', 'description'] as const;
 export type LocationI18nField = (typeof LOCATION_I18N_FIELDS)[number];
@@ -41,6 +41,8 @@ const LABELS: Record<MultilingualContentField, string> = {
   localDescription: 'Yerel açıklama',
   terms: 'Şartlar',
   buttonText: 'Buton metni',
+  customTypeLabel: 'Özel tip etiketi',
+  contentHtml: 'İçerik HTML',
   seoTitle: 'SEO Başlığı',
   seoDescription: 'SEO Açıklaması',
 };
@@ -203,12 +205,13 @@ export function MultilingualContentFields({
             {field === 'description' ||
             field === 'shortDescription' ||
             field === 'terms' ||
+            field === 'contentHtml' ||
             field === 'seoDescription' ||
             field === 'localDescription' ? (
               <textarea
                 style={{
                   ...inputStyle,
-                  minHeight: field === 'description' ? 88 : field === 'terms' || field === 'seoDescription' ? 64 : 52,
+                  minHeight: field === 'description' || field === 'contentHtml' ? 88 : field === 'terms' || field === 'seoDescription' ? 64 : 52,
                   resize: 'vertical',
                 }}
                 value={getValue(active.id, field)}
