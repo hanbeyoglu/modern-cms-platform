@@ -95,6 +95,10 @@ export class ServicesService {
         description: dto.description ?? null,
         iconMediaId: dto.iconMediaId ?? null,
         coverMediaId: dto.coverMediaId ?? null,
+        iconMediaWidthOverride: dto.iconMediaWidthOverride ?? null,
+        iconMediaHeightOverride: dto.iconMediaHeightOverride ?? null,
+        coverMediaWidthOverride: dto.coverMediaWidthOverride ?? null,
+        coverMediaHeightOverride: dto.coverMediaHeightOverride ?? null,
         category: dto.category ?? null,
         floor: dto.floor ?? null,
         unitNo: dto.unitNo ?? null,
@@ -143,6 +147,18 @@ export class ServicesService {
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.iconMediaId !== undefined && { iconMediaId: dto.iconMediaId || null }),
         ...(dto.coverMediaId !== undefined && { coverMediaId: dto.coverMediaId || null }),
+        ...(dto.iconMediaWidthOverride !== undefined && {
+          iconMediaWidthOverride: dto.iconMediaWidthOverride,
+        }),
+        ...(dto.iconMediaHeightOverride !== undefined && {
+          iconMediaHeightOverride: dto.iconMediaHeightOverride,
+        }),
+        ...(dto.coverMediaWidthOverride !== undefined && {
+          coverMediaWidthOverride: dto.coverMediaWidthOverride,
+        }),
+        ...(dto.coverMediaHeightOverride !== undefined && {
+          coverMediaHeightOverride: dto.coverMediaHeightOverride,
+        }),
         ...(dto.category !== undefined && { category: dto.category || null }),
         ...(dto.floor !== undefined && { floor: dto.floor || null }),
         ...(dto.unitNo !== undefined && { unitNo: dto.unitNo || null }),

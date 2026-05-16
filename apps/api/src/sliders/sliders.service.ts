@@ -389,6 +389,10 @@ export class SlidersService {
         linkUrl: dto.linkUrl ?? null,
         desktopMediaId: dto.desktopMediaId ?? null,
         mobileMediaId: dto.mobileMediaId ?? null,
+        desktopMediaWidthOverride: dto.desktopMediaWidthOverride ?? null,
+        desktopMediaHeightOverride: dto.desktopMediaHeightOverride ?? null,
+        mobileMediaWidthOverride: dto.mobileMediaWidthOverride ?? null,
+        mobileMediaHeightOverride: dto.mobileMediaHeightOverride ?? null,
         sortOrder: dto.sortOrder ?? 0,
         status: dto.status ?? 'DRAFT',
       },
@@ -436,6 +440,18 @@ export class SlidersService {
         ...(dto.linkUrl !== undefined && { linkUrl: dto.linkUrl || null }),
         ...(dto.desktopMediaId !== undefined && { desktopMediaId: dto.desktopMediaId || null }),
         ...(dto.mobileMediaId !== undefined && { mobileMediaId: dto.mobileMediaId || null }),
+        ...(dto.desktopMediaWidthOverride !== undefined && {
+          desktopMediaWidthOverride: dto.desktopMediaWidthOverride,
+        }),
+        ...(dto.desktopMediaHeightOverride !== undefined && {
+          desktopMediaHeightOverride: dto.desktopMediaHeightOverride,
+        }),
+        ...(dto.mobileMediaWidthOverride !== undefined && {
+          mobileMediaWidthOverride: dto.mobileMediaWidthOverride,
+        }),
+        ...(dto.mobileMediaHeightOverride !== undefined && {
+          mobileMediaHeightOverride: dto.mobileMediaHeightOverride,
+        }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
         ...(dto.status !== undefined && { status: dto.status }),
       },

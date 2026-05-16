@@ -26,6 +26,10 @@ export type SliderItem = {
   linkUrl: string | null;
   desktopMediaId: string | null;
   mobileMediaId: string | null;
+  desktopMediaWidthOverride: number | null;
+  desktopMediaHeightOverride: number | null;
+  mobileMediaWidthOverride: number | null;
+  mobileMediaHeightOverride: number | null;
   sortOrder: number;
   status: SliderStatus;
   createdAt: string;
@@ -83,6 +87,10 @@ export type CreateSliderItemPayload = {
   linkUrl?: string;
   desktopMediaId?: string;
   mobileMediaId?: string;
+  desktopMediaWidthOverride?: number | null;
+  desktopMediaHeightOverride?: number | null;
+  mobileMediaWidthOverride?: number | null;
+  mobileMediaHeightOverride?: number | null;
   sortOrder?: number;
   status?: SliderStatus;
 };

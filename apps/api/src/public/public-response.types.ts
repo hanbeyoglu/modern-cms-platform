@@ -6,6 +6,8 @@ export interface PublicMediaAsset {
   mimeType: string | null;
   width: number | null;
   height: number | null;
+  widthOverride: number | null;
+  heightOverride: number | null;
   alt: string | null;
   caption: string | null;
   dominantColor: string | null;
@@ -13,6 +15,16 @@ export interface PublicMediaAsset {
 
 /** @deprecated Use PublicMediaAsset */
 export type PublicMediaRef = PublicMediaAsset;
+
+export interface PublicMediaGuideline {
+  usageKey: string;
+  label: string;
+  recommendedWidth: number;
+  recommendedHeight: number;
+  acceptedMimeTypes: string[];
+  helperText: string | null;
+  aspectRatioLocked: boolean;
+}
 
 // ── SEO ───────────────────────────────────────────────────────────────────────
 

@@ -12,7 +12,13 @@ import { PublicCacheService } from './cache/public-cache.service';
 import { PublicContentService } from './public-content.service';
 import { PublicContextService, type PublicContext } from './public-context.service';
 import { PublicSearchService } from '../search/public-search.service';
-import { makeEnvelope, type PublicEnvelope, type PublicSiteConfig } from './public-response.types';
+import { MediaGuidelinesService } from '../media/media-guidelines.service';
+import {
+  makeEnvelope,
+  type PublicEnvelope,
+  type PublicMediaGuideline,
+  type PublicSiteConfig,
+} from './public-response.types';
 import { PrismaService } from '../prisma/prisma.service';
 
 // Cache TTLs in seconds
@@ -45,6 +51,7 @@ export class PublicController {
     private readonly content: PublicContentService,
     private readonly cache: PublicCacheService,
     private readonly publicSearch: PublicSearchService,
+    private readonly mediaGuidelines: MediaGuidelinesService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -91,10 +98,10 @@ export class PublicController {
           phone: mall.phone,
           supportEmail: mall.supportEmail,
           logo: mall.logoMedia
-            ? { id: mall.logoMedia.id, url: mall.logoMedia.publicUrl, mimeType: mall.logoMedia.mimeType ?? null, alt: mall.logoMedia.altText ?? null, caption: mall.logoMedia.caption ?? null, width: mall.logoMedia.width ?? null, height: mall.logoMedia.height ?? null, dominantColor: mall.logoMedia.dominantColor ?? null }
+            ? { id: mall.logoMedia.id, url: mall.logoMedia.publicUrl, mimeType: mall.logoMedia.mimeType ?? null, alt: mall.logoMedia.altText ?? null, caption: mall.logoMedia.caption ?? null, width: mall.logoMedia.width ?? null, height: mall.logoMedia.height ?? null, widthOverride: null, heightOverride: null, dominantColor: mall.logoMedia.dominantColor ?? null }
             : null,
           cover: mall.coverMedia
-            ? { id: mall.coverMedia.id, url: mall.coverMedia.publicUrl, mimeType: mall.coverMedia.mimeType ?? null, alt: mall.coverMedia.altText ?? null, caption: mall.coverMedia.caption ?? null, width: mall.coverMedia.width ?? null, height: mall.coverMedia.height ?? null, dominantColor: mall.coverMedia.dominantColor ?? null }
+            ? { id: mall.coverMedia.id, url: mall.coverMedia.publicUrl, mimeType: mall.coverMedia.mimeType ?? null, alt: mall.coverMedia.altText ?? null, caption: mall.coverMedia.caption ?? null, width: mall.coverMedia.width ?? null, height: mall.coverMedia.height ?? null, widthOverride: null, heightOverride: null, dominantColor: mall.coverMedia.dominantColor ?? null }
             : null,
           address: hasAddress
             ? {
@@ -135,6 +142,36 @@ export class PublicController {
     };
 
     const result = envelop(siteConfig, context);
+    await this.cache.set(cacheKey, result, TTL.siteConfig);
+    return result;
+  }
+
+  @Get('media-guidelines')
+  async getMediaGuidelines(
+    @Headers('x-tenant-id') tenantId: string | undefined,
+    @Headers('x-mall-id') mallId: string | undefined,
+    @Query('locale') locale: string | undefined,
+  ): Promise<PublicEnvelope<PublicMediaGuideline[]>> {
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
+    const cacheKey = `public:${context.tenantId}:media-guidelines`;
+
+    const cached = await this.cache.get<PublicEnvelope<PublicMediaGuideline[]>>(cacheKey);
+    if (cached) return cached;
+
+    const rows = await this.mediaGuidelines.listMerged(context.tenantId);
+    const data: PublicMediaGuideline[] = rows
+      .filter((r) => r.active)
+      .map((r) => ({
+        usageKey: r.usageKey,
+        label: r.label,
+        recommendedWidth: r.recommendedWidth,
+        recommendedHeight: r.recommendedHeight,
+        acceptedMimeTypes: r.acceptedMimeTypes,
+        helperText: r.helperText,
+        aspectRatioLocked: r.aspectRatioLocked,
+      }));
+
+    const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.siteConfig);
     return result;
   }

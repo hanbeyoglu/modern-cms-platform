@@ -34,6 +34,18 @@ export class UpdateEventDto {
   coverMediaId?: string;
 
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))
+  @IsInt()
+  @Min(1)
+  coverMediaWidthOverride?: number | null;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))
+  @IsInt()
+  @Min(1)
+  coverMediaHeightOverride?: number | null;
+
+  @IsOptional()
   @IsDateString()
   startAt?: string;
 

@@ -1,4 +1,5 @@
 export type MediaUsageContextKey =
+  | 'HOMEPAGE_HERO'
   | 'SLIDER_DESKTOP'
   | 'SLIDER_MOBILE'
   | 'SLIDER_KIOSK'
@@ -18,9 +19,18 @@ export interface MediaContextPreset {
   recommendedWidth: number;
   recommendedHeight: number;
   acceptedMime: string;
+  helperText?: string | null;
+  aspectRatioLocked?: boolean;
 }
 
 export const MEDIA_CONTEXTS: Record<MediaUsageContextKey, MediaContextPreset> = {
+  HOMEPAGE_HERO: {
+    key: 'HOMEPAGE_HERO',
+    label: 'Ana Sayfa Hero',
+    recommendedWidth: 1920,
+    recommendedHeight: 800,
+    acceptedMime: 'image/*',
+  },
   SLIDER_DESKTOP: {
     key: 'SLIDER_DESKTOP',
     label: 'Slider Web Görseli',

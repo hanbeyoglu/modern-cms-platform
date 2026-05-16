@@ -44,6 +44,15 @@ export const NAV_ITEMS: NavItem[] = [
     capability: 'media',
   },
   {
+    id: 'media-guidelines',
+    label: 'Medya Boyut Ayarları',
+    icon: '▥',
+    href: '/media/guidelines',
+    permission: 'media:read',
+    capability: 'media',
+    group: 'Ayarlar',
+  },
+  {
     id: 'sliders',
     label: 'Slider Yönetimi',
     icon: '▦',

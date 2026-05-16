@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../auth/useAuth';
 import { apiMediaGet, apiMediaList, apiMediaUpload, type MediaAsset } from '../lib/api';
 import { MEDIA_CONTEXTS, type MediaContextPreset, type MediaUsageContextKey } from '../lib/media-contexts';
+import { resolveMediaPreset, useMediaGuidelines } from '../hooks/useMediaGuidelines';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -34,11 +35,99 @@ interface Props {
   context: MediaUsageContextKey;
   value: string;
   onChange: (mediaId: string) => void;
+  dimensionOverride?: { width: number | null; height: number | null };
+  onDimensionOverrideChange?: (dimensions: { width: number | null; height: number | null }) => void;
   mallId?: string;
   disabled?: boolean;
 }
 
 type ModalMode = 'library' | 'upload';
+type DimensionOverride = { width: number | null; height: number | null };
+
+function getEffectiveDimensions(preset: MediaContextPreset, override?: DimensionOverride) {
+  const width = override?.width && override.width > 0 ? override.width : preset.recommendedWidth;
+  const height = override?.height && override.height > 0 ? override.height : preset.recommendedHeight;
+  return { width, height };
+}
+
+function formatAspectRatio(width: number, height: number): string {
+  const ratio = width / height;
+  return Number.isFinite(ratio) ? ratio.toFixed(2).replace(/\.00$/, '') : '-';
+}
+
+function DimensionHelper({
+  preset,
+  override,
+  onChange,
+  disabled,
+}: {
+  preset: MediaContextPreset;
+  override?: DimensionOverride;
+  onChange?: (dimensions: DimensionOverride) => void;
+  disabled?: boolean;
+}) {
+  if (!onChange) return null;
+
+  const emitChange = onChange;
+  const customEnabled = Boolean(override?.width && override?.height);
+  const effective = getEffectiveDimensions(preset, override);
+
+  function setEnabled(enabled: boolean) {
+    emitChange(enabled
+      ? { width: preset.recommendedWidth, height: preset.recommendedHeight }
+      : { width: null, height: null });
+  }
+
+  function setDimension(key: keyof DimensionOverride, value: string) {
+    const parsed = value === '' ? null : Math.max(1, Number.parseInt(value, 10) || 0);
+    emitChange({ width: override?.width ?? null, height: override?.height ?? null, [key]: parsed });
+  }
+
+  return (
+    <div style={{ padding: '8px 10px', borderTop: '1px solid #f3f4f6', background: '#fff' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, color: '#374151', fontWeight: 600 }}>
+        <input
+          type="checkbox"
+          checked={customEnabled}
+          disabled={disabled}
+          onChange={(e) => setEnabled(e.target.checked)}
+        />
+        Özel boyut kullan
+      </label>
+      {customEnabled && (
+        <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <label style={{ fontSize: 10, color: '#6b7280' }}>
+              Genişlik
+              <input
+                type="number"
+                min={1}
+                value={override?.width ?? ''}
+                disabled={disabled}
+                onChange={(e) => setDimension('width', e.target.value)}
+                style={{ width: '100%', marginTop: 3, padding: '4px 6px', border: '1px solid #d1d5db', borderRadius: 4, boxSizing: 'border-box' }}
+              />
+            </label>
+            <label style={{ fontSize: 10, color: '#6b7280' }}>
+              Yükseklik
+              <input
+                type="number"
+                min={1}
+                value={override?.height ?? ''}
+                disabled={disabled}
+                onChange={(e) => setDimension('height', e.target.value)}
+                style={{ width: '100%', marginTop: 3, padding: '4px 6px', border: '1px solid #d1d5db', borderRadius: 4, boxSizing: 'border-box' }}
+              />
+            </label>
+          </div>
+          <div style={{ fontSize: 10, color: '#6b7280' }}>
+            Kullanılan boyut: {effective.width}×{effective.height} · Oran: {formatAspectRatio(effective.width, effective.height)}:1
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Overlay ─────────────────────────────────────────────────────────────────
 
@@ -67,11 +156,13 @@ function Overlay({ onClose, children }: { onClose: () => void; children: React.R
 
 function LibraryBrowser({
   preset,
+  dimensionOverride,
   mallId,
   onSelect,
   onClose,
 }: {
   preset: MediaContextPreset;
+  dimensionOverride?: DimensionOverride;
   mallId?: string;
   onSelect: (asset: MediaAsset) => void;
   onClose: () => void;
@@ -113,6 +204,11 @@ function LibraryBrowser({
   }
 
   const selectedAsset = highlighted ? assets.find((a) => a.id === highlighted) : null;
+  const effective = getEffectiveDimensions(preset, dimensionOverride);
+  const selectedTooSmall =
+    selectedAsset?.width != null &&
+    selectedAsset.height != null &&
+    (selectedAsset.width < effective.width || selectedAsset.height < effective.height);
 
   return (
     <div
@@ -133,7 +229,10 @@ function LibraryBrowser({
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>Medya Kütüphanesi</div>
           <div style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>
-            {preset.label} · Önerilen: {preset.recommendedWidth}×{preset.recommendedHeight}px
+            {preset.label} · Önerilen boyut: {preset.recommendedWidth}×{preset.recommendedHeight}
+            {dimensionOverride?.width && dimensionOverride.height
+              ? ` · Özel: ${dimensionOverride.width}×${dimensionOverride.height}`
+              : ''}
           </div>
         </div>
         <input
@@ -252,6 +351,9 @@ function LibraryBrowser({
             {selectedAsset.width && selectedAsset.height && (
               <span style={{ color: '#6b7280' }}> ({selectedAsset.width}×{selectedAsset.height})</span>
             )}
+            {selectedTooSmall && (
+              <span style={{ color: '#92400e' }}> · Önerilen {effective.width}×{effective.height} değerinden küçük</span>
+            )}
           </span>
         )}
         {!selectedAsset && <span style={{ flex: 1 }} />}
@@ -294,11 +396,13 @@ function LibraryBrowser({
 
 function UploadPanel({
   preset,
+  dimensionOverride,
   mallId,
   onUploaded,
   onClose,
 }: {
   preset: MediaContextPreset;
+  dimensionOverride?: DimensionOverride;
   mallId?: string;
   onUploaded: (asset: MediaAsset) => void;
   onClose: () => void;
@@ -330,9 +434,10 @@ function UploadPanel({
     return () => { if (preview) URL.revokeObjectURL(preview); };
   }, [preview]);
 
+  const effective = getEffectiveDimensions(preset, dimensionOverride);
   const tooSmall =
     dims != null &&
-    (dims.width < preset.recommendedWidth || dims.height < preset.recommendedHeight);
+    (dims.width < effective.width || dims.height < effective.height);
 
   async function handleUpload() {
     if (!file || !accessToken || !activeTenantId) return;
@@ -344,8 +449,6 @@ function UploadPanel({
         mallId,
         altText: altText || undefined,
         usageContext: preset.key,
-        suggestedWidth: preset.recommendedWidth,
-        suggestedHeight: preset.recommendedHeight,
         tags,
       });
       onUploaded(asset);
@@ -372,7 +475,10 @@ function UploadPanel({
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>Yeni Görsel Yükle</div>
           <div style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>
-            {preset.label} · Önerilen: {preset.recommendedWidth}×{preset.recommendedHeight}px
+            {preset.label} · Önerilen boyut: {preset.recommendedWidth}×{preset.recommendedHeight}
+            {dimensionOverride?.width && dimensionOverride.height
+              ? ` · Özel: ${dimensionOverride.width}×${dimensionOverride.height}`
+              : ''}
           </div>
         </div>
         <button
@@ -412,7 +518,7 @@ function UploadPanel({
               <div style={{ fontSize: 28, marginBottom: 6 }}>🖼️</div>
               <div style={{ fontSize: 13, color: '#374151' }}>Görsel seçmek için tıklayın</div>
               <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
-                PNG, JPG, WebP, SVG · Önerilen: {preset.recommendedWidth}×{preset.recommendedHeight}px
+                PNG, JPG, WebP, SVG · Kullanılan hedef: {effective.width}×{effective.height}px
               </div>
             </>
           )}
@@ -459,7 +565,7 @@ function UploadPanel({
               marginBottom: 12,
             }}
           >
-            Uyarı: Görsel önerilen boyuttan ({preset.recommendedWidth}×{preset.recommendedHeight}px) küçük.
+            Uyarı: Görsel önerilen boyuttan ({effective.width}×{effective.height}px) küçük.
             Kalite düşük görünebilir. Yine de yükleyebilirsiniz.
           </div>
         )}
@@ -542,9 +648,18 @@ function UploadPanel({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function ContextualMediaPicker({ context, value, onChange, mallId, disabled }: Props) {
+export function ContextualMediaPicker({
+  context,
+  value,
+  onChange,
+  dimensionOverride,
+  onDimensionOverrideChange,
+  mallId,
+  disabled,
+}: Props) {
   const { accessToken, activeTenantId } = useAuth();
-  const preset = MEDIA_CONTEXTS[context];
+  const { guidelines } = useMediaGuidelines();
+  const preset = resolveMediaPreset(context, guidelines);
 
   const [modalMode, setModalMode] = useState<ModalMode | null>(null);
   const [currentAsset, setCurrentAsset] = useState<MediaAsset | null>(null);
@@ -576,6 +691,13 @@ export function ContextualMediaPicker({ context, value, onChange, mallId, disabl
     onChange('');
   }
 
+  const effective = getEffectiveDimensions(preset, dimensionOverride);
+  const customEnabled = Boolean(dimensionOverride?.width && dimensionOverride?.height);
+  const currentTooSmall =
+    currentAsset?.width != null &&
+    currentAsset.height != null &&
+    (currentAsset.width < effective.width || currentAsset.height < effective.height);
+
   const containerStyle: React.CSSProperties = {
     border: '1px solid #d1d5db',
     borderRadius: 8,
@@ -590,6 +712,7 @@ export function ContextualMediaPicker({ context, value, onChange, mallId, disabl
     borderBottom: '1px solid #e5e7eb',
     display: 'flex',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
   };
 
@@ -609,8 +732,13 @@ export function ContextualMediaPicker({ context, value, onChange, mallId, disabl
               whiteSpace: 'nowrap',
             }}
           >
-            {preset.recommendedWidth}×{preset.recommendedHeight}px
+            Önerilen boyut: {preset.recommendedWidth}×{preset.recommendedHeight}
           </span>
+          {preset.helperText && (
+            <span style={{ fontSize: 10, color: '#9ca3af', flexBasis: '100%', paddingTop: 4 }}>
+              {preset.helperText}
+            </span>
+          )}
         </div>
 
         {/* Preview area */}
@@ -642,6 +770,16 @@ export function ContextualMediaPicker({ context, value, onChange, mallId, disabl
                     {currentAsset.width}×{currentAsset.height}px · {formatBytes(currentAsset.size)}
                   </div>
                 )}
+                {customEnabled && (
+                  <div style={{ fontSize: 10, color: '#2563eb', marginTop: 2 }}>
+                    Özel hedef: {effective.width}×{effective.height}px
+                  </div>
+                )}
+                {currentTooSmall && (
+                  <div style={{ fontSize: 10, color: '#92400e', marginTop: 2 }}>
+                    Uyarı: Görsel hedef boyuttan küçük.
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -662,6 +800,13 @@ export function ContextualMediaPicker({ context, value, onChange, mallId, disabl
             </div>
           )}
         </div>
+
+        <DimensionHelper
+          preset={preset}
+          override={dimensionOverride}
+          onChange={onDimensionOverrideChange}
+          disabled={disabled}
+        />
 
         {/* Action buttons */}
         <div
@@ -727,23 +872,25 @@ export function ContextualMediaPicker({ context, value, onChange, mallId, disabl
       </div>
 
       {/* Modals */}
-      {modalMode === 'library' && (
-        <Overlay onClose={() => setModalMode(null)}>
-          <LibraryBrowser
-            preset={preset}
-            mallId={mallId}
-            onSelect={handleSelect}
-            onClose={() => setModalMode(null)}
+        {modalMode === 'library' && (
+          <Overlay onClose={() => setModalMode(null)}>
+            <LibraryBrowser
+              preset={preset}
+              dimensionOverride={dimensionOverride}
+              mallId={mallId}
+              onSelect={handleSelect}
+              onClose={() => setModalMode(null)}
           />
         </Overlay>
       )}
-      {modalMode === 'upload' && (
-        <Overlay onClose={() => setModalMode(null)}>
-          <UploadPanel
-            preset={preset}
-            mallId={mallId}
-            onUploaded={handleSelect}
-            onClose={() => setModalMode(null)}
+        {modalMode === 'upload' && (
+          <Overlay onClose={() => setModalMode(null)}>
+            <UploadPanel
+              preset={preset}
+              dimensionOverride={dimensionOverride}
+              mallId={mallId}
+              onUploaded={handleSelect}
+              onClose={() => setModalMode(null)}
           />
         </Overlay>
       )}

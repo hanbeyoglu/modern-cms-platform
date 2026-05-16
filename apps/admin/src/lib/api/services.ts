@@ -14,6 +14,10 @@ export type CmsService = {
   description: string | null;
   iconMediaId: string | null;
   coverMediaId: string | null;
+  iconMediaWidthOverride: number | null;
+  iconMediaHeightOverride: number | null;
+  coverMediaWidthOverride: number | null;
+  coverMediaHeightOverride: number | null;
   category: string | null;
   floor: string | null;
   unitNo: string | null;
@@ -40,6 +44,10 @@ export type CreateServicePayload = {
   description?: string;
   iconMediaId?: string;
   coverMediaId?: string;
+  iconMediaWidthOverride?: number | null;
+  iconMediaHeightOverride?: number | null;
+  coverMediaWidthOverride?: number | null;
+  coverMediaHeightOverride?: number | null;
   category?: string;
   floor?: string;
   unitNo?: string;

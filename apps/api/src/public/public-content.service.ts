@@ -823,7 +823,10 @@ type RichMediaRow = {
   dominantColor?: string | null;
 } | null;
 
-function toMediaAsset(m: RichMediaRow): PublicMediaAsset | null {
+function toMediaAsset(
+  m: RichMediaRow,
+  overrides?: { width?: number | null; height?: number | null },
+): PublicMediaAsset | null {
   if (!m) return null;
   return {
     id: m.id,
@@ -831,6 +834,8 @@ function toMediaAsset(m: RichMediaRow): PublicMediaAsset | null {
     mimeType: m.mimeType ?? null,
     width: m.width ?? null,
     height: m.height ?? null,
+    widthOverride: overrides?.width ?? null,
+    heightOverride: overrides?.height ?? null,
     alt: m.altText ?? null,
     caption: m.caption ?? null,
     dominantColor: m.dominantColor ?? null,
@@ -868,6 +873,10 @@ function mapSliderItem(item: {
   status: string;
   desktopMedia: RichMediaRow;
   mobileMedia: RichMediaRow;
+  desktopMediaWidthOverride?: number | null;
+  desktopMediaHeightOverride?: number | null;
+  mobileMediaWidthOverride?: number | null;
+  mobileMediaHeightOverride?: number | null;
 }): PublicSlider['items'][number] {
   return {
     id: item.id,
@@ -875,8 +884,14 @@ function mapSliderItem(item: {
     description: item.description,
     buttonText: item.buttonText,
     linkUrl: item.linkUrl,
-    desktopMedia: toMediaAsset(item.desktopMedia),
-    mobileMedia: toMediaAsset(item.mobileMedia),
+    desktopMedia: toMediaAsset(item.desktopMedia, {
+      width: item.desktopMediaWidthOverride,
+      height: item.desktopMediaHeightOverride,
+    }),
+    mobileMedia: toMediaAsset(item.mobileMedia, {
+      width: item.mobileMediaWidthOverride,
+      height: item.mobileMediaHeightOverride,
+    }),
     sortOrder: item.sortOrder,
     status: item.status,
   };
@@ -901,6 +916,10 @@ function mapSliderGroup(s: {
     status: string;
     desktopMedia: RichMediaRow;
     mobileMedia: RichMediaRow;
+    desktopMediaWidthOverride?: number | null;
+    desktopMediaHeightOverride?: number | null;
+    mobileMediaWidthOverride?: number | null;
+    mobileMediaHeightOverride?: number | null;
   }>;
 }): PublicSlider {
   const items = s.items.map(mapSliderItem);
@@ -953,6 +972,8 @@ function mapEvent(e: {
   shortDescription: string | null;
   description: string | null;
   coverMedia: RichMediaRow;
+  coverMediaWidthOverride?: number | null;
+  coverMediaHeightOverride?: number | null;
   startAt: Date | null;
   endAt: Date | null;
   location: string | null;
@@ -968,7 +989,10 @@ function mapEvent(e: {
     title: e.title,
     shortDescription: e.shortDescription,
     description: e.description,
-    coverMedia: toMediaAsset(e.coverMedia),
+    coverMedia: toMediaAsset(e.coverMedia, {
+      width: e.coverMediaWidthOverride,
+      height: e.coverMediaHeightOverride,
+    }),
     startAt: toDate(e.startAt),
     endAt: toDate(e.endAt),
     location: e.location,
@@ -993,6 +1017,8 @@ function mapCampaign(c: {
   shortDescription: string | null;
   description: string | null;
   coverMedia: RichMediaRow;
+  coverMediaWidthOverride?: number | null;
+  coverMediaHeightOverride?: number | null;
   startAt: Date | null;
   endAt: Date | null;
   terms: string | null;
@@ -1013,7 +1039,10 @@ function mapCampaign(c: {
     title: c.title,
     shortDescription: c.shortDescription,
     description: c.description,
-    coverMedia: toMediaAsset(c.coverMedia),
+    coverMedia: toMediaAsset(c.coverMedia, {
+      width: c.coverMediaWidthOverride,
+      height: c.coverMediaHeightOverride,
+    }),
     startAt: toDate(c.startAt),
     endAt: toDate(c.endAt),
     terms: c.terms,
@@ -1234,6 +1263,8 @@ function mapPopup(r: {
   title: string;
   description: string | null;
   imageMedia: RichMediaRow | null;
+  imageMediaWidthOverride?: number | null;
+  imageMediaHeightOverride?: number | null;
   linkUrl: string | null;
   buttonText: string | null;
   channels: string[];
@@ -1247,7 +1278,10 @@ function mapPopup(r: {
     id: r.id,
     title: r.title,
     description: r.description,
-    image: toMediaAsset(r.imageMedia),
+    image: toMediaAsset(r.imageMedia, {
+      width: r.imageMediaWidthOverride,
+      height: r.imageMediaHeightOverride,
+    }),
     linkUrl: r.linkUrl,
     buttonText: r.buttonText,
     channels: r.channels,
@@ -1266,6 +1300,10 @@ function mapLocationService(r: {
   description: string | null;
   iconMedia: RichMediaRow | null;
   coverMedia: RichMediaRow | null;
+  iconMediaWidthOverride?: number | null;
+  iconMediaHeightOverride?: number | null;
+  coverMediaWidthOverride?: number | null;
+  coverMediaHeightOverride?: number | null;
   category: string | null;
   floor: string | null;
   unitNo: string | null;
@@ -1284,8 +1322,14 @@ function mapLocationService(r: {
     mallId: r.mallId,
     name: r.name,
     description: r.description,
-    icon: toMediaAsset(r.iconMedia),
-    cover: toMediaAsset(r.coverMedia),
+    icon: toMediaAsset(r.iconMedia, {
+      width: r.iconMediaWidthOverride,
+      height: r.iconMediaHeightOverride,
+    }),
+    cover: toMediaAsset(r.coverMedia, {
+      width: r.coverMediaWidthOverride,
+      height: r.coverMediaHeightOverride,
+    }),
     category: r.category,
     floor: r.floor,
     unitNo: r.unitNo,

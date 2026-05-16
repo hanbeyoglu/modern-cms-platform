@@ -1,5 +1,5 @@
 import { IsArray, IsBoolean, IsEnum, IsISO8601, IsOptional, IsString, IsInt, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import type { PopupStatusType, ChannelType } from './create-popup.dto';
 
 export class UpdatePopupDto {
@@ -14,6 +14,18 @@ export class UpdatePopupDto {
   @IsOptional()
   @IsString()
   imageMediaId?: string;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))
+  @IsInt()
+  @Min(1)
+  imageMediaWidthOverride?: number | null;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))
+  @IsInt()
+  @Min(1)
+  imageMediaHeightOverride?: number | null;
 
   @IsOptional()
   @IsString()

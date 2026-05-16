@@ -66,6 +66,8 @@ type FormState = {
   shortDescription: string;
   description: string;
   coverMediaId: string;
+  coverMediaWidthOverride: string;
+  coverMediaHeightOverride: string;
   startAt: string;
   endAt: string;
   location: string;
@@ -84,6 +86,8 @@ const EMPTY: FormState = {
   shortDescription: '',
   description: '',
   coverMediaId: '',
+  coverMediaWidthOverride: '',
+  coverMediaHeightOverride: '',
   startAt: '',
   endAt: '',
   location: '',
@@ -103,6 +107,8 @@ function evToForm(e: CmsEvent): FormState {
     shortDescription: e.shortDescription ?? '',
     description: e.description ?? '',
     coverMediaId: e.coverMediaId ?? '',
+    coverMediaWidthOverride: e.coverMediaWidthOverride ? String(e.coverMediaWidthOverride) : '',
+    coverMediaHeightOverride: e.coverMediaHeightOverride ? String(e.coverMediaHeightOverride) : '',
     startAt: e.startAt ? e.startAt.slice(0, 16) : '',
     endAt: e.endAt ? e.endAt.slice(0, 16) : '',
     location: e.location ?? '',
@@ -116,6 +122,11 @@ function evToForm(e: CmsEvent): FormState {
   };
 }
 
+function parseOptionalDimension(value: string): number | null {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 function formToPayload(f: FormState): CreateEventPayload {
   return {
     title: f.title,
@@ -123,6 +134,8 @@ function formToPayload(f: FormState): CreateEventPayload {
     shortDescription: f.shortDescription || undefined,
     description: f.description || undefined,
     coverMediaId: f.coverMediaId || undefined,
+    coverMediaWidthOverride: parseOptionalDimension(f.coverMediaWidthOverride),
+    coverMediaHeightOverride: parseOptionalDimension(f.coverMediaHeightOverride),
     startAt: f.startAt ? new Date(f.startAt).toISOString() : undefined,
     endAt: f.endAt ? new Date(f.endAt).toISOString() : undefined,
     location: f.location || undefined,
@@ -486,6 +499,18 @@ export function EventsPage() {
                 value={form.coverMediaId}
                 mallId={mallId}
                 onChange={(id) => { setForm({ ...form, coverMediaId: id }); setEventFormDirty(true); }}
+                dimensionOverride={{
+                  width: parseOptionalDimension(form.coverMediaWidthOverride),
+                  height: parseOptionalDimension(form.coverMediaHeightOverride),
+                }}
+                onDimensionOverrideChange={(dimensions) => {
+                  setForm({
+                    ...form,
+                    coverMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                    coverMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                  });
+                  setEventFormDirty(true);
+                }}
               />
             </div>
             <div style={{ gridColumn: '1 / -1' }}>

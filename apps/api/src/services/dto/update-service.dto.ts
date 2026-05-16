@@ -1,5 +1,5 @@
 import { IsArray, IsBoolean, IsEmail, IsEnum, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import type { ServiceStatusType } from './create-service.dto';
 
 export class UpdateServiceDto {
@@ -18,6 +18,30 @@ export class UpdateServiceDto {
   @IsOptional()
   @IsString()
   coverMediaId?: string;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))
+  @IsInt()
+  @Min(1)
+  iconMediaWidthOverride?: number | null;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))
+  @IsInt()
+  @Min(1)
+  iconMediaHeightOverride?: number | null;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))
+  @IsInt()
+  @Min(1)
+  coverMediaWidthOverride?: number | null;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))
+  @IsInt()
+  @Min(1)
+  coverMediaHeightOverride?: number | null;
 
   @IsOptional()
   @IsString()

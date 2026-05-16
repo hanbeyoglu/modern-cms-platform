@@ -39,6 +39,10 @@ type FormState = {
   description: string;
   iconMediaId: string;
   coverMediaId: string;
+  iconMediaWidthOverride: string;
+  iconMediaHeightOverride: string;
+  coverMediaWidthOverride: string;
+  coverMediaHeightOverride: string;
   category: string;
   floor: string;
   unitNo: string;
@@ -57,6 +61,10 @@ const EMPTY: FormState = {
   description: '',
   iconMediaId: '',
   coverMediaId: '',
+  iconMediaWidthOverride: '',
+  iconMediaHeightOverride: '',
+  coverMediaWidthOverride: '',
+  coverMediaHeightOverride: '',
   category: '',
   floor: '',
   unitNo: '',
@@ -76,6 +84,10 @@ function toForm(s: CmsService): FormState {
     description: s.description ?? '',
     iconMediaId: s.iconMediaId ?? '',
     coverMediaId: s.coverMediaId ?? '',
+    iconMediaWidthOverride: s.iconMediaWidthOverride ? String(s.iconMediaWidthOverride) : '',
+    iconMediaHeightOverride: s.iconMediaHeightOverride ? String(s.iconMediaHeightOverride) : '',
+    coverMediaWidthOverride: s.coverMediaWidthOverride ? String(s.coverMediaWidthOverride) : '',
+    coverMediaHeightOverride: s.coverMediaHeightOverride ? String(s.coverMediaHeightOverride) : '',
     category: s.category ?? '',
     floor: s.floor ?? '',
     unitNo: s.unitNo ?? '',
@@ -97,12 +109,21 @@ function parseSearchTags(raw: string): string[] {
     .filter(Boolean);
 }
 
+function parseOptionalDimension(value: string): number | null {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 function toPayload(f: FormState): CreateServicePayload {
   return {
     name: f.name,
     description: f.description || undefined,
     iconMediaId: f.iconMediaId || undefined,
     coverMediaId: f.coverMediaId || undefined,
+    iconMediaWidthOverride: parseOptionalDimension(f.iconMediaWidthOverride),
+    iconMediaHeightOverride: parseOptionalDimension(f.iconMediaHeightOverride),
+    coverMediaWidthOverride: parseOptionalDimension(f.coverMediaWidthOverride),
+    coverMediaHeightOverride: parseOptionalDimension(f.coverMediaHeightOverride),
     category: f.category || undefined,
     floor: f.floor || undefined,
     unitNo: f.unitNo || undefined,
@@ -301,6 +322,15 @@ export function ServicesPage() {
                   value={form.iconMediaId}
                   mallId={mallId}
                   onChange={(id) => setForm({ ...form, iconMediaId: id })}
+                  dimensionOverride={{
+                    width: parseOptionalDimension(form.iconMediaWidthOverride),
+                    height: parseOptionalDimension(form.iconMediaHeightOverride),
+                  }}
+                  onDimensionOverrideChange={(dimensions) => setForm({
+                    ...form,
+                    iconMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                    iconMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                  })}
                 />
               </div>
               <div>
@@ -309,6 +339,15 @@ export function ServicesPage() {
                   value={form.coverMediaId}
                   mallId={mallId}
                   onChange={(id) => setForm({ ...form, coverMediaId: id })}
+                  dimensionOverride={{
+                    width: parseOptionalDimension(form.coverMediaWidthOverride),
+                    height: parseOptionalDimension(form.coverMediaHeightOverride),
+                  }}
+                  onDimensionOverrideChange={(dimensions) => setForm({
+                    ...form,
+                    coverMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                    coverMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                  })}
                 />
               </div>
               <div>

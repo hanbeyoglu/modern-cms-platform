@@ -17,6 +17,8 @@ export type CmsEvent = {
   shortDescription: string | null;
   description: string | null;
   coverMediaId: string | null;
+  coverMediaWidthOverride: number | null;
+  coverMediaHeightOverride: number | null;
   startAt: string | null;
   endAt: string | null;
   location: string | null;
@@ -43,6 +45,8 @@ export type CreateEventPayload = {
   shortDescription?: string;
   description?: string;
   coverMediaId?: string;
+  coverMediaWidthOverride?: number | null;
+  coverMediaHeightOverride?: number | null;
   startAt?: string;
   endAt?: string;
   location?: string;

@@ -21,6 +21,8 @@ export type CmsCampaign = {
   shortDescription: string | null;
   description: string | null;
   coverMediaId: string | null;
+  coverMediaWidthOverride: number | null;
+  coverMediaHeightOverride: number | null;
   startAt: string | null;
   endAt: string | null;
   terms: string | null;
@@ -53,6 +55,8 @@ export type CreateCampaignPayload = {
   shortDescription?: string;
   description?: string;
   coverMediaId?: string;
+  coverMediaWidthOverride?: number | null;
+  coverMediaHeightOverride?: number | null;
   startAt?: string;
   endAt?: string;
   terms?: string;

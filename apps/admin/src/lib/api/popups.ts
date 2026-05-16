@@ -17,6 +17,8 @@ export type CmsPopup = {
   title: string;
   description: string | null;
   imageMediaId: string | null;
+  imageMediaWidthOverride: number | null;
+  imageMediaHeightOverride: number | null;
   linkUrl: string | null;
   buttonText: string | null;
   status: PopupStatus;
@@ -40,6 +42,8 @@ export type CreatePopupPayload = {
   title: string;
   description?: string;
   imageMediaId?: string;
+  imageMediaWidthOverride?: number | null;
+  imageMediaHeightOverride?: number | null;
   linkUrl?: string;
   buttonText?: string;
   status?: PopupStatus;

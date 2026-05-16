@@ -76,6 +76,8 @@ type FormState = {
   shortDescription: string;
   description: string;
   coverMediaId: string;
+  coverMediaWidthOverride: string;
+  coverMediaHeightOverride: string;
   startAt: string;
   endAt: string;
   terms: string;
@@ -95,6 +97,8 @@ const EMPTY: FormState = {
   shortDescription: '',
   description: '',
   coverMediaId: '',
+  coverMediaWidthOverride: '',
+  coverMediaHeightOverride: '',
   startAt: '',
   endAt: '',
   terms: '',
@@ -115,6 +119,8 @@ function cToForm(c: CmsCampaign): FormState {
     shortDescription: c.shortDescription ?? '',
     description: c.description ?? '',
     coverMediaId: c.coverMediaId ?? '',
+    coverMediaWidthOverride: c.coverMediaWidthOverride ? String(c.coverMediaWidthOverride) : '',
+    coverMediaHeightOverride: c.coverMediaHeightOverride ? String(c.coverMediaHeightOverride) : '',
     startAt: c.startAt ? c.startAt.slice(0, 16) : '',
     endAt: c.endAt ? c.endAt.slice(0, 16) : '',
     terms: c.terms ?? '',
@@ -129,6 +135,11 @@ function cToForm(c: CmsCampaign): FormState {
   };
 }
 
+function parseOptionalDimension(value: string): number | null {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 function formToPayload(f: FormState): CreateCampaignPayload {
   return {
     title: f.title,
@@ -136,6 +147,8 @@ function formToPayload(f: FormState): CreateCampaignPayload {
     shortDescription: f.shortDescription || undefined,
     description: f.description || undefined,
     coverMediaId: f.coverMediaId || undefined,
+    coverMediaWidthOverride: parseOptionalDimension(f.coverMediaWidthOverride),
+    coverMediaHeightOverride: parseOptionalDimension(f.coverMediaHeightOverride),
     startAt: f.startAt ? new Date(f.startAt).toISOString() : undefined,
     endAt: f.endAt ? new Date(f.endAt).toISOString() : undefined,
     terms: f.terms || undefined,
@@ -517,6 +530,18 @@ export function CampaignsPage() {
                 value={form.coverMediaId}
                 mallId={mallId}
                 onChange={(id) => { setForm({ ...form, coverMediaId: id }); setCampaignFormDirty(true); }}
+                dimensionOverride={{
+                  width: parseOptionalDimension(form.coverMediaWidthOverride),
+                  height: parseOptionalDimension(form.coverMediaHeightOverride),
+                }}
+                onDimensionOverrideChange={(dimensions) => {
+                  setForm({
+                    ...form,
+                    coverMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                    coverMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                  });
+                  setCampaignFormDirty(true);
+                }}
               />
             </div>
             <div>

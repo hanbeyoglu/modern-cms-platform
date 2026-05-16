@@ -32,6 +32,11 @@ export {
   apiFolderUpdate,
   apiFolderDelete,
 } from './media';
+export {
+  apiMediaGuidelinesList,
+  apiMediaGuidelineUpdate,
+} from './media-guidelines';
+export type { MediaGuideline, UpdateMediaGuidelinePayload } from './media-guidelines';
 export type {
   MediaAsset,
   MediaAssetStatus,

@@ -95,6 +95,8 @@ export class PopupsService {
         title: dto.title,
         description: dto.description ?? null,
         imageMediaId: dto.imageMediaId ?? null,
+        imageMediaWidthOverride: dto.imageMediaWidthOverride ?? null,
+        imageMediaHeightOverride: dto.imageMediaHeightOverride ?? null,
         linkUrl: dto.linkUrl ?? null,
         buttonText: dto.buttonText ?? null,
         status,
@@ -145,6 +147,12 @@ export class PopupsService {
         ...(dto.title !== undefined && { title: dto.title }),
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.imageMediaId !== undefined && { imageMediaId: dto.imageMediaId || null }),
+        ...(dto.imageMediaWidthOverride !== undefined && {
+          imageMediaWidthOverride: dto.imageMediaWidthOverride,
+        }),
+        ...(dto.imageMediaHeightOverride !== undefined && {
+          imageMediaHeightOverride: dto.imageMediaHeightOverride,
+        }),
         ...(dto.linkUrl !== undefined && { linkUrl: dto.linkUrl || null }),
         ...(dto.buttonText !== undefined && { buttonText: dto.buttonText || null }),
         ...(dto.status !== undefined && { status: dto.status as PopupStatus }),

@@ -47,6 +47,8 @@ type FormState = {
   title: string;
   description: string;
   imageMediaId: string;
+  imageMediaWidthOverride: string;
+  imageMediaHeightOverride: string;
   linkUrl: string;
   buttonText: string;
   startAt: string;
@@ -62,6 +64,8 @@ const EMPTY: FormState = {
   title: '',
   description: '',
   imageMediaId: '',
+  imageMediaWidthOverride: '',
+  imageMediaHeightOverride: '',
   linkUrl: '',
   buttonText: '',
   startAt: '',
@@ -78,6 +82,8 @@ function toForm(p: CmsPopup): FormState {
     title: p.title,
     description: p.description ?? '',
     imageMediaId: p.imageMediaId ?? '',
+    imageMediaWidthOverride: p.imageMediaWidthOverride ? String(p.imageMediaWidthOverride) : '',
+    imageMediaHeightOverride: p.imageMediaHeightOverride ? String(p.imageMediaHeightOverride) : '',
     linkUrl: p.linkUrl ?? '',
     buttonText: p.buttonText ?? '',
     startAt: p.startAt ? p.startAt.slice(0, 16) : '',
@@ -90,11 +96,18 @@ function toForm(p: CmsPopup): FormState {
   };
 }
 
+function parseOptionalDimension(value: string): number | null {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 function toPayload(f: FormState): CreatePopupPayload {
   return {
     title: f.title,
     description: f.description || undefined,
     imageMediaId: f.imageMediaId || undefined,
+    imageMediaWidthOverride: parseOptionalDimension(f.imageMediaWidthOverride),
+    imageMediaHeightOverride: parseOptionalDimension(f.imageMediaHeightOverride),
     linkUrl: f.linkUrl || undefined,
     buttonText: f.buttonText || undefined,
     startAt: f.startAt ? new Date(f.startAt).toISOString() : undefined,
@@ -320,6 +333,15 @@ export function PopupsPage() {
                   value={form.imageMediaId}
                   mallId={mallId}
                   onChange={(id) => setForm({ ...form, imageMediaId: id })}
+                  dimensionOverride={{
+                    width: parseOptionalDimension(form.imageMediaWidthOverride),
+                    height: parseOptionalDimension(form.imageMediaHeightOverride),
+                  }}
+                  onDimensionOverrideChange={(dimensions) => setForm({
+                    ...form,
+                    imageMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                    imageMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                  })}
                 />
               </div>
               <div>

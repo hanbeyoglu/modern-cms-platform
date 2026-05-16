@@ -127,6 +127,8 @@ export class EventsService {
         shortDescription: dto.shortDescription ?? null,
         description: dto.description ?? null,
         coverMediaId: dto.coverMediaId ?? null,
+        coverMediaWidthOverride: dto.coverMediaWidthOverride ?? null,
+        coverMediaHeightOverride: dto.coverMediaHeightOverride ?? null,
         startAt: schedule.startAt,
         endAt: schedule.endAt,
         location: dto.location ?? null,
@@ -227,6 +229,12 @@ export class EventsService {
         ...(dto.shortDescription !== undefined && { shortDescription: dto.shortDescription || null }),
         ...(dto.description !== undefined && { description: dto.description || null }),
         ...(dto.coverMediaId !== undefined && { coverMediaId: dto.coverMediaId || null }),
+        ...(dto.coverMediaWidthOverride !== undefined && {
+          coverMediaWidthOverride: dto.coverMediaWidthOverride,
+        }),
+        ...(dto.coverMediaHeightOverride !== undefined && {
+          coverMediaHeightOverride: dto.coverMediaHeightOverride,
+        }),
         startAt: schedule.startAt,
         endAt: schedule.endAt,
         ...(dto.location !== undefined && { location: dto.location || null }),

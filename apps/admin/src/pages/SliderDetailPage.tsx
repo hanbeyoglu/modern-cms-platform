@@ -76,6 +76,10 @@ type ItemForm = {
   linkUrl: string;
   desktopMediaId: string;
   mobileMediaId: string;
+  desktopMediaWidthOverride: string;
+  desktopMediaHeightOverride: string;
+  mobileMediaWidthOverride: string;
+  mobileMediaHeightOverride: string;
   sortOrder: string;
   status: SliderStatus;
 };
@@ -87,6 +91,10 @@ const EMPTY_ITEM: ItemForm = {
   linkUrl: '',
   desktopMediaId: '',
   mobileMediaId: '',
+  desktopMediaWidthOverride: '',
+  desktopMediaHeightOverride: '',
+  mobileMediaWidthOverride: '',
+  mobileMediaHeightOverride: '',
   sortOrder: '0',
   status: 'DRAFT',
 };
@@ -99,9 +107,18 @@ function itemToForm(item: SliderItem): ItemForm {
     linkUrl: item.linkUrl ?? '',
     desktopMediaId: item.desktopMediaId ?? '',
     mobileMediaId: item.mobileMediaId ?? '',
+    desktopMediaWidthOverride: item.desktopMediaWidthOverride ? String(item.desktopMediaWidthOverride) : '',
+    desktopMediaHeightOverride: item.desktopMediaHeightOverride ? String(item.desktopMediaHeightOverride) : '',
+    mobileMediaWidthOverride: item.mobileMediaWidthOverride ? String(item.mobileMediaWidthOverride) : '',
+    mobileMediaHeightOverride: item.mobileMediaHeightOverride ? String(item.mobileMediaHeightOverride) : '',
     sortOrder: String(item.sortOrder),
     status: item.status,
   };
+}
+
+function parseOptionalDimension(value: string): number | null {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 function itemFormToPayload(f: ItemForm): CreateSliderItemPayload {
@@ -112,6 +129,10 @@ function itemFormToPayload(f: ItemForm): CreateSliderItemPayload {
     linkUrl: f.linkUrl || undefined,
     desktopMediaId: f.desktopMediaId || undefined,
     mobileMediaId: f.mobileMediaId || undefined,
+    desktopMediaWidthOverride: parseOptionalDimension(f.desktopMediaWidthOverride),
+    desktopMediaHeightOverride: parseOptionalDimension(f.desktopMediaHeightOverride),
+    mobileMediaWidthOverride: parseOptionalDimension(f.mobileMediaWidthOverride),
+    mobileMediaHeightOverride: parseOptionalDimension(f.mobileMediaHeightOverride),
     sortOrder: parseInt(f.sortOrder, 10) || 0,
     status: f.status,
   };
@@ -767,12 +788,30 @@ export function SliderDetailPage() {
                 value={itemForm.desktopMediaId}
                 mallId={activeMallId ?? undefined}
                 onChange={(mediaId) => setItemForm({ ...itemForm, desktopMediaId: mediaId })}
+                dimensionOverride={{
+                  width: parseOptionalDimension(itemForm.desktopMediaWidthOverride),
+                  height: parseOptionalDimension(itemForm.desktopMediaHeightOverride),
+                }}
+                onDimensionOverrideChange={(dimensions) => setItemForm({
+                  ...itemForm,
+                  desktopMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                  desktopMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                })}
               />
               <ContextualMediaPicker
                 context="SLIDER_MOBILE"
                 value={itemForm.mobileMediaId}
                 mallId={activeMallId ?? undefined}
                 onChange={(mediaId) => setItemForm({ ...itemForm, mobileMediaId: mediaId })}
+                dimensionOverride={{
+                  width: parseOptionalDimension(itemForm.mobileMediaWidthOverride),
+                  height: parseOptionalDimension(itemForm.mobileMediaHeightOverride),
+                }}
+                onDimensionOverrideChange={(dimensions) => setItemForm({
+                  ...itemForm,
+                  mobileMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                  mobileMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                })}
               />
             </div>
 

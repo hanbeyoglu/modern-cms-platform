@@ -6,9 +6,21 @@ export interface CmsMediaAsset {
   mimeType: string | null;
   width: number | null;
   height: number | null;
+  widthOverride: number | null;
+  heightOverride: number | null;
   alt: string | null;
   caption: string | null;
   dominantColor: string | null;
+}
+
+export interface CmsMediaGuideline {
+  usageKey: string;
+  label: string;
+  recommendedWidth: number;
+  recommendedHeight: number;
+  acceptedMimeTypes: string[];
+  helperText: string | null;
+  aspectRatioLocked: boolean;
 }
 
 // ── SEO ───────────────────────────────────────────────────────────────────────

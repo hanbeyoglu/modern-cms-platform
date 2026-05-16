@@ -642,6 +642,39 @@ async function main(): Promise<void> {
     });
   }
 
+  // ─── Tenant media dimension guidelines (defaults per usage context) ─────────
+  const MEDIA_GUIDELINE_DEFAULTS: Array<{
+    usageKey: string;
+    recommendedWidth: number;
+    recommendedHeight: number;
+    acceptedMimeTypes: string[];
+    helperText: string | null;
+    aspectRatioLocked: boolean;
+  }> = [
+    { usageKey: 'HOMEPAGE_HERO', recommendedWidth: 1920, recommendedHeight: 800, acceptedMimeTypes: ['image/*'], helperText: 'Ana sayfa üst banner görseli', aspectRatioLocked: true },
+    { usageKey: 'SLIDER_DESKTOP', recommendedWidth: 1920, recommendedHeight: 720, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
+    { usageKey: 'SLIDER_MOBILE', recommendedWidth: 768, recommendedHeight: 1024, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
+    { usageKey: 'SLIDER_KIOSK', recommendedWidth: 1080, recommendedHeight: 1920, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
+    { usageKey: 'EVENT_COVER', recommendedWidth: 1200, recommendedHeight: 630, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
+    { usageKey: 'CAMPAIGN_COVER', recommendedWidth: 1200, recommendedHeight: 630, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
+    { usageKey: 'POPUP_IMAGE', recommendedWidth: 800, recommendedHeight: 800, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
+    { usageKey: 'MOVIE_POSTER', recommendedWidth: 600, recommendedHeight: 900, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
+    { usageKey: 'STORE_LOGO', recommendedWidth: 512, recommendedHeight: 512, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: true },
+    { usageKey: 'LOCATION_LOGO', recommendedWidth: 512, recommendedHeight: 512, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: true },
+    { usageKey: 'LOCATION_COVER', recommendedWidth: 1600, recommendedHeight: 600, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
+    { usageKey: 'SERVICE_ICON', recommendedWidth: 256, recommendedHeight: 256, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: true },
+    { usageKey: 'SERVICE_COVER', recommendedWidth: 1200, recommendedHeight: 630, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
+  ];
+  for (const tenant of [tenantEmaar, tenantMallGroup]) {
+    for (const g of MEDIA_GUIDELINE_DEFAULTS) {
+      await prisma.tenantMediaGuideline.upsert({
+        where: { tenantId_usageKey: { tenantId: tenant.id, usageKey: g.usageKey } },
+        update: {},
+        create: { tenantId: tenant.id, ...g, active: true },
+      });
+    }
+  }
+
   // ─── Official locale catalog per demo tenant (Sprint 21) ───────────────────
   for (const tenant of [tenantEmaar, tenantMallGroup]) {
     for (let i = 0; i < OFFICIAL_SUPPORTED_LANGUAGES.length; i++) {
