@@ -177,4 +177,4 @@ pnpm turbo typecheck build
 
 ### Paylaşılan paket derlemesi
 
-`@modern-cms/content-scheduling` paketinde `prebuild` ile `apps/api/prisma/schema.prisma` üzerinden `prisma generate` çalışır; böylece şema ile uyumlu Prisma tipleri garanti edilir.
+`@modern-cms/content-scheduling` paketi Prisma şemasına veya `@prisma/client` tiplerine bağlı değildir. `runContentSchedulingTick` yalnızca `SchedulingDb` adlı minimal yapısal tipi bekler (`page` / `slider` / `event` / `campaign` / `popup` delegate'lerinde `findMany` + `updateMany`). API ve worker tarafındaki gerçek `PrismaClient` bu şekle uyduğu için doğrudan geçirilebilir; paket derlemesi `prisma generate` gerektirmez.

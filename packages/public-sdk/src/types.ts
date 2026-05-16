@@ -163,9 +163,22 @@ export interface CmsStore {
   workingHoursJson: unknown;
   locationJson: unknown;
   isFeatured: boolean;
+  isSoon: boolean;
+  searchTags: string[];
   sortOrder: number;
   logo: CmsMediaAsset | null;
-  globalStore: { id: string; name: string; slug: string; websiteUrl: string | null };
+  globalStore: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    phone: string | null;
+    email: string | null;
+    websiteUrl: string | null;
+    logo: CmsMediaAsset | null;
+  };
+  categories: { id: string; name: string; slug: string }[];
+  /** @deprecated Use categories[0] */
   category: { id: string; name: string; slug: string } | null;
   seo: CmsSeoMeta;
 }

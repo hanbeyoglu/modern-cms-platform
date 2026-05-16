@@ -341,7 +341,6 @@ export class PublicSearchService {
               select: {
                 id: true,
                 localDescription: true,
-                localLogoMedia: { select: { publicUrl: true } },
                 globalStore: {
                   select: {
                     description: true,
@@ -354,8 +353,7 @@ export class PublicSearchService {
               rows.forEach((r) =>
                 detail.set(r.id, {
                   description: r.localDescription ?? r.globalStore.description,
-                  imageUrl:
-                    r.localLogoMedia?.publicUrl ?? r.globalStore.logoMedia?.publicUrl ?? null,
+                  imageUrl: r.globalStore.logoMedia?.publicUrl ?? null,
                 }),
               ),
             )

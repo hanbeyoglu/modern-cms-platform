@@ -34,6 +34,16 @@ export class CreateGlobalStoreDto {
   description?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(320)
+  email?: string;
+
+  @IsOptional()
   @IsUrl({ require_tld: false })
   @MaxLength(2000)
   websiteUrl?: string;

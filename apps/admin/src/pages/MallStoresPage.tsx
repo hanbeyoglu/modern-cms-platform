@@ -18,7 +18,6 @@ import {
   apiMallStoreUnfeature,
   apiMallStoreUpdate,
   apiMallStoresList,
-  apiMediaList,
   apiStoreCategoriesList,
   apiTranslationDelete,
   apiTranslationsList,
@@ -27,7 +26,6 @@ import {
   type GlobalStore,
   type GlobalStoreCategoryPreview,
   type MallStore,
-  type MediaAsset,
   type StoreCategory,
   type StoreStatus,
 } from '../lib/api';
@@ -52,18 +50,24 @@ function mallStoreCategories(m: MallStore): GlobalStoreCategoryPreview[] {
   return (m.categoryLinks ?? []).map((link) => link.storeCategory);
 }
 
-function GlobalStorePreview({ store }: { store: GlobalStore }) {
+function GlobalStorePreview({ store, readonly }: { store: GlobalStore; readonly?: boolean }) {
   return (
-    <div
+    <div>
+      {readonly ? (
+        <p style={{ margin: '0 0 6px', fontSize: 12, color: '#6b7280' }}>
+          Atanan global marka (değiştirmek için önce bu atamayı kaldırıp yeniden oluşturun).
+        </p>
+      ) : null}
+      <div
       style={{
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: 12,
         padding: 10,
         border: '1px solid #e5e7eb',
         borderRadius: 8,
-        background: '#fff',
-        marginTop: 8,
+        background: readonly ? '#f9fafb' : '#fff',
+        marginTop: readonly ? 0 : 8,
       }}
     >
       {store.logoMedia?.publicUrl ? (
@@ -91,7 +95,15 @@ function GlobalStorePreview({ store }: { store: GlobalStore }) {
       )}
       <div style={{ minWidth: 0 }}>
         <div style={{ fontWeight: 600, fontSize: 14 }}>{store.name}</div>
-        <div style={{ fontSize: 11, color: '#6b7280' }}>{store.slug}</div>
+        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>{store.slug}</div>
+        {store.phone ? <div style={{ fontSize: 12, color: '#374151' }}>Tel: {store.phone}</div> : null}
+        {store.email ? (
+          <div style={{ fontSize: 12 }}>
+            <a href={`mailto:${store.email}`} style={{ color: '#2563eb' }}>
+              {store.email}
+            </a>
+          </div>
+        ) : null}
         {store.websiteUrl ? (
           <a
             href={store.websiteUrl}
@@ -105,6 +117,7 @@ function GlobalStorePreview({ store }: { store: GlobalStore }) {
           <span style={{ fontSize: 12, color: '#9ca3af' }}>Web sitesi yok</span>
         )}
       </div>
+    </div>
     </div>
   );
 }
@@ -129,7 +142,6 @@ export function MallStoresPage() {
   const [items, setItems] = useState<MallStore[]>([]);
   const [globals, setGlobals] = useState<GlobalStore[]>([]);
   const [categories, setCategories] = useState<StoreCategory[]>([]);
-  const [media, setMedia] = useState<MediaAsset[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -142,11 +154,8 @@ export function MallStoresPage() {
   const [editing, setEditing] = useState<MallStore | null>(null);
   const [localName, setLocalName] = useState('');
   const [localDescription, setLocalDescription] = useState('');
-  const [localLogoMediaId, setLocalLogoMediaId] = useState('');
   const [floor, setFloor] = useState('');
   const [storeNo, setStoreNo] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
   const [workingHoursJson, setWorkingHoursJson] = useState('');
   const [locationJson, setLocationJson] = useState('');
   const [sortOrder, setSortOrder] = useState('0');
@@ -168,17 +177,15 @@ export function MallStoresPage() {
     setLoading(true);
     setError(null);
     try {
-      const [res, glob, cats, med] = await Promise.all([
+      const [res, glob, cats] = await Promise.all([
         apiMallStoresList(accessToken, tenantId, mallId, { search: search || undefined, limit: 100 }),
-        apiGlobalStoresList(accessToken, tenantId, { limit: 200, status: 'ACTIVE' }),
-        apiStoreCategoriesList(accessToken, tenantId, { limit: 200, status: 'ACTIVE' }),
-        apiMediaList(accessToken, tenantId, { limit: 200 }),
+        apiGlobalStoresList(accessToken, tenantId, { limit: 100, status: 'ACTIVE' }),
+        apiStoreCategoriesList(accessToken, tenantId, { limit: 100, status: 'ACTIVE' }),
       ]);
       setItems(res.items);
       setTotal(res.total);
       setGlobals(glob.items);
       setCategories(cats.items);
-      setMedia(med.assets);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Yükleme hatası');
     } finally {
@@ -297,11 +304,8 @@ export function MallStoresPage() {
     setCategoryIds([]);
     setLocalName('');
     setLocalDescription('');
-    setLocalLogoMediaId('');
     setFloor('');
     setStoreNo('');
-    setPhone('');
-    setEmail('');
     setWorkingHoursJson('');
     setLocationJson('');
     setSortOrder('0');
@@ -321,11 +325,8 @@ export function MallStoresPage() {
     setCategoryIds(mallStoreCategories(m).map((c) => c.id));
     setLocalName(m.localName ?? '');
     setLocalDescription(m.localDescription ?? '');
-    setLocalLogoMediaId(m.localLogoMediaId ?? '');
     setFloor(m.floor ?? '');
     setStoreNo(m.storeNo ?? '');
-    setPhone(m.phone ?? '');
-    setEmail(m.email ?? '');
     setWorkingHoursJson(m.workingHoursJson ? JSON.stringify(m.workingHoursJson, null, 2) : '');
     setLocationJson(m.locationJson ? JSON.stringify(m.locationJson, null, 2) : '');
     setSortOrder(String(m.sortOrder));
@@ -364,11 +365,8 @@ export function MallStoresPage() {
         const u = await apiMallStoreUpdate(accessToken, tenantId, mallId, editing.id, {
           localName: localName.trim() || null,
           localDescription: localDescription.trim() || null,
-          localLogoMediaId: localLogoMediaId || null,
           floor: floor.trim() || null,
           storeNo: storeNo.trim() || null,
-          phone: phone.trim() || null,
-          email: email.trim() || null,
           ...(wh !== undefined ? { workingHoursJson: wh } : {}),
           ...(loc !== undefined ? { locationJson: loc } : {}),
           sortOrder: parseInt(sortOrder, 10) || 0,
@@ -390,11 +388,8 @@ export function MallStoresPage() {
           globalStoreId,
           localName: localName.trim() || undefined,
           localDescription: localDescription.trim() || undefined,
-          localLogoMediaId: localLogoMediaId || undefined,
           floor: floor.trim() || undefined,
           storeNo: storeNo.trim() || undefined,
-          phone: phone.trim() || undefined,
-          email: email.trim() || null,
           ...(wh !== undefined ? { workingHoursJson: wh } : {}),
           ...(loc !== undefined ? { locationJson: loc } : {}),
           sortOrder: parseInt(sortOrder, 10) || 0,
@@ -507,6 +502,7 @@ export function MallStoresPage() {
               )}
               {!editing ? (
                 <select
+                  required
                   value={globalStoreId}
                   onChange={(e) => setGlobalStoreId(e.target.value)}
                   style={{ display: 'block', width: '100%', padding: 6, borderRadius: 4, border: '1px solid #d1d5db' }}
@@ -519,13 +515,13 @@ export function MallStoresPage() {
                   ))}
                 </select>
               ) : null}
-              {selectedGlobal ? <GlobalStorePreview store={selectedGlobal} /> : null}
+              {selectedGlobal ? <GlobalStorePreview store={selectedGlobal} readonly={!!editing} /> : null}
             </div>
 
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>AVM içindeki kategori</label>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>AVM içindeki kategoriler</label>
               <p style={{ margin: '0 0 8px', fontSize: 12, color: '#6b7280' }}>
-                Aynı marka farklı AVM&apos;lerde farklı kategorilere sahip olabilir.
+                Aynı marka farklı lokasyonlarda farklı kategorilere sahip olabilir.
               </p>
               {categories.length === 0 ? (
                 <p style={{ fontSize: 12, color: '#9ca3af' }}>Henüz kategori tanımlı değil.</p>
@@ -615,25 +611,6 @@ export function MallStoresPage() {
             <label>
               Mağaza no
               <input value={storeNo} onChange={(e) => setStoreNo(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
-            </label>
-            <label>
-              Telefon
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
-            </label>
-            <label>
-              E-posta
-              <input value={email} onChange={(e) => setEmail(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
-            </label>
-            <label>
-              Yerel logo
-              <select value={localLogoMediaId} onChange={(e) => setLocalLogoMediaId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }}>
-                <option value="">—</option>
-                {media.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.originalName}
-                  </option>
-                ))}
-              </select>
             </label>
             <label>
               Sıra

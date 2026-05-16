@@ -575,6 +575,8 @@ async function main(): Promise<void> {
         phone: '+90 212 555 0000',
         status: 'ACTIVE',
         sortOrder: 5,
+        searchTags: [],
+        isSoon: false,
         createdBy: superAdmin.id,
       },
     });

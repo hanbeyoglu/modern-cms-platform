@@ -33,6 +33,16 @@ export class UpdateGlobalStoreDto {
   description?: string | null;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  phone?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(320)
+  email?: string | null;
+
+  @IsOptional()
   @IsUrl({ require_tld: false })
   @MaxLength(2000)
   websiteUrl?: string | null;

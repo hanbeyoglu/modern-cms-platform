@@ -15,13 +15,11 @@ import {
   apiGlobalStoreUpdate,
   apiGlobalStoresList,
   apiLocalesList,
-  apiStoreCategoriesList,
   apiTranslationDelete,
   apiTranslationsList,
   apiTranslationUpsert,
   type CmsLocale,
   type GlobalStore,
-  type StoreCategory,
   type StoreStatus,
 } from '../lib/api';
 
@@ -44,12 +42,10 @@ export function GlobalStoresPage() {
   const { accessToken, activeTenantId } = useAuth();
   const { can } = usePermission();
   const [items, setItems] = useState<GlobalStore[]>([]);
-  const [categories, setCategories] = useState<StoreCategory[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [categoryId, setCategoryId] = useState('');
   const [filterStatus, setFilterStatus] = useState<StoreStatus | ''>('');
 
   const [showForm, setShowForm] = useState(false);
@@ -58,8 +54,9 @@ export function GlobalStoresPage() {
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [logoMediaId, setLogoMediaId] = useState('');
-  const [catId, setCatId] = useState('');
   const [formStatus, setFormStatus] = useState<StoreStatus>('ACTIVE');
   const [saving, setSaving] = useState(false);
   const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
@@ -74,24 +71,19 @@ export function GlobalStoresPage() {
     setLoading(true);
     setError(null);
     try {
-      const [res, cats] = await Promise.all([
-        apiGlobalStoresList(accessToken, tenantId, {
-          search: search || undefined,
-          categoryId: categoryId || undefined,
-          status: filterStatus || undefined,
-          limit: 100,
-        }),
-        apiStoreCategoriesList(accessToken, tenantId, { limit: 200 }),
-      ]);
+      const res = await apiGlobalStoresList(accessToken, tenantId, {
+        search: search || undefined,
+        status: filterStatus || undefined,
+        limit: 100,
+      });
       setItems(res.items);
       setTotal(res.total);
-      setCategories(cats.items);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Yükleme hatası');
     } finally {
       setLoading(false);
     }
-  }, [accessToken, tenantId, search, categoryId, filterStatus]);
+  }, [accessToken, tenantId, search, filterStatus]);
 
   useEffect(() => {
     void load();
@@ -190,8 +182,9 @@ export function GlobalStoresPage() {
     setSlug('');
     setDescription('');
     setWebsiteUrl('');
+    setPhone('');
+    setEmail('');
     setLogoMediaId('');
-    setCatId('');
     setFormStatus('ACTIVE');
     setLocaleDrafts({});
     setI18nDirty(false);
@@ -204,8 +197,9 @@ export function GlobalStoresPage() {
     setSlug(g.slug);
     setDescription(g.description ?? '');
     setWebsiteUrl(g.websiteUrl ?? '');
+    setPhone(g.phone ?? '');
+    setEmail(g.email ?? '');
     setLogoMediaId(g.logoMediaId ?? '');
-    setCatId(g.categoryId ?? '');
     setFormStatus(g.status);
     setI18nDirty(false);
     setShowForm(true);
@@ -220,9 +214,10 @@ export function GlobalStoresPage() {
           name: name.trim(),
           slug: slug.trim() || undefined,
           description: description.trim() || null,
+          phone: phone.trim() || null,
+          email: email.trim() || null,
           websiteUrl: websiteUrl.trim() || null,
           logoMediaId: logoMediaId || null,
-          categoryId: catId || null,
           status: formStatus,
         });
         setItems((prev) => prev.map((x) => (x.id === u.id ? u : x)));
@@ -232,9 +227,10 @@ export function GlobalStoresPage() {
           name: name.trim(),
           slug: slug.trim() || undefined,
           description: description.trim() || undefined,
+          phone: phone.trim() || undefined,
+          email: email.trim() || undefined,
           websiteUrl: websiteUrl.trim() || undefined,
           logoMediaId: logoMediaId || undefined,
-          categoryId: catId || undefined,
           status: formStatus,
         });
         setItems((prev) => [c, ...prev]);
@@ -291,14 +287,6 @@ export function GlobalStoresPage() {
           onChange={(e) => setSearch(e.target.value)}
           style={{ padding: 5, border: '1px solid #d1d5db', borderRadius: 4, width: 160 }}
         />
-        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={{ padding: 5, borderRadius: 4 }}>
-          <option value="">Tüm kategoriler</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as StoreStatus | '')} style={{ padding: 5, borderRadius: 4 }}>
           <option value="">Tüm durumlar</option>
           <option value="ACTIVE">Aktif</option>
@@ -373,15 +361,12 @@ export function GlobalStoresPage() {
               <input value={slug} onChange={(e) => setSlug(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
             </label>
             <label>
-              Kategori
-              <select value={catId} onChange={(e) => setCatId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }}>
-                <option value="">—</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              Telefon
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
+            </label>
+            <label>
+              E-posta
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
             </label>
             <div style={{ marginBottom: 8 }}>
               <ContextualMediaPicker
@@ -421,7 +406,7 @@ export function GlobalStoresPage() {
           <thead>
             <tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}>
               <th style={{ padding: 8 }}>Mağaza</th>
-              <th style={{ padding: 8 }}>Kategori</th>
+              <th style={{ padding: 8 }}>İletişim</th>
               <th style={{ padding: 8 }}>Durum</th>
               <th style={{ padding: 8 }} />
             </tr>
@@ -436,7 +421,12 @@ export function GlobalStoresPage() {
                     <img src={g.logoMedia.publicUrl} alt="" style={{ width: 48, height: 48, objectFit: 'cover', marginTop: 4, borderRadius: 4 }} />
                   )}
                 </td>
-                <td style={{ padding: 8 }}>{g.category?.name ?? '—'}</td>
+                <td style={{ padding: 8, fontSize: 12, color: '#4b5563' }}>
+                  {g.phone ? <span>{g.phone}</span> : null}
+                  {g.phone && g.email ? <br /> : null}
+                  {g.email ? <a href={`mailto:${g.email}`}>{g.email}</a> : null}
+                  {!g.phone && !g.email ? '—' : null}
+                </td>
                 <td style={{ padding: 8 }}>
                   <StatusBadge status={g.status} />
                 </td>

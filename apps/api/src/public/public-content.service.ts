@@ -354,7 +354,6 @@ export class PublicContentService {
         },
       },
       include: {
-        localLogoMedia: { select: MEDIA_SELECT },
         categoryLinks: {
           include: {
             storeCategory: { select: { id: true, name: true, slug: true } },
@@ -364,7 +363,6 @@ export class PublicContentService {
         globalStore: {
           include: {
             logoMedia: { select: MEDIA_SELECT },
-            category: { select: { id: true, name: true, slug: true } },
           },
         },
       },
@@ -399,7 +397,6 @@ export class PublicContentService {
         globalStore: { is: { slug: opts.slug, deletedAt: null, status: 'ACTIVE' } },
       },
       include: {
-        localLogoMedia: { select: MEDIA_SELECT },
         categoryLinks: {
           include: {
             storeCategory: { select: { id: true, name: true, slug: true } },
@@ -409,7 +406,6 @@ export class PublicContentService {
         globalStore: {
           include: {
             logoMedia: { select: MEDIA_SELECT },
-            category: { select: { id: true, name: true, slug: true } },
           },
         },
       },
@@ -1054,22 +1050,24 @@ function mapStore(r: {
   isSoon: boolean;
   searchTags: string[];
   sortOrder: number;
-  localLogoMedia: RichMediaRow;
   categoryLinks: { storeCategory: { id: string; name: string; slug: string } }[];
   globalStore: {
     id: string;
     name: string;
     slug: string;
     description: string | null;
+    phone: string | null;
+    email: string | null;
     websiteUrl: string | null;
     logoMedia: RichMediaRow;
-    category: { id: string; name: string; slug: string } | null;
   };
 }): PublicStore {
   const resolvedName = r.localName ?? r.globalStore.name;
   const resolvedDesc = r.localDescription ?? r.globalStore.description;
-  const logo = toMediaAsset(r.localLogoMedia) ?? toMediaAsset(r.globalStore.logoMedia);
+  const logo = toMediaAsset(r.globalStore.logoMedia);
   const categories = r.categoryLinks.map((link) => link.storeCategory);
+  const phone = r.globalStore.phone ?? r.phone;
+  const email = r.globalStore.email ?? r.email;
 
   return {
     id: r.id,
@@ -1078,8 +1076,8 @@ function mapStore(r: {
     description: resolvedDesc,
     floor: r.floor,
     storeNo: r.storeNo,
-    phone: r.phone,
-    email: r.email,
+    phone,
+    email,
     workingHoursJson: r.workingHoursJson,
     locationJson: r.locationJson,
     isFeatured: r.isFeatured,
@@ -1092,11 +1090,13 @@ function mapStore(r: {
       name: r.globalStore.name,
       slug: r.globalStore.slug,
       description: r.globalStore.description,
+      phone: r.globalStore.phone,
+      email: r.globalStore.email,
       websiteUrl: r.globalStore.websiteUrl,
-      logo: toMediaAsset(r.globalStore.logoMedia),
+      logo,
     },
     categories,
-    category: categories[0] ?? r.globalStore.category ?? null,
+    category: categories[0] ?? null,
     seo: buildSeo({
       title: resolvedName,
       description: resolvedDesc,

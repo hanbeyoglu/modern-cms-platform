@@ -42,6 +42,8 @@ export type GlobalStore = {
   logoMediaId: string | null;
   categoryId: string | null;
   description: string | null;
+  phone: string | null;
+  email: string | null;
   websiteUrl: string | null;
   socialLinksJson: Record<string, unknown> | null;
   status: StoreStatus;
@@ -50,6 +52,7 @@ export type GlobalStore = {
   createdAt: string;
   updatedAt: string;
   logoMedia: GlobalStoreMediaPreview | null;
+  /** @deprecated Brand-level stores are not categorized; use MallStore categories. */
   category: GlobalStoreCategoryPreview | null;
 };
 
@@ -179,8 +182,9 @@ export async function apiGlobalStoreCreate(
     name: string;
     slug?: string;
     logoMediaId?: string;
-    categoryId?: string;
     description?: string;
+    phone?: string;
+    email?: string;
     websiteUrl?: string;
     socialLinksJson?: Record<string, unknown>;
     status?: StoreStatus;
@@ -202,8 +206,9 @@ export async function apiGlobalStoreUpdate(
     name: string;
     slug: string;
     logoMediaId: string | null;
-    categoryId: string | null;
     description: string | null;
+    phone: string | null;
+    email: string | null;
     websiteUrl: string | null;
     socialLinksJson: Record<string, unknown> | null;
     status: StoreStatus;
@@ -264,11 +269,8 @@ export async function apiMallStoreAssign(
     globalStoreId: string;
     localName?: string;
     localDescription?: string;
-    localLogoMediaId?: string;
     floor?: string;
     storeNo?: string;
-    phone?: string;
-    email?: string | null;
     workingHoursJson?: Record<string, unknown>;
     locationJson?: Record<string, unknown>;
     isFeatured?: boolean;
@@ -296,11 +298,8 @@ export async function apiMallStoreUpdate(
   body: Partial<{
     localName: string | null;
     localDescription: string | null;
-    localLogoMediaId: string | null;
     floor: string | null;
     storeNo: string | null;
-    phone: string | null;
-    email: string | null;
     workingHoursJson: Record<string, unknown> | null;
     locationJson: Record<string, unknown> | null;
     isFeatured: boolean;

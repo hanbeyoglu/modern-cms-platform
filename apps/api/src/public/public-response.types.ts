@@ -178,6 +178,8 @@ export interface PublicStore {
     name: string;
     slug: string;
     description: string | null;
+    phone: string | null;
+    email: string | null;
     websiteUrl: string | null;
     logo: PublicMediaAsset | null;
   };

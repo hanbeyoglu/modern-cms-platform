@@ -32,7 +32,6 @@ const MALL_STORE_INCLUDE = {
   globalStore: {
     include: {
       logoMedia: { select: MEDIA_SELECT },
-      category: { select: CATEGORY_SELECT },
     },
   },
   localLogoMedia: { select: MEDIA_SELECT },
@@ -81,9 +80,10 @@ export type PublicMallStore = {
     name: string;
     slug: string;
     description: string | null;
+    phone: string | null;
+    email: string | null;
     websiteUrl: string | null;
     logoMedia: { id: string; publicUrl: string; originalName: string; mimeType: string } | null;
-    category: { id: string; name: string; slug: string } | null;
   };
 };
 
@@ -193,10 +193,6 @@ export class MallStoresService {
       throw new ConflictException('Bu global mağaza bu AVM için zaten atanmış');
     }
 
-    if (dto.localLogoMediaId) {
-      await this.assertTenantMedia(tenantId, dto.localLogoMediaId);
-    }
-
     const row = await this.prisma.mallStore.create({
       data: {
         tenantId,
@@ -204,11 +200,8 @@ export class MallStoresService {
         globalStoreId: dto.globalStoreId,
         localName: dto.localName?.trim() || null,
         localDescription: dto.localDescription?.trim() || null,
-        localLogoMediaId: dto.localLogoMediaId ?? null,
         floor: dto.floor?.trim() || null,
         storeNo: dto.storeNo?.trim() || null,
-        phone: dto.phone?.trim() || null,
-        email: this.normalizeEmail(dto.email),
         workingHoursJson:
           dto.workingHoursJson !== undefined
             ? (dto.workingHoursJson as Prisma.InputJsonValue)
@@ -256,23 +249,16 @@ export class MallStoresService {
     });
     if (!existing) throw new NotFoundException('Mall store not found');
 
-    if (dto.localLogoMediaId !== undefined && dto.localLogoMediaId !== null) {
-      await this.assertTenantMedia(tenantId, dto.localLogoMediaId);
-    }
-
     const data: Prisma.MallStoreUpdateInput = {
       ...(dto.localName !== undefined && { localName: dto.localName }),
       ...(dto.localDescription !== undefined && { localDescription: dto.localDescription }),
       ...(dto.floor !== undefined && { floor: dto.floor }),
       ...(dto.storeNo !== undefined && { storeNo: dto.storeNo }),
-      ...(dto.phone !== undefined && { phone: dto.phone }),
-      ...(dto.email !== undefined && { email: this.normalizeEmail(dto.email) }),
       ...(dto.isFeatured !== undefined && { isFeatured: dto.isFeatured }),
       ...(dto.isSoon !== undefined && { isSoon: dto.isSoon }),
       ...(dto.searchTags !== undefined && { searchTags: dto.searchTags }),
       ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
       ...(dto.status !== undefined && { status: dto.status }),
-      ...(dto.localLogoMediaId !== undefined && { localLogoMediaId: dto.localLogoMediaId }),
       ...(dto.workingHoursJson !== undefined && {
         workingHoursJson:
           dto.workingHoursJson === null ? Prisma.JsonNull : (dto.workingHoursJson as Prisma.InputJsonValue),
@@ -437,7 +423,6 @@ export class MallStoresService {
         globalStore: {
           include: {
             logoMedia: { select: MEDIA_SELECT },
-            category: { select: { id: true, name: true, slug: true } },
           },
         },
       },
@@ -454,8 +439,8 @@ export class MallStoresService {
         localDescription: r.localDescription,
         floor: r.floor,
         storeNo: r.storeNo,
-        phone: r.phone,
-        email: r.email,
+        phone: r.globalStore.phone ?? r.phone,
+        email: r.globalStore.email ?? r.email,
         workingHoursJson: r.workingHoursJson,
         locationJson: r.locationJson,
         isFeatured: r.isFeatured,
@@ -468,9 +453,10 @@ export class MallStoresService {
           name: r.globalStore.name,
           slug: r.globalStore.slug,
           description: r.globalStore.description,
+          phone: r.globalStore.phone,
+          email: r.globalStore.email,
           websiteUrl: r.globalStore.websiteUrl,
           logoMedia: r.globalStore.logoMedia,
-          category: r.globalStore.category,
         },
       };
     });
@@ -499,16 +485,4 @@ export class MallStoresService {
     ]);
   }
 
-  private normalizeEmail(v: string | null | undefined): string | null {
-    if (v === undefined || v === null) return null;
-    const t = String(v).trim();
-    return t.length === 0 ? null : t;
-  }
-
-  private async assertTenantMedia(tenantId: string, mediaId: string): Promise<void> {
-    const m = await this.prisma.mediaAsset.findFirst({
-      where: { id: mediaId, tenantId, deletedAt: null },
-    });
-    if (!m) throw new BadRequestException('localLogoMediaId bu tenant için geçerli bir medya olmalıdır');
-  }
 }

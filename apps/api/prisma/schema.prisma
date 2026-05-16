@@ -7,6 +7,986 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                     String           @id @default(cuid())
+  email                  String           @unique
+  passwordHash           String
+  firstName              String?
+  lastName               String?
+  status                 UserStatus       @default(ACTIVE)
+  isSuperAdmin           Boolean          @default(false)
+  deletedAt              DateTime?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  auditLogs              AuditLog[]       @relation("AuditActor")
+  createdCampaigns       Campaign[]       @relation("CampaignCreator")
+  updatedCampaigns       Campaign[]       @relation("CampaignUpdater")
+  createdCinemas         Cinema[]         @relation("CinemaCreator")
+  updatedCinemas         Cinema[]         @relation("CinemaUpdater")
+  createdEvents          Event[]          @relation("EventCreator")
+  updatedEvents          Event[]          @relation("EventUpdater")
+  createdGlobalStores    GlobalStore[]    @relation("GlobalStoreCreator")
+  updatedGlobalStores    GlobalStore[]    @relation("GlobalStoreUpdater")
+  createdMallStores      MallStore[]      @relation("MallStoreCreator")
+  updatedMallStores      MallStore[]      @relation("MallStoreUpdater")
+  uploadedAssets         MediaAsset[]     @relation("AssetUploader")
+  mediaFolders           MediaFolder[]    @relation("FolderCreator")
+  createdMovies          Movie[]          @relation("MovieCreator")
+  updatedMovies          Movie[]          @relation("MovieUpdater")
+  createdMovieSessions   MovieSession[]   @relation("MovieSessionCreator")
+  updatedMovieSessions   MovieSession[]   @relation("MovieSessionUpdater")
+  notifications          Notification[]   @relation("NotificationRecipient")
+  createdPages           Page[]           @relation("PageCreator")
+  updatedPages           Page[]           @relation("PageUpdater")
+  createdPageAttachments PageAttachment[] @relation("PageAttachmentCreator")
+  updatedPageAttachments PageAttachment[] @relation("PageAttachmentUpdater")
+  createdPageBlocks      PageBlock[]      @relation("PageBlockCreator")
+  updatedPageBlocks      PageBlock[]      @relation("PageBlockUpdater")
+  createdPopups          Popup[]          @relation("PopupCreator")
+  updatedPopups          Popup[]          @relation("PopupUpdater")
+  refreshTokens          RefreshToken[]
+  createdServices        Service[]        @relation("ServiceCreator")
+  updatedServices        Service[]        @relation("ServiceUpdater")
+  createdSliders         Slider[]         @relation("SliderCreator")
+  updatedSliders         Slider[]         @relation("SliderUpdater")
+  tenantUsers            TenantUser[]
+}
+
+model Tenant {
+  id                 String             @id @default(cuid())
+  name               String
+  slug               String             @unique
+  status             TenantStatus       @default(ACTIVE)
+  deletedAt          DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  addressJson        Json?
+  billingEmail       String?
+  contactEmail       String?
+  contactPhone       String?
+  legalName          String?
+  metadataJson       Json?
+  websiteUrl         String?
+  analyticsEvents    AnalyticsEvent[]
+  auditLogs          AuditLog[]
+  campaigns          Campaign[]
+  cinemas            Cinema[]
+  events             Event[]
+  locales            Locale[]
+  localizedContent   LocalizedContent[]
+  malls              Mall[]
+  mallStores         MallStore[]
+  mediaAssets        MediaAsset[]
+  mediaFolders       MediaFolder[]
+  movies             Movie[]
+  movieSessions      MovieSession[]
+  notifications      Notification[]
+  pages              Page[]
+  pageAttachments    PageAttachment[]
+  pageBlocks         PageBlock[]
+  popups             Popup[]
+  roles              Role[]
+  searchIndexEntries SearchIndexEntry[]
+  services           Service[]
+  sliders            Slider[]
+  capabilities       TenantCapability[]
+  settings           TenantSetting[]
+  tenantUsers        TenantUser[]
+}
+
+model Mall {
+  id                 String             @id @default(cuid())
+  tenantId           String
+  name               String
+  slug               String
+  status             MallStatus         @default(LIVE)
+  deletedAt          DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  addressLine1       String?
+  addressLine2       String?
+  city               String?
+  country            String?
+  coverMediaId       String?
+  description        String?
+  displayName        String?
+  district           String?
+  isPublic           Boolean            @default(true)
+  latitude           Float?
+  legalName          String?
+  logoMediaId        String?
+  longitude          Float?
+  metadataJson       Json?
+  phone              String?
+  postalCode         String?
+  shortDescription   String?
+  socialLinksJson    Json?
+  supportEmail       String?
+  timezone           String?
+  type               LocationType       @default(SHOPPING_MALL)
+  websiteUrl         String?
+  workingHoursJson   Json?
+  analyticsEvents    AnalyticsEvent[]
+  auditLogs          AuditLog[]
+  campaigns          Campaign[]
+  cinemas            Cinema[]
+  events             Event[]
+  coverMedia         MediaAsset?        @relation("MallCoverMedia", fields: [coverMediaId], references: [id])
+  logoMedia          MediaAsset?        @relation("MallLogoMedia", fields: [logoMediaId], references: [id])
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mallStores         MallStore[]
+  mediaAssets        MediaAsset[]
+  mediaFolders       MediaFolder[]
+  movieSessions      MovieSession[]
+  notifications      Notification[]
+  pages              Page[]
+  pageAttachments    PageAttachment[]
+  pageBlocks         PageBlock[]
+  popups             Popup[]
+  searchIndexEntries SearchIndexEntry[]
+  services           Service[]
+  sliders            Slider[]
+  userMallAccesses   UserMallAccess[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+model Role {
+  id              String           @id @default(cuid())
+  code            String           @unique
+  name            String
+  description     String?
+  isSystem        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  isActive        Boolean          @default(true)
+  tenantId        String?
+  tenant          Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rolePermissions RolePermission[]
+  tenantUsers     TenantUser[]
+
+  @@index([tenantId])
+}
+
+model Permission {
+  id              String           @id @default(cuid())
+  code            String           @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model TenantUser {
+  id         String           @id @default(cuid())
+  tenantId   String
+  userId     String
+  roleId     String
+  deletedAt  DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  isActive   Boolean          @default(true)
+  role       Role             @relation(fields: [roleId], references: [id])
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mallAccess UserMallAccess[]
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@index([tenantId])
+}
+
+model UserMallAccess {
+  id           String     @id @default(cuid())
+  tenantUserId String
+  mallId       String
+  createdAt    DateTime   @default(now())
+  mall         Mall       @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantUserId, mallId])
+  @@index([mallId])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model AuditLog {
+  id            String        @id @default(cuid())
+  actorUserId   String?
+  tenantId      String?
+  mallId        String?
+  action        String
+  resource      String
+  resourceId    String?
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+  resourceName  String?
+  severity      AuditSeverity @default(INFO)
+  source        String?
+  success       Boolean       @default(true)
+  correlationId String?
+  requestId     String?
+  actor         User?         @relation("AuditActor", fields: [actorUserId], references: [id])
+  mall          Mall?         @relation(fields: [mallId], references: [id])
+  tenant        Tenant?       @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([severity, createdAt])
+  @@index([resource, createdAt])
+  @@index([correlationId])
+  @@index([success, createdAt])
+}
+
+model MediaFolder {
+  id        String        @id @default(cuid())
+  tenantId  String
+  mallId    String?
+  parentId  String?
+  name      String
+  slug      String
+  createdBy String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  sortOrder Int           @default(0)
+  deletedAt DateTime?
+  assets    MediaAsset[]
+  creator   User          @relation("FolderCreator", fields: [createdBy], references: [id])
+  mall      Mall?         @relation(fields: [mallId], references: [id])
+  parent    MediaFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children  MediaFolder[] @relation("FolderHierarchy")
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, parentId])
+  @@index([mallId])
+}
+
+model MediaAsset {
+  id                  String           @id @default(cuid())
+  tenantId            String
+  mallId              String?
+  folderId            String?
+  uploadedBy          String
+  originalName        String
+  fileName            String
+  mimeType            String
+  extension           String
+  size                Int
+  width               Int?
+  height              Int?
+  storageKey          String           @unique
+  publicUrl           String
+  altText             String?
+  metadataJson        Json?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  deletedAt           DateTime?
+  caption             String?
+  description         String?
+  tags                String[]
+  durationSeconds     Float?
+  focalPointX         Float?
+  focalPointY         Float?
+  dominantColor       String?
+  source              String?
+  checksum            String?
+  status              MediaAssetStatus @default(ACTIVE)
+  suggestedHeight     Int?
+  suggestedWidth      Int?
+  usageContext        String?
+  campaignCovers      Campaign[]       @relation("CampaignCoverMedia")
+  cinemaLogos         Cinema[]         @relation("CinemaLogoMedia")
+  eventCovers         Event[]          @relation("EventCoverMedia")
+  globalStoreLogos    GlobalStore[]    @relation("GlobalStoreLogo")
+  mallCovers          Mall[]           @relation("MallCoverMedia")
+  mallLogos           Mall[]           @relation("MallLogoMedia")
+  mallStoreLocalLogos MallStore[]      @relation("MallStoreLocalLogo")
+  folder              MediaFolder?     @relation(fields: [folderId], references: [id])
+  mall                Mall?            @relation(fields: [mallId], references: [id])
+  tenant              Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploader            User             @relation("AssetUploader", fields: [uploadedBy], references: [id])
+  variants            MediaVariant[]
+  moviePosters        Movie[]          @relation("MoviePosterMedia")
+  pageAttachments     PageAttachment[] @relation("PageAttachmentMedia")
+  popupImages         Popup[]          @relation("PopupImageMedia")
+  serviceCovers       Service[]        @relation("ServiceCoverMedia")
+  serviceIcons        Service[]        @relation("ServiceIconMedia")
+  slidersDesktop      Slider[]         @relation("SliderDesktopMedia")
+  slidersMobile       Slider[]         @relation("SliderMobileMedia")
+  slidersVideo        Slider[]         @relation("SliderVideoMedia")
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, folderId])
+  @@index([tenantId, status])
+  @@index([mallId])
+}
+
+model MediaVariant {
+  id           String     @id @default(cuid())
+  mediaAssetId String
+  variantKey   String
+  url          String
+  width        Int?
+  height       Int?
+  mimeType     String
+  fileSize     Int
+  createdAt    DateTime   @default(now())
+  asset        MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaAssetId, variantKey])
+  @@index([mediaAssetId])
+}
+
+model Slider {
+  id             String             @id @default(cuid())
+  tenantId       String
+  mallId         String?
+  title          String
+  subtitle       String?
+  description    String?
+  desktopMediaId String?
+  mobileMediaId  String?
+  videoMediaId   String?
+  linkType       SliderLinkType     @default(NONE)
+  linkValue      String?
+  buttonText     String?
+  startAt        DateTime?
+  endAt          DateTime?
+  sortOrder      Int                @default(0)
+  status         SliderStatus       @default(DRAFT)
+  targetDevice   SliderTargetDevice @default(ALL)
+  createdBy      String
+  updatedBy      String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  deletedAt      DateTime?
+  channels       Channel[]
+  createdByUser  User               @relation("SliderCreator", fields: [createdBy], references: [id])
+  desktopMedia   MediaAsset?        @relation("SliderDesktopMedia", fields: [desktopMediaId], references: [id])
+  mall           Mall?              @relation(fields: [mallId], references: [id])
+  mobileMedia    MediaAsset?        @relation("SliderMobileMedia", fields: [mobileMediaId], references: [id])
+  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser  User?              @relation("SliderUpdater", fields: [updatedBy], references: [id])
+  videoMedia     MediaAsset?        @relation("SliderVideoMedia", fields: [videoMediaId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, mallId])
+  @@index([tenantId, sortOrder])
+  @@index([status, startAt])
+  @@index([status, endAt])
+}
+
+model StoreCategory {
+  id             String                @id @default(cuid())
+  name           String
+  slug           String                @unique
+  icon           String?
+  sortOrder      Int                   @default(0)
+  status         StoreCategoryStatus   @default(ACTIVE)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  deletedAt      DateTime?
+  globalStores   GlobalStore[]
+  mallStoreLinks MallStoreOnCategory[]
+
+  @@index([status])
+  @@index([sortOrder])
+}
+
+model GlobalStore {
+  id              String         @id @default(cuid())
+  name            String
+  slug            String         @unique
+  logoMediaId     String?
+  categoryId      String?
+  description     String?
+  phone           String?
+  email           String?
+  websiteUrl      String?
+  socialLinksJson Json?
+  status          StoreStatus    @default(ACTIVE)
+  createdBy       String
+  updatedBy       String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+  category        StoreCategory? @relation(fields: [categoryId], references: [id])
+  createdByUser   User           @relation("GlobalStoreCreator", fields: [createdBy], references: [id])
+  logoMedia       MediaAsset?    @relation("GlobalStoreLogo", fields: [logoMediaId], references: [id])
+  updatedByUser   User?          @relation("GlobalStoreUpdater", fields: [updatedBy], references: [id])
+  mallStores      MallStore[]
+
+  @@index([categoryId])
+  @@index([status])
+}
+
+model MallStore {
+  id               String                @id @default(cuid())
+  tenantId         String
+  mallId           String
+  globalStoreId    String
+  localName        String?
+  localDescription String?
+  localLogoMediaId String?
+  floor            String?
+  storeNo          String?
+  phone            String?
+  email            String?
+  workingHoursJson Json?
+  locationJson     Json?
+  isFeatured       Boolean               @default(false)
+  sortOrder        Int                   @default(0)
+  status           StoreStatus           @default(ACTIVE)
+  createdBy        String
+  updatedBy        String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  deletedAt        DateTime?
+  isSoon           Boolean               @default(false)
+  searchTags       String[]
+  campaigns        Campaign[]
+  createdByUser    User                  @relation("MallStoreCreator", fields: [createdBy], references: [id])
+  globalStore      GlobalStore           @relation(fields: [globalStoreId], references: [id])
+  localLogoMedia   MediaAsset?           @relation("MallStoreLocalLogo", fields: [localLogoMediaId], references: [id])
+  mall             Mall                  @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser    User?                 @relation("MallStoreUpdater", fields: [updatedBy], references: [id])
+  categoryLinks    MallStoreOnCategory[]
+
+  @@index([tenantId, mallId])
+  @@index([globalStoreId])
+  @@index([tenantId, mallId, status])
+}
+
+/// Per-mall category assignment (same brand may differ by mall).
+model MallStoreOnCategory {
+  mallStoreId     String
+  storeCategoryId String
+  createdAt       DateTime      @default(now())
+  mallStore       MallStore     @relation(fields: [mallStoreId], references: [id], onDelete: Cascade)
+  storeCategory   StoreCategory @relation(fields: [storeCategoryId], references: [id], onDelete: Cascade)
+
+  @@id([mallStoreId, storeCategoryId])
+  @@index([storeCategoryId])
+}
+
+model Event {
+  id                String        @id @default(cuid())
+  tenantId          String
+  mallId            String?
+  title             String
+  slug              String
+  shortDescription  String?
+  description       String?
+  coverMediaId      String?
+  startAt           DateTime?
+  endAt             DateTime?
+  location          String?
+  category          String?
+  buttonText        String?
+  linkUrl           String?
+  status            ContentStatus @default(DRAFT)
+  sortOrder         Int           @default(0)
+  dynamicFieldsJson Json?
+  createdBy         String
+  updatedBy         String?
+  publishedAt       DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
+  channels          Channel[]
+  coverMedia        MediaAsset?   @relation("EventCoverMedia", fields: [coverMediaId], references: [id])
+  createdByUser     User          @relation("EventCreator", fields: [createdBy], references: [id])
+  mall              Mall?         @relation(fields: [mallId], references: [id])
+  tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser     User?         @relation("EventUpdater", fields: [updatedBy], references: [id])
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@index([tenantId, mallId])
+  @@index([tenantId, sortOrder])
+  @@index([tenantId, startAt])
+  @@index([status, startAt])
+  @@index([status, endAt])
+}
+
+model Campaign {
+  id                String        @id @default(cuid())
+  tenantId          String
+  mallId            String?
+  storeId           String?
+  title             String
+  slug              String
+  shortDescription  String?
+  description       String?
+  coverMediaId      String?
+  startAt           DateTime?
+  endAt             DateTime?
+  terms             String?
+  couponCode        String?
+  buttonText        String?
+  linkUrl           String?
+  status            ContentStatus @default(DRAFT)
+  sortOrder         Int           @default(0)
+  dynamicFieldsJson Json?
+  createdBy         String
+  updatedBy         String?
+  publishedAt       DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
+  channels          Channel[]
+  coverMedia        MediaAsset?   @relation("CampaignCoverMedia", fields: [coverMediaId], references: [id])
+  createdByUser     User          @relation("CampaignCreator", fields: [createdBy], references: [id])
+  mall              Mall?         @relation(fields: [mallId], references: [id])
+  store             MallStore?    @relation(fields: [storeId], references: [id])
+  tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser     User?         @relation("CampaignUpdater", fields: [updatedBy], references: [id])
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@index([tenantId, mallId])
+  @@index([tenantId, storeId])
+  @@index([tenantId, sortOrder])
+  @@index([status, startAt])
+  @@index([status, endAt])
+}
+
+model Cinema {
+  id                 String             @id @default(cuid())
+  tenantId           String
+  mallId             String
+  name               String
+  slug               String
+  logoMediaId        String?
+  description        String?
+  providerType       CinemaProviderType @default(MANUAL)
+  providerConfigJson Json?
+  status             CinemaStatus       @default(ACTIVE)
+  createdBy          String
+  updatedBy          String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deletedAt          DateTime?
+  createdByUser      User               @relation("CinemaCreator", fields: [createdBy], references: [id])
+  logoMedia          MediaAsset?        @relation("CinemaLogoMedia", fields: [logoMediaId], references: [id])
+  mall               Mall               @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser      User?              @relation("CinemaUpdater", fields: [updatedBy], references: [id])
+  movieSessions      MovieSession[]
+
+  @@unique([mallId, slug])
+  @@index([tenantId, mallId])
+  @@index([tenantId, status])
+}
+
+model Movie {
+  id              String         @id @default(cuid())
+  tenantId        String
+  title           String
+  slug            String
+  originalTitle   String?
+  posterMediaId   String?
+  description     String?
+  durationMinutes Int?
+  genre           String?
+  rating          String?
+  trailerUrl      String?
+  releaseDate     DateTime?
+  status          MovieStatus    @default(ACTIVE)
+  createdBy       String
+  updatedBy       String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+  createdByUser   User           @relation("MovieCreator", fields: [createdBy], references: [id])
+  posterMedia     MediaAsset?    @relation("MoviePosterMedia", fields: [posterMediaId], references: [id])
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser   User?          @relation("MovieUpdater", fields: [updatedBy], references: [id])
+  movieSessions   MovieSession[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@index([tenantId, title])
+}
+
+model MovieSession {
+  id            String             @id @default(cuid())
+  tenantId      String
+  mallId        String
+  cinemaId      String
+  movieId       String
+  hallName      String?
+  startsAt      DateTime
+  endsAt        DateTime?
+  language      String?
+  subtitle      String?
+  format        String?
+  ticketUrl     String?
+  status        MovieSessionStatus @default(SCHEDULED)
+  createdBy     String
+  updatedBy     String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  deletedAt     DateTime?
+  cinema        Cinema             @relation(fields: [cinemaId], references: [id])
+  createdByUser User               @relation("MovieSessionCreator", fields: [createdBy], references: [id])
+  mall          Mall               @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  movie         Movie              @relation(fields: [movieId], references: [id])
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser User?              @relation("MovieSessionUpdater", fields: [updatedBy], references: [id])
+
+  @@index([tenantId, mallId, startsAt])
+  @@index([cinemaId, startsAt])
+  @@index([movieId])
+  @@index([tenantId, status])
+}
+
+model Page {
+  id              String           @id @default(cuid())
+  tenantId        String
+  mallId          String?
+  title           String
+  slug            String
+  type            PageType         @default(STANDARD)
+  status          PageStatus       @default(DRAFT)
+  seoTitle        String?
+  seoDescription  String?
+  seoKeywords     String?
+  createdBy       String
+  updatedBy       String?
+  publishedAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+  publishAt       DateTime?
+  unpublishAt     DateTime?
+  customTypeLabel String?
+  contentHtml     String?
+  createdByUser   User             @relation("PageCreator", fields: [createdBy], references: [id])
+  mall            Mall?            @relation(fields: [mallId], references: [id])
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser   User?            @relation("PageUpdater", fields: [updatedBy], references: [id])
+  attachments     PageAttachment[]
+  blocks          PageBlock[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@index([tenantId, mallId])
+  @@index([tenantId, type])
+  @@index([status, publishAt])
+  @@index([status, unpublishAt])
+}
+
+model PageAttachment {
+  id            String     @id @default(cuid())
+  tenantId      String
+  mallId        String?
+  pageId        String
+  mediaId       String
+  title         String?
+  description   String?
+  sortOrder     Int        @default(0)
+  downloadable  Boolean    @default(true)
+  createdBy     String
+  updatedBy     String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+  createdByUser User       @relation("PageAttachmentCreator", fields: [createdBy], references: [id])
+  mall          Mall?      @relation(fields: [mallId], references: [id])
+  media         MediaAsset @relation("PageAttachmentMedia", fields: [mediaId], references: [id])
+  page          Page       @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser User?      @relation("PageAttachmentUpdater", fields: [updatedBy], references: [id])
+
+  @@index([pageId, sortOrder])
+  @@index([tenantId, pageId])
+  @@index([mediaId])
+}
+
+model PageBlock {
+  id            String          @id @default(cuid())
+  tenantId      String
+  mallId        String?
+  pageId        String
+  type          String
+  title         String?
+  dataJson      Json            @default("{}")
+  sortOrder     Int             @default(0)
+  status        PageBlockStatus @default(ACTIVE)
+  createdBy     String
+  updatedBy     String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  deletedAt     DateTime?
+  createdByUser User            @relation("PageBlockCreator", fields: [createdBy], references: [id])
+  mall          Mall?           @relation(fields: [mallId], references: [id])
+  page          Page            @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser User?           @relation("PageBlockUpdater", fields: [updatedBy], references: [id])
+
+  @@index([pageId, sortOrder])
+  @@index([tenantId, pageId])
+}
+
+model Locale {
+  id           String             @id @default(cuid())
+  tenantId     String
+  code         String
+  name         String
+  nativeName   String
+  isDefault    Boolean            @default(false)
+  isActive     Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  /// Display / form tab order within the tenant (Sprint 21).
+  sortOrder    Int                @default(0)
+  /// Right-to-left UI for this locale (e.g. Arabic).
+  rtl          Boolean            @default(false)
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  translations LocalizedContent[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, sortOrder])
+}
+
+model LocalizedContent {
+  id         String              @id @default(cuid())
+  tenantId   String
+  localeId   String
+  entityType LocalizedEntityType
+  entityId   String
+  field      String
+  value      String
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  locale     Locale              @relation(fields: [localeId], references: [id], onDelete: Cascade)
+  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, localeId, entityType, entityId, field])
+  @@index([tenantId, localeId])
+  @@index([entityType, entityId])
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model SearchIndexEntry {
+  id          String                @id @default(cuid())
+  tenantId    String?
+  mallId      String?
+  entityType  SearchIndexEntityType
+  entityId    String
+  title       String
+  status      String
+  slug        String?
+  document    String
+  isFeatured  Boolean               @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  mall        Mall?                 @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  tenant      Tenant?               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([entityType, entityId])
+  @@index([tenantId])
+  @@index([tenantId, mallId])
+}
+
+model AnalyticsEvent {
+  id           String              @id @default(cuid())
+  tenantId     String
+  mallId       String?
+  entityType   AnalyticsEntityType
+  entityId     String?
+  eventType    AnalyticsEventType
+  path         String?
+  referrer     String?
+  userAgent    String?
+  deviceType   String?
+  ipHash       String?
+  metadataJson Json?
+  createdAt    DateTime            @default(now())
+  /// BCP-47-ish language tag when the client reports locale (Sprint 21).
+  locale       String?
+  mall         Mall?               @relation(fields: [mallId], references: [id])
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, mallId, createdAt])
+  @@index([entityType, entityId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([tenantId, locale])
+}
+
+model Capability {
+  id                 String             @id @default(cuid())
+  code               String             @unique
+  name               String
+  description        String?
+  category           CapabilityCategory
+  isSystem           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  tenantCapabilities TenantCapability[]
+}
+
+model TenantCapability {
+  id           String     @id @default(cuid())
+  tenantId     String
+  capabilityId String
+  enabled      Boolean    @default(true)
+  enabledAt    DateTime?
+  disabledAt   DateTime?
+  metadataJson Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  capability   Capability @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, capabilityId])
+  @@index([tenantId])
+}
+
+model TenantSetting {
+  id        String   @id @default(cuid())
+  tenantId  String
+  key       String
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+}
+
+model Notification {
+  id           String               @id @default(cuid())
+  tenantId     String?
+  mallId       String?
+  userId       String?
+  type         NotificationType
+  title        String
+  message      String
+  entityType   String?
+  entityId     String?
+  severity     NotificationSeverity
+  readAt       DateTime?
+  createdAt    DateTime             @default(now())
+  metadataJson Json?
+  deletedAt    DateTime?
+  mall         Mall?                @relation(fields: [mallId], references: [id])
+  tenant       Tenant?              @relation(fields: [tenantId], references: [id])
+  user         User?                @relation("NotificationRecipient", fields: [userId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, mallId, createdAt])
+  @@index([userId, readAt, createdAt])
+  @@index([readAt, createdAt])
+}
+
+model Popup {
+  id            String      @id @default(cuid())
+  tenantId      String
+  mallId        String?
+  title         String
+  description   String?
+  imageMediaId  String?
+  linkUrl       String?
+  buttonText    String?
+  status        PopupStatus @default(DRAFT)
+  channels      Channel[]
+  startAt       DateTime?
+  endAt         DateTime?
+  sortOrder     Int         @default(0)
+  showOnce      Boolean     @default(false)
+  closable      Boolean     @default(true)
+  metadataJson  Json?
+  createdBy     String
+  updatedBy     String?
+  publishedAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+  createdByUser User        @relation("PopupCreator", fields: [createdBy], references: [id])
+  imageMedia    MediaAsset? @relation("PopupImageMedia", fields: [imageMediaId], references: [id])
+  mall          Mall?       @relation(fields: [mallId], references: [id])
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser User?       @relation("PopupUpdater", fields: [updatedBy], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, mallId])
+  @@index([tenantId, sortOrder])
+  @@index([status, startAt])
+  @@index([status, endAt])
+}
+
+model Service {
+  id            String        @id @default(cuid())
+  tenantId      String
+  mallId        String
+  name          String
+  description   String?
+  iconMediaId   String?
+  coverMediaId  String?
+  category      String?
+  floor         String?
+  unitNo        String?
+  phone         String?
+  email         String?
+  websiteUrl    String?
+  locationLabel String?
+  latitude      Float?
+  longitude     Float?
+  searchTags    String[]
+  isSoon        Boolean       @default(false)
+  status        ServiceStatus @default(ACTIVE)
+  sortOrder     Int           @default(0)
+  metadataJson  Json?
+  createdBy     String
+  updatedBy     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+  coverMedia    MediaAsset?   @relation("ServiceCoverMedia", fields: [coverMediaId], references: [id])
+  createdByUser User          @relation("ServiceCreator", fields: [createdBy], references: [id])
+  iconMedia     MediaAsset?   @relation("ServiceIconMedia", fields: [iconMediaId], references: [id])
+  mall          Mall          @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser User?         @relation("ServiceUpdater", fields: [updatedBy], references: [id])
+
+  @@index([tenantId, mallId])
+  @@index([tenantId, status])
+  @@index([tenantId, mallId, status])
+  @@index([tenantId, sortOrder])
+}
+
 enum UserStatus {
   INVITED
   ACTIVE
@@ -28,8 +1008,6 @@ enum MallStatus {
   CLOSED
 }
 
-// Sprint 20: Location type — Mall is the internal model, Location is the product concept.
-// Mall stays as the DB table name for backward compatibility. LocationType drives per-location behavior.
 enum LocationType {
   SHOPPING_MALL
   STORE
@@ -45,246 +1023,6 @@ enum LocationType {
   CUSTOM
 }
 
-model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  passwordHash String
-  firstName    String?
-  lastName     String?
-  status       UserStatus @default(ACTIVE)
-  isSuperAdmin Boolean    @default(false)
-  deletedAt    DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  tenantUsers    TenantUser[]
-  refreshTokens  RefreshToken[]
-  auditLogs      AuditLog[]    @relation("AuditActor")
-  mediaFolders   MediaFolder[] @relation("FolderCreator")
-  uploadedAssets MediaAsset[]  @relation("AssetUploader")
-  createdSliders Slider[]      @relation("SliderCreator")
-  updatedSliders Slider[]      @relation("SliderUpdater")
-  createdGlobalStores GlobalStore[] @relation("GlobalStoreCreator")
-  updatedGlobalStores GlobalStore[] @relation("GlobalStoreUpdater")
-  createdMallStores     MallStore[]     @relation("MallStoreCreator")
-  updatedMallStores     MallStore[]     @relation("MallStoreUpdater")
-  createdEvents         Event[]         @relation("EventCreator")
-  updatedEvents         Event[]         @relation("EventUpdater")
-  createdCampaigns      Campaign[]      @relation("CampaignCreator")
-  updatedCampaigns      Campaign[]      @relation("CampaignUpdater")
-  createdCinemas        Cinema[]        @relation("CinemaCreator")
-  updatedCinemas        Cinema[]        @relation("CinemaUpdater")
-  createdMovies         Movie[]         @relation("MovieCreator")
-  updatedMovies         Movie[]         @relation("MovieUpdater")
-  createdMovieSessions  MovieSession[]  @relation("MovieSessionCreator")
-  updatedMovieSessions  MovieSession[]  @relation("MovieSessionUpdater")
-  createdPages          Page[]          @relation("PageCreator")
-  updatedPages          Page[]          @relation("PageUpdater")
-  createdPageBlocks     PageBlock[]     @relation("PageBlockCreator")
-  updatedPageBlocks     PageBlock[]     @relation("PageBlockUpdater")
-  createdPageAttachments PageAttachment[] @relation("PageAttachmentCreator")
-  updatedPageAttachments PageAttachment[] @relation("PageAttachmentUpdater")
-  notifications         Notification[]  @relation("NotificationRecipient")
-  createdPopups         Popup[]         @relation("PopupCreator")
-  updatedPopups         Popup[]         @relation("PopupUpdater")
-  createdServices       Service[]       @relation("ServiceCreator")
-  updatedServices       Service[]       @relation("ServiceUpdater")
-}
-
-model Tenant {
-  id        String       @id @default(cuid())
-  name      String
-  slug      String       @unique
-  status    TenantStatus @default(ACTIVE)
-
-  // Contact & billing (Sprint 20)
-  legalName     String?
-  contactEmail  String?
-  contactPhone  String?
-  websiteUrl    String?
-  billingEmail  String?
-  addressJson   Json?
-  metadataJson  Json?
-
-  deletedAt DateTime?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-
-  malls        Mall[]
-  tenantUsers  TenantUser[]
-  roles        Role[]
-  auditLogs    AuditLog[]
-  mediaFolders MediaFolder[]
-  mediaAssets  MediaAsset[]
-  sliders       Slider[]
-  mallStores    MallStore[]
-  events        Event[]
-  campaigns     Campaign[]
-  cinemas       Cinema[]
-  movies        Movie[]
-  movieSessions MovieSession[]
-  pages         Page[]
-  pageBlocks    PageBlock[]
-  pageAttachments PageAttachment[]
-  analyticsEvents    AnalyticsEvent[]
-  locales            Locale[]
-  localizedContent   LocalizedContent[]
-  notifications      Notification[]
-  searchIndexEntries SearchIndexEntry[]
-  capabilities       TenantCapability[]
-  settings           TenantSetting[]
-  popups             Popup[]
-  services           Service[]
-}
-
-model Mall {
-  id        String       @id @default(cuid())
-  tenantId  String
-  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name      String
-  slug      String
-  type      LocationType @default(SHOPPING_MALL)
-  status    MallStatus   @default(LIVE)
-  isPublic  Boolean      @default(true)
-
-  // Generic location / venue fields (Sprint 20)
-  legalName         String?
-  displayName       String?
-  shortDescription  String?
-  description       String?
-  logoMediaId       String?
-  coverMediaId      String?
-  websiteUrl        String?
-  supportEmail      String?
-  phone             String?
-  addressLine1      String?
-  addressLine2      String?
-  city              String?
-  district          String?
-  country           String?
-  postalCode        String?
-  latitude          Float?
-  longitude         Float?
-  timezone          String?
-  workingHoursJson  Json?
-  socialLinksJson   Json?
-  metadataJson      Json?
-
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  logoMedia  MediaAsset? @relation("MallLogoMedia", fields: [logoMediaId], references: [id], onDelete: SetNull)
-  coverMedia MediaAsset? @relation("MallCoverMedia", fields: [coverMediaId], references: [id], onDelete: SetNull)
-
-  userMallAccesses UserMallAccess[]
-  auditLogs        AuditLog[]
-  mediaFolders     MediaFolder[]
-  mediaAssets      MediaAsset[]
-  sliders          Slider[]
-  mallStores       MallStore[]
-  events           Event[]
-  campaigns        Campaign[]
-  cinemas          Cinema[]
-  movieSessions    MovieSession[]
-  pages            Page[]
-  pageBlocks       PageBlock[]
-  pageAttachments  PageAttachment[]
-  analyticsEvents  AnalyticsEvent[]
-  notifications    Notification[]
-  searchIndexEntries SearchIndexEntry[]
-  popups           Popup[]
-  services         Service[]
-
-  @@unique([tenantId, slug])
-  @@index([tenantId])
-}
-
-model Role {
-  id          String   @id @default(cuid())
-  tenantId    String?
-  code        String   @unique
-  name        String
-  description String?
-  isSystem    Boolean  @default(true)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  tenant          Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tenantUsers     TenantUser[]
-  rolePermissions RolePermission[]
-
-  @@index([tenantId])
-}
-
-model Permission {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  rolePermissions RolePermission[]
-}
-
-model RolePermission {
-  roleId       String
-  permissionId String
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  createdAt    DateTime   @default(now())
-
-  @@id([roleId, permissionId])
-}
-
-model TenantUser {
-  id        String    @id @default(cuid())
-  tenantId  String
-  userId    String
-  roleId    String
-  isActive  Boolean   @default(true)
-  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  mallAccess UserMallAccess[]
-
-  @@unique([tenantId, userId])
-  @@index([userId])
-  @@index([tenantId])
-}
-
-model UserMallAccess {
-  id           String     @id @default(cuid())
-  tenantUserId String
-  mallId       String
-  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
-  mall         Mall       @relation(fields: [mallId], references: [id], onDelete: Cascade)
-  createdAt    DateTime   @default(now())
-
-  @@unique([tenantUserId, mallId])
-  @@index([mallId])
-}
-
-model RefreshToken {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String
-  expiresAt DateTime
-  revokedAt DateTime?
-  userAgent String?
-  ipAddress String?
-  createdAt DateTime  @default(now())
-
-  @@index([userId])
-  @@index([tokenHash])
-}
-
 enum AuditSeverity {
   INFO
   WARNING
@@ -293,146 +1031,10 @@ enum AuditSeverity {
   CRITICAL
 }
 
-model AuditLog {
-  id            String         @id @default(cuid())
-  actorUserId   String?
-  actor         User?          @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
-  tenantId      String?
-  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
-  mallId        String?
-  mall          Mall?          @relation(fields: [mallId], references: [id], onDelete: SetNull)
-  action        String
-  resource      String
-  resourceId    String?
-  resourceName  String?
-  severity      AuditSeverity  @default(INFO)
-  source        String?
-  success       Boolean        @default(true)
-  correlationId String?
-  requestId     String?
-  metadata      Json?
-  createdAt     DateTime       @default(now())
-
-  @@index([tenantId, createdAt])
-  @@index([actorUserId, createdAt])
-  @@index([severity, createdAt])
-  @@index([resource, createdAt])
-  @@index([correlationId])
-  @@index([success, createdAt])
-}
-
-// ─── Media ────────────────────────────────────────────────────────────────────
-
 enum MediaAssetStatus {
   ACTIVE
   ARCHIVED
 }
-
-model MediaFolder {
-  id        String    @id @default(cuid())
-  tenantId  String
-  mallId    String?
-  parentId  String?
-  name      String
-  slug      String
-  sortOrder Int       @default(0)
-  createdBy String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall     Mall?         @relation(fields: [mallId], references: [id], onDelete: SetNull)
-  parent   MediaFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children MediaFolder[] @relation("FolderHierarchy")
-  creator  User          @relation("FolderCreator", fields: [createdBy], references: [id])
-  assets   MediaAsset[]
-
-  @@index([tenantId])
-  @@index([tenantId, parentId])
-  @@index([mallId])
-}
-
-model MediaAsset {
-  id              String           @id @default(cuid())
-  tenantId        String
-  mallId          String?
-  folderId        String?
-  uploadedBy      String
-  originalName    String
-  fileName        String
-  mimeType        String
-  extension       String
-  size            Int
-  width           Int?
-  height          Int?
-  durationSeconds Float?
-  storageKey      String           @unique
-  publicUrl       String
-  altText         String?
-  caption         String?
-  description     String?
-  tags            String[]
-  focalPointX     Float?
-  focalPointY     Float?
-  dominantColor   String?
-  source          String?
-  checksum        String?
-  status          MediaAssetStatus @default(ACTIVE)
-  usageContext    String?
-  suggestedWidth  Int?
-  suggestedHeight Int?
-  metadataJson    Json?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  deletedAt       DateTime?
-
-  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall     Mall?        @relation(fields: [mallId], references: [id], onDelete: SetNull)
-  folder   MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  uploader User         @relation("AssetUploader", fields: [uploadedBy], references: [id])
-  variants MediaVariant[]
-
-  slidersDesktop      Slider[]    @relation("SliderDesktopMedia")
-  slidersMobile       Slider[]    @relation("SliderMobileMedia")
-  slidersVideo        Slider[]    @relation("SliderVideoMedia")
-  globalStoreLogos    GlobalStore[] @relation("GlobalStoreLogo")
-  mallStoreLocalLogos MallStore[] @relation("MallStoreLocalLogo")
-  eventCovers         Event[]     @relation("EventCoverMedia")
-  campaignCovers      Campaign[]  @relation("CampaignCoverMedia")
-  cinemaLogos         Cinema[]    @relation("CinemaLogoMedia")
-  moviePosters        Movie[]     @relation("MoviePosterMedia")
-  mallLogos           Mall[]      @relation("MallLogoMedia")
-  mallCovers          Mall[]      @relation("MallCoverMedia")
-  pageAttachments     PageAttachment[] @relation("PageAttachmentMedia")
-  popupImages         Popup[]          @relation("PopupImageMedia")
-  serviceIcons        Service[]        @relation("ServiceIconMedia")
-  serviceCovers       Service[]        @relation("ServiceCoverMedia")
-
-  @@index([tenantId, createdAt])
-  @@index([tenantId, folderId])
-  @@index([tenantId, status])
-  @@index([mallId])
-}
-
-model MediaVariant {
-  id           String     @id @default(cuid())
-  mediaAssetId String
-  variantKey   String
-  url          String
-  width        Int?
-  height       Int?
-  mimeType     String
-  fileSize     Int
-  createdAt    DateTime   @default(now())
-
-  asset MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
-
-  @@unique([mediaAssetId, variantKey])
-  @@index([mediaAssetId])
-}
-
-// ─── Channel Visibility (Sprint 25) ──────────────────────────────────────────
 
 enum Channel {
   WEB
@@ -440,8 +1042,6 @@ enum Channel {
   KIOSK
   SIGNAGE
 }
-
-// ─── Sliders ──────────────────────────────────────────────────────────────────
 
 enum SliderStatus {
   DRAFT
@@ -465,48 +1065,6 @@ enum SliderLinkType {
   STORE
 }
 
-model Slider {
-  id             String             @id @default(cuid())
-  tenantId       String
-  mallId         String?
-  title          String
-  subtitle       String?
-  description    String?
-  desktopMediaId String?
-  mobileMediaId  String?
-  videoMediaId   String?
-  linkType       SliderLinkType     @default(NONE)
-  linkValue      String?
-  buttonText     String?
-  startAt        DateTime?
-  endAt          DateTime?
-  sortOrder      Int                @default(0)
-  status         SliderStatus       @default(DRAFT)
-  targetDevice   SliderTargetDevice @default(ALL)
-  channels       Channel[]
-  createdBy      String
-  updatedBy      String?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  deletedAt      DateTime?
-
-  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall          Mall?       @relation(fields: [mallId], references: [id], onDelete: SetNull)
-  desktopMedia  MediaAsset? @relation("SliderDesktopMedia", fields: [desktopMediaId], references: [id], onDelete: SetNull)
-  mobileMedia   MediaAsset? @relation("SliderMobileMedia", fields: [mobileMediaId], references: [id], onDelete: SetNull)
-  videoMedia    MediaAsset? @relation("SliderVideoMedia", fields: [videoMediaId], references: [id], onDelete: SetNull)
-  createdByUser User        @relation("SliderCreator", fields: [createdBy], references: [id])
-  updatedByUser User?       @relation("SliderUpdater", fields: [updatedBy], references: [id])
-
-  @@index([tenantId, status])
-  @@index([tenantId, mallId])
-  @@index([tenantId, sortOrder])
-  @@index([status, startAt])
-  @@index([status, endAt])
-}
-
-// ─── Store Center (global pool + mall assignment) ─────────────────────────────
-
 enum StoreCategoryStatus {
   ACTIVE
   PASSIVE
@@ -518,196 +1076,12 @@ enum StoreStatus {
   ARCHIVED
 }
 
-model StoreCategory {
-  id        String              @id @default(cuid())
-  name      String
-  slug      String              @unique
-  icon      String?
-  sortOrder Int                 @default(0)
-  status    StoreCategoryStatus @default(ACTIVE)
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
-  deletedAt DateTime?
-
-  globalStores   GlobalStore[]
-  mallStoreLinks MallStoreOnCategory[]
-
-  @@index([status])
-  @@index([sortOrder])
-}
-
-model GlobalStore {
-  id              String      @id @default(cuid())
-  name            String
-  slug            String      @unique
-  logoMediaId     String?
-  categoryId      String?
-  description     String?
-  websiteUrl      String?
-  socialLinksJson Json?
-  status          StoreStatus @default(ACTIVE)
-  createdBy       String
-  updatedBy       String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  deletedAt       DateTime?
-
-  category        StoreCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  logoMedia       MediaAsset?    @relation("GlobalStoreLogo", fields: [logoMediaId], references: [id], onDelete: SetNull)
-  createdByUser   User           @relation("GlobalStoreCreator", fields: [createdBy], references: [id])
-  updatedByUser   User?          @relation("GlobalStoreUpdater", fields: [updatedBy], references: [id])
-  mallStores      MallStore[]
-
-  @@index([categoryId])
-  @@index([status])
-}
-
-model MallStore {
-  id               String      @id @default(cuid())
-  tenantId         String
-  mallId           String
-  globalStoreId    String
-  localName        String?
-  localDescription String?
-  localLogoMediaId String?
-  floor            String?
-  storeNo          String?
-  phone            String?
-  email            String?
-  workingHoursJson Json?
-  locationJson     Json?
-  isFeatured       Boolean     @default(false)
-  isSoon           Boolean     @default(false)
-  searchTags       String[]
-  sortOrder        Int         @default(0)
-  status           StoreStatus @default(ACTIVE)
-  createdBy        String
-  updatedBy        String?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-  deletedAt        DateTime?
-
-  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall             Mall         @relation(fields: [mallId], references: [id], onDelete: Cascade)
-  globalStore      GlobalStore  @relation(fields: [globalStoreId], references: [id], onDelete: Restrict)
-  localLogoMedia   MediaAsset?  @relation("MallStoreLocalLogo", fields: [localLogoMediaId], references: [id], onDelete: SetNull)
-  createdByUser    User         @relation("MallStoreCreator", fields: [createdBy], references: [id])
-  updatedByUser    User?                 @relation("MallStoreUpdater", fields: [updatedBy], references: [id])
-  campaigns        Campaign[]
-  categoryLinks    MallStoreOnCategory[]
-
-  @@index([tenantId, mallId])
-  @@index([globalStoreId])
-  @@index([tenantId, mallId, status])
-}
-
-/// Per-mall category assignment (same brand may differ by mall).
-model MallStoreOnCategory {
-  mallStoreId     String
-  storeCategoryId String
-  createdAt       DateTime @default(now())
-
-  mallStore     MallStore     @relation(fields: [mallStoreId], references: [id], onDelete: Cascade)
-  storeCategory StoreCategory @relation(fields: [storeCategoryId], references: [id], onDelete: Cascade)
-
-  @@id([mallStoreId, storeCategoryId])
-  @@index([storeCategoryId])
-}
-
-// ─── Events & Campaigns (Sprint 6) ────────────────────────────────────────────
-
 enum ContentStatus {
   DRAFT
   SCHEDULED
   PUBLISHED
   ARCHIVED
 }
-
-model Event {
-  id                  String        @id @default(cuid())
-  tenantId            String
-  mallId              String?
-  title               String
-  slug                String
-  shortDescription    String?
-  description         String?
-  coverMediaId        String?
-  startAt             DateTime?
-  endAt               DateTime?
-  location            String?
-  category            String?
-  buttonText          String?
-  linkUrl             String?
-  status              ContentStatus @default(DRAFT)
-  sortOrder           Int           @default(0)
-  channels            Channel[]
-  dynamicFieldsJson   Json?
-  createdBy           String
-  updatedBy           String?
-  publishedAt         DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  deletedAt           DateTime?
-
-  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall            Mall?       @relation(fields: [mallId], references: [id], onDelete: SetNull)
-  coverMedia      MediaAsset? @relation("EventCoverMedia", fields: [coverMediaId], references: [id], onDelete: SetNull)
-  createdByUser   User        @relation("EventCreator", fields: [createdBy], references: [id])
-  updatedByUser   User?       @relation("EventUpdater", fields: [updatedBy], references: [id])
-
-  @@unique([tenantId, slug])
-  @@index([tenantId, status])
-  @@index([tenantId, mallId])
-  @@index([tenantId, sortOrder])
-  @@index([tenantId, startAt])
-  @@index([status, startAt])
-  @@index([status, endAt])
-}
-
-model Campaign {
-  id                  String        @id @default(cuid())
-  tenantId            String
-  mallId              String?
-  storeId             String?
-  title               String
-  slug                String
-  shortDescription    String?
-  description         String?
-  coverMediaId        String?
-  startAt             DateTime?
-  endAt               DateTime?
-  terms               String?
-  couponCode          String?
-  buttonText          String?
-  linkUrl             String?
-  status              ContentStatus @default(DRAFT)
-  sortOrder           Int           @default(0)
-  channels            Channel[]
-  dynamicFieldsJson   Json?
-  createdBy           String
-  updatedBy           String?
-  publishedAt         DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  deletedAt           DateTime?
-
-  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall            Mall?       @relation(fields: [mallId], references: [id], onDelete: SetNull)
-  store           MallStore?  @relation(fields: [storeId], references: [id], onDelete: SetNull)
-  coverMedia      MediaAsset? @relation("CampaignCoverMedia", fields: [coverMediaId], references: [id], onDelete: SetNull)
-  createdByUser   User        @relation("CampaignCreator", fields: [createdBy], references: [id])
-  updatedByUser   User?       @relation("CampaignUpdater", fields: [updatedBy], references: [id])
-
-  @@unique([tenantId, slug])
-  @@index([tenantId, status])
-  @@index([tenantId, mallId])
-  @@index([tenantId, storeId])
-  @@index([tenantId, sortOrder])
-  @@index([status, startAt])
-  @@index([status, endAt])
-}
-
-// ─── Cinema & sessions (Sprint 8) ─────────────────────────────────────────────
 
 enum CinemaStatus {
   ACTIVE
@@ -733,101 +1107,6 @@ enum CinemaProviderType {
   XML_FEED
 }
 
-model Cinema {
-  id                 String             @id @default(cuid())
-  tenantId           String
-  mallId             String
-  name               String
-  slug               String
-  logoMediaId        String?
-  description        String?
-  providerType       CinemaProviderType @default(MANUAL)
-  providerConfigJson Json?
-  status             CinemaStatus       @default(ACTIVE)
-  createdBy          String
-  updatedBy          String?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  deletedAt          DateTime?
-
-  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall            Mall         @relation(fields: [mallId], references: [id], onDelete: Cascade)
-  logoMedia       MediaAsset?  @relation("CinemaLogoMedia", fields: [logoMediaId], references: [id], onDelete: SetNull)
-  createdByUser   User         @relation("CinemaCreator", fields: [createdBy], references: [id])
-  updatedByUser   User?        @relation("CinemaUpdater", fields: [updatedBy], references: [id])
-  movieSessions   MovieSession[]
-
-  @@unique([mallId, slug])
-  @@index([tenantId, mallId])
-  @@index([tenantId, status])
-}
-
-model Movie {
-  id              String      @id @default(cuid())
-  tenantId        String
-  title           String
-  slug            String
-  originalTitle   String?
-  posterMediaId   String?
-  description     String?
-  durationMinutes Int?
-  genre           String?
-  rating          String?
-  trailerUrl      String?
-  releaseDate     DateTime?
-  status          MovieStatus @default(ACTIVE)
-  createdBy       String
-  updatedBy       String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  deletedAt       DateTime?
-
-  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  posterMedia     MediaAsset?    @relation("MoviePosterMedia", fields: [posterMediaId], references: [id], onDelete: SetNull)
-  createdByUser   User           @relation("MovieCreator", fields: [createdBy], references: [id])
-  updatedByUser   User?          @relation("MovieUpdater", fields: [updatedBy], references: [id])
-  movieSessions   MovieSession[]
-
-  @@unique([tenantId, slug])
-  @@index([tenantId, status])
-  @@index([tenantId, title])
-}
-
-model MovieSession {
-  id         String             @id @default(cuid())
-  tenantId   String
-  mallId     String
-  cinemaId   String
-  movieId    String
-  hallName   String?
-  startsAt   DateTime
-  endsAt     DateTime?
-  language   String?
-  subtitle   String?
-  format     String?
-  ticketUrl  String?
-  status     MovieSessionStatus @default(SCHEDULED)
-  createdBy  String
-  updatedBy  String?
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
-  deletedAt  DateTime?
-
-  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall            Mall         @relation(fields: [mallId], references: [id], onDelete: Cascade)
-  cinema          Cinema       @relation(fields: [cinemaId], references: [id], onDelete: Restrict)
-  movie           Movie        @relation(fields: [movieId], references: [id], onDelete: Restrict)
-  createdByUser   User         @relation("MovieSessionCreator", fields: [createdBy], references: [id])
-  updatedByUser   User?        @relation("MovieSessionUpdater", fields: [updatedBy], references: [id])
-
-  @@index([tenantId, mallId, startsAt])
-  @@index([cinemaId, startsAt])
-  @@index([movieId])
-  @@index([tenantId, status])
-}
-
-// ─── Page Builder (Sprint 9) ──────────────────────────────────────────────────
-
 enum PageStatus {
   DRAFT
   SCHEDULED
@@ -840,6 +1119,7 @@ enum PageType {
   LANDING
   LEGAL
   CONTACT
+  CUSTOM
   ABOUT
   KVKK
   PRIVACY_POLICY
@@ -851,106 +1131,12 @@ enum PageType {
   CERTIFICATES
   DOCUMENTS
   AWARDS
-  CUSTOM
 }
 
 enum PageBlockStatus {
   ACTIVE
   PASSIVE
 }
-
-model Page {
-  id             String     @id @default(cuid())
-  tenantId       String
-  mallId         String?
-  title          String
-  slug           String
-  type           PageType   @default(STANDARD)
-  customTypeLabel String?
-  contentHtml    String?
-  status         PageStatus @default(DRAFT)
-  seoTitle       String?
-  seoDescription String?
-  seoKeywords    String?
-  publishAt      DateTime?
-  unpublishAt    DateTime?
-  createdBy      String
-  updatedBy      String?
-  publishedAt    DateTime?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  deletedAt      DateTime?
-
-  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall          Mall?       @relation(fields: [mallId], references: [id], onDelete: SetNull)
-  createdByUser User        @relation("PageCreator", fields: [createdBy], references: [id])
-  updatedByUser User?       @relation("PageUpdater", fields: [updatedBy], references: [id])
-  blocks        PageBlock[]
-  attachments   PageAttachment[]
-
-  @@unique([tenantId, slug])
-  @@index([tenantId, status])
-  @@index([tenantId, mallId])
-  @@index([tenantId, type])
-  @@index([status, publishAt])
-  @@index([status, unpublishAt])
-}
-
-model PageAttachment {
-  id           String   @id @default(cuid())
-  tenantId     String
-  mallId       String?
-  pageId       String
-  mediaId      String
-  title        String?
-  description  String?
-  sortOrder    Int      @default(0)
-  downloadable Boolean  @default(true)
-  createdBy    String
-  updatedBy    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  deletedAt    DateTime?
-
-  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall          Mall?      @relation(fields: [mallId], references: [id], onDelete: SetNull)
-  page          Page       @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  media         MediaAsset @relation("PageAttachmentMedia", fields: [mediaId], references: [id], onDelete: Restrict)
-  createdByUser User      @relation("PageAttachmentCreator", fields: [createdBy], references: [id])
-  updatedByUser User?     @relation("PageAttachmentUpdater", fields: [updatedBy], references: [id])
-
-  @@index([pageId, sortOrder])
-  @@index([tenantId, pageId])
-  @@index([mediaId])
-}
-
-model PageBlock {
-  id        String          @id @default(cuid())
-  tenantId  String
-  mallId    String?
-  pageId    String
-  type      String
-  title     String?
-  dataJson  Json            @default("{}")
-  sortOrder Int             @default(0)
-  status    PageBlockStatus @default(ACTIVE)
-  createdBy String
-  updatedBy String?
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  deletedAt DateTime?
-
-  tenant        Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall          Mall?   @relation(fields: [mallId], references: [id], onDelete: SetNull)
-  page          Page    @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  createdByUser User    @relation("PageBlockCreator", fields: [createdBy], references: [id])
-  updatedByUser User?   @relation("PageBlockUpdater", fields: [updatedBy], references: [id])
-
-  @@index([pageId, sortOrder])
-  @@index([tenantId, pageId])
-}
-
-// ─── Localization (Sprint 12A) ────────────────────────────────────────────────
 
 enum LocalizedEntityType {
   PAGE
@@ -966,50 +1152,6 @@ enum LocalizedEntityType {
   SERVICE
 }
 
-model Locale {
-  id         String   @id @default(cuid())
-  tenantId   String
-  code       String
-  name       String
-  nativeName String
-  isDefault  Boolean  @default(false)
-  isActive   Boolean  @default(true)
-  /// Display / form tab order within the tenant (Sprint 21).
-  sortOrder  Int      @default(0)
-  /// Right-to-left UI for this locale (e.g. Arabic).
-  rtl        Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  translations LocalizedContent[]
-
-  @@unique([tenantId, code])
-  @@index([tenantId])
-  @@index([tenantId, sortOrder])
-}
-
-model LocalizedContent {
-  id         String              @id @default(cuid())
-  tenantId   String
-  localeId   String
-  entityType LocalizedEntityType
-  entityId   String
-  field      String
-  value      String
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  locale Locale @relation(fields: [localeId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, localeId, entityType, entityId, field])
-  @@index([tenantId, localeId])
-  @@index([entityType, entityId])
-}
-
-// ─── Search index (Sprint 15) ───────────────────────────────────────────────
-
 enum SearchIndexEntityType {
   PAGE
   EVENT
@@ -1022,29 +1164,6 @@ enum SearchIndexEntityType {
   LOCATION
   POPUP
   SERVICE
-}
-
-model SearchIndexEntry {
-  id           String              @id @default(cuid())
-  tenantId     String?
-  mallId       String?
-  entityType   SearchIndexEntityType
-  entityId     String
-  title        String
-  status       String
-  slug         String?
-  document     String              @db.Text
-  isFeatured   Boolean             @default(false)
-  publishedAt  DateTime?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-
-  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall   Mall?   @relation(fields: [mallId], references: [id], onDelete: Cascade)
-
-  @@unique([entityType, entityId])
-  @@index([tenantId])
-  @@index([tenantId, mallId])
 }
 
 enum AnalyticsEntityType {
@@ -1077,35 +1196,6 @@ enum AnalyticsEventType {
   CUSTOM
 }
 
-model AnalyticsEvent {
-  id            String               @id @default(cuid())
-  tenantId      String
-  mallId        String?
-  entityType    AnalyticsEntityType
-  entityId      String?
-  eventType     AnalyticsEventType
-  path          String?
-  referrer      String?
-  userAgent     String?
-  deviceType    String?
-  ipHash        String?
-  /// BCP-47-ish language tag when the client reports locale (Sprint 21).
-  locale        String?
-  metadataJson  Json?
-  createdAt     DateTime             @default(now())
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall   Mall?  @relation(fields: [mallId], references: [id], onDelete: SetNull)
-
-  @@index([tenantId, mallId, createdAt])
-  @@index([entityType, entityId])
-  @@index([eventType])
-  @@index([createdAt])
-  @@index([tenantId, locale])
-}
-
-// ─── Capability & Package System (Sprint 16) ─────────────────────────────────
-
 enum CapabilityCategory {
   CORE
   CONTENT
@@ -1118,55 +1208,6 @@ enum CapabilityCategory {
   AI
   INTEGRATION
 }
-
-model Capability {
-  id          String             @id @default(cuid())
-  code        String             @unique
-  name        String
-  description String?
-  category    CapabilityCategory
-  isSystem    Boolean            @default(true)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-
-  tenantCapabilities TenantCapability[]
-}
-
-model TenantCapability {
-  id             String      @id @default(cuid())
-  tenantId       String
-  capabilityId   String
-  enabled        Boolean     @default(true)
-  enabledAt      DateTime?
-  disabledAt     DateTime?
-  metadataJson   Json?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-
-  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  capability Capability @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, capabilityId])
-  @@index([tenantId])
-}
-
-// ─── Tenant Settings (Sprint 19) ─────────────────────────────────────────────
-
-model TenantSetting {
-  id        String   @id @default(cuid())
-  tenantId  String
-  key       String
-  value     Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, key])
-  @@index([tenantId])
-}
-
-// ─── Notifications (Sprint 14) ──────────────────────────────────────────────
 
 enum NotificationType {
   SYSTEM
@@ -1183,34 +1224,6 @@ enum NotificationSeverity {
   ERROR
 }
 
-model Notification {
-  id           String               @id @default(cuid())
-  tenantId     String?
-  mallId       String?
-  userId       String?
-  type         NotificationType
-  title        String
-  message      String
-  entityType   String?
-  entityId     String?
-  severity     NotificationSeverity
-  readAt       DateTime?
-  createdAt    DateTime             @default(now())
-  metadataJson Json?
-  deletedAt    DateTime?
-
-  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
-  mall   Mall?   @relation(fields: [mallId], references: [id], onDelete: SetNull)
-  user   User?   @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([tenantId, createdAt])
-  @@index([tenantId, mallId, createdAt])
-  @@index([userId, readAt, createdAt])
-  @@index([readAt, createdAt])
-}
-
-// ─── Popups (Sprint 25) ───────────────────────────────────────────────────────
-
 enum PopupStatus {
   DRAFT
   SCHEDULED
@@ -1218,87 +1231,7 @@ enum PopupStatus {
   ARCHIVED
 }
 
-model Popup {
-  id           String      @id @default(cuid())
-  tenantId     String
-  mallId       String?
-  title        String
-  description  String?
-  imageMediaId String?
-  linkUrl      String?
-  buttonText   String?
-  status       PopupStatus @default(DRAFT)
-  channels     Channel[]
-  startAt      DateTime?
-  endAt        DateTime?
-  sortOrder    Int         @default(0)
-  showOnce     Boolean     @default(false)
-  closable     Boolean     @default(true)
-  metadataJson Json?
-  createdBy    String
-  updatedBy    String?
-  publishedAt  DateTime?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  deletedAt    DateTime?
-
-  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall       Mall?       @relation(fields: [mallId], references: [id], onDelete: SetNull)
-  imageMedia MediaAsset? @relation("PopupImageMedia", fields: [imageMediaId], references: [id], onDelete: SetNull)
-  createdByUser User     @relation("PopupCreator", fields: [createdBy], references: [id])
-  updatedByUser User?    @relation("PopupUpdater", fields: [updatedBy], references: [id])
-
-  @@index([tenantId, status])
-  @@index([tenantId, mallId])
-  @@index([tenantId, sortOrder])
-  @@index([status, startAt])
-  @@index([status, endAt])
-}
-
-// ─── Services (Sprint 25) ─────────────────────────────────────────────────────
-
 enum ServiceStatus {
   ACTIVE
   INACTIVE
-}
-
-model Service {
-  id            String        @id @default(cuid())
-  tenantId      String
-  mallId        String
-  name          String
-  description   String?
-  iconMediaId   String?
-  coverMediaId  String?
-  category      String?
-  floor         String?
-  unitNo        String?
-  phone         String?
-  email         String?
-  websiteUrl    String?
-  locationLabel String?
-  latitude      Float?
-  longitude     Float?
-  searchTags    String[]
-  isSoon        Boolean       @default(false)
-  status        ServiceStatus @default(ACTIVE)
-  sortOrder     Int           @default(0)
-  metadataJson  Json?
-  createdBy     String
-  updatedBy     String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  deletedAt     DateTime?
-
-  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mall          Mall        @relation(fields: [mallId], references: [id], onDelete: Cascade)
-  iconMedia     MediaAsset? @relation("ServiceIconMedia", fields: [iconMediaId], references: [id], onDelete: SetNull)
-  coverMedia    MediaAsset? @relation("ServiceCoverMedia", fields: [coverMediaId], references: [id], onDelete: SetNull)
-  createdByUser User        @relation("ServiceCreator", fields: [createdBy], references: [id])
-  updatedByUser User?       @relation("ServiceUpdater", fields: [updatedBy], references: [id])
-
-  @@index([tenantId, mallId])
-  @@index([tenantId, status])
-  @@index([tenantId, mallId, status])
-  @@index([tenantId, sortOrder])
 }

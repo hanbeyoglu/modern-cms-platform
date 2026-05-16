@@ -1,4 +1,32 @@
-import type { PrismaClient } from '@prisma/client';
+/** Minimal Prisma delegate shape used by the scheduling tick (structural, not PrismaClient-coupled). */
+type ScheduledRow = {
+  id: string;
+  tenantId: string;
+  mallId: string | null;
+};
+
+type UpdateManyResult = { count: number };
+
+type SchedulingDelegate = {
+  findMany: (args: {
+    where: Record<string, unknown>;
+    select: { id: true; tenantId: true; mallId: true };
+    take: number;
+    orderBy: Record<string, 'asc' | 'desc'>;
+  }) => Promise<ScheduledRow[]>;
+  updateMany: (args: {
+    where: Record<string, unknown>;
+    data: Record<string, unknown>;
+  }) => Promise<UpdateManyResult>;
+};
+
+export type SchedulingDb = {
+  page: SchedulingDelegate;
+  slider: SchedulingDelegate;
+  event: SchedulingDelegate;
+  campaign: SchedulingDelegate;
+  popup: SchedulingDelegate;
+};
 
 /** Slider / Event / Campaign / Popup use `startAt` / `endAt`. Page uses `publishAt` / `unpublishAt`. */
 export type ScheduledEntityKind = 'slider' | 'event' | 'campaign' | 'page' | 'popup';
@@ -32,7 +60,7 @@ const ARCHIVED = 'ARCHIVED' as const;
  * cannot double-publish. Safe to run every few seconds.
  */
 export async function runContentSchedulingTick(
-  prisma: PrismaClient,
+  prisma: SchedulingDb,
   opts: RunContentSchedulingTickOptions = {},
 ): Promise<RunContentSchedulingTickResult> {
   const now = opts.now ?? new Date();

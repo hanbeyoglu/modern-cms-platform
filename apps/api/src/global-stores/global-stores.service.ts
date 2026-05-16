@@ -20,16 +20,8 @@ const MEDIA_SELECT = {
   mimeType: true,
 } as const;
 
-const CATEGORY_SELECT = {
-  id: true,
-  name: true,
-  slug: true,
-  status: true,
-} as const;
-
 const GLOBAL_STORE_INCLUDE = {
   logoMedia: { select: MEDIA_SELECT },
-  category: { select: CATEGORY_SELECT },
 } satisfies Prisma.GlobalStoreInclude;
 
 export type GlobalStoreResponse = Prisma.GlobalStoreGetPayload<{ include: typeof GLOBAL_STORE_INCLUDE }>;
@@ -59,7 +51,6 @@ export class GlobalStoresService {
     const where: Prisma.GlobalStoreWhereInput = {
       deletedAt: null,
       ...(query.status ? { status: query.status } : {}),
-      ...(query.categoryId ? { categoryId: query.categoryId } : {}),
       ...(query.search
         ? { name: { contains: query.search, mode: 'insensitive' as const } }
         : {}),
@@ -89,9 +80,6 @@ export class GlobalStoresService {
   }
 
   async create(dto: CreateGlobalStoreDto, user: User): Promise<GlobalStoreResponse> {
-    if (dto.categoryId) {
-      await this.assertCategoryExists(dto.categoryId);
-    }
     if (dto.logoMediaId) {
       await this.assertMediaExists(dto.logoMediaId);
     }
@@ -103,16 +91,17 @@ export class GlobalStoresService {
       data: {
         name: dto.name.trim(),
         slug,
-        logoMediaId: dto.logoMediaId ?? null,
-        categoryId: dto.categoryId ?? null,
+        ...this.buildLogoMediaCreateInput(dto.logoMediaId),
         description: dto.description?.trim() || null,
+        phone: dto.phone?.trim() || null,
+        email: this.normalizeEmail(dto.email),
         websiteUrl: dto.websiteUrl?.trim() || null,
         socialLinksJson:
           dto.socialLinksJson !== undefined
             ? (dto.socialLinksJson as Prisma.InputJsonValue)
             : undefined,
         status: dto.status ?? 'ACTIVE',
-        createdBy: user.id,
+        createdByUser: { connect: { id: user.id } },
       },
       include: GLOBAL_STORE_INCLUDE,
     });
@@ -135,9 +124,6 @@ export class GlobalStoresService {
     });
     if (!existing) throw new NotFoundException('Global store not found');
 
-    if (dto.categoryId !== undefined && dto.categoryId !== null) {
-      await this.assertCategoryExists(dto.categoryId);
-    }
     if (dto.logoMediaId !== undefined && dto.logoMediaId !== null) {
       await this.assertMediaExists(dto.logoMediaId);
     }
@@ -145,14 +131,15 @@ export class GlobalStoresService {
     const data: Prisma.GlobalStoreUpdateInput = {
       ...(dto.name !== undefined && { name: dto.name.trim() }),
       ...(dto.description !== undefined && { description: dto.description }),
+      ...(dto.phone !== undefined && { phone: dto.phone?.trim() || null }),
+      ...(dto.email !== undefined && { email: this.normalizeEmail(dto.email) }),
       ...(dto.websiteUrl !== undefined && { websiteUrl: dto.websiteUrl }),
       ...(dto.socialLinksJson !== undefined && {
         socialLinksJson:
           dto.socialLinksJson === null ? Prisma.JsonNull : (dto.socialLinksJson as Prisma.InputJsonValue),
       }),
       ...(dto.status !== undefined && { status: dto.status }),
-      ...(dto.logoMediaId !== undefined && { logoMediaId: dto.logoMediaId }),
-      ...(dto.categoryId !== undefined && { categoryId: dto.categoryId }),
+      ...this.buildLogoMediaUpdateInput(dto.logoMediaId),
       updatedByUser: { connect: { id: user.id } },
     };
 
@@ -212,11 +199,25 @@ export class GlobalStoresService {
     this.scheduleGlobalStoreIndex(id);
   }
 
-  private async assertCategoryExists(categoryId: string): Promise<void> {
-    const c = await this.prisma.storeCategory.findFirst({
-      where: { id: categoryId, deletedAt: null },
-    });
-    if (!c) throw new BadRequestException('Invalid categoryId');
+  private normalizeEmail(v: string | null | undefined): string | null {
+    if (v === undefined || v === null) return null;
+    const t = String(v).trim();
+    return t.length === 0 ? null : t;
+  }
+
+  private buildLogoMediaCreateInput(
+    logoMediaId?: string,
+  ): Pick<Prisma.GlobalStoreCreateInput, 'logoMedia'> | Record<string, never> {
+    if (!logoMediaId) return {};
+    return { logoMedia: { connect: { id: logoMediaId } } };
+  }
+
+  private buildLogoMediaUpdateInput(
+    logoMediaId: string | null | undefined,
+  ): Pick<Prisma.GlobalStoreUpdateInput, 'logoMedia'> | Record<string, never> {
+    if (logoMediaId === undefined) return {};
+    if (logoMediaId === null) return { logoMedia: { disconnect: true } };
+    return { logoMedia: { connect: { id: logoMediaId } } };
   }
 
   private async assertMediaExists(mediaId: string): Promise<void> {

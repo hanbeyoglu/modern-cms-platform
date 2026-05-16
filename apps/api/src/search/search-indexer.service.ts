@@ -221,6 +221,8 @@ export class SearchIndexerService {
       row.name,
       row.slug,
       row.description,
+      row.phone,
+      row.email,
       row.websiteUrl,
       jsonSnippet(row.socialLinksJson),
     ]);
@@ -255,6 +257,8 @@ export class SearchIndexerService {
       row.localDescription,
       row.floor,
       row.storeNo,
+      gs.phone,
+      gs.email,
       row.phone,
       row.email,
       loc,
