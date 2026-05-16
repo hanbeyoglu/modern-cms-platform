@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import { BrandAvatar } from '../components/ui/BrandAvatar';
+import { formatStatusLabel, getTenantBrandImageUrl, isPositiveStatus } from '../lib/branding';
 import type { Tenant } from '../lib/api';
 
 const pageStyle: React.CSSProperties = {
@@ -22,10 +24,10 @@ const panelStyle: React.CSSProperties = {
 const cardStyle: React.CSSProperties = {
   background: '#fff',
   border: '1px solid #e5e7eb',
-  borderRadius: 8,
+  borderRadius: 10,
   padding: 18,
   display: 'grid',
-  gap: 12,
+  gap: 14,
 };
 
 function isTenantDisabled(tenant: Tenant): boolean {
@@ -33,16 +35,18 @@ function isTenantDisabled(tenant: Tenant): boolean {
 }
 
 function statusStyle(status: string): React.CSSProperties {
-  const normalized = status.toUpperCase();
-  const active = normalized === 'ACTIVE';
+  const positive = isPositiveStatus(status);
 
   return {
     borderRadius: 999,
     padding: '3px 8px',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 700,
-    color: active ? '#166534' : '#7f1d1d',
-    background: active ? '#dcfce7' : '#fee2e2',
+    textTransform: 'uppercase',
+    letterSpacing: '0.03em',
+    color: positive ? '#166534' : '#7f1d1d',
+    background: positive ? '#dcfce7' : '#fee2e2',
+    whiteSpace: 'nowrap',
   };
 }
 
@@ -91,29 +95,39 @@ export function SelectTenantPage() {
           <div style={{ display: 'grid', gap: 12 }}>
             {tenants.map((tenant) => {
               const disabled = isTenantDisabled(tenant);
+              const logoUrl = getTenantBrandImageUrl(tenant);
+              const selected = activeTenantId === tenant.id;
 
               return (
                 <article key={tenant.id} style={cardStyle}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 16,
-                      alignItems: 'flex-start',
-                    }}
-                  >
-                    <div style={{ display: 'grid', gap: 5 }}>
-                      <strong style={{ fontSize: 16, color: '#111827' }}>{tenant.name}</strong>
-                      <span style={{ color: '#6b7280', fontSize: 13 }}>{tenant.slug}</span>
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                    <BrandAvatar name={tenant.name} imageUrl={logoUrl} size={52} />
+                    <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: 6 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                          alignItems: 'flex-start',
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <strong style={{ fontSize: 16, color: '#111827', display: 'block' }}>
+                            {tenant.name}
+                          </strong>
+                          <span style={{ color: '#6b7280', fontSize: 13 }}>{tenant.slug}</span>
+                        </div>
+                        <span style={statusStyle(tenant.status)}>
+                          {formatStatusLabel(tenant.status)}
+                        </span>
+                      </div>
+                      <div style={{ color: '#4b5563', fontSize: 13 }}>{capabilitySummary(tenant.id)}</div>
                     </div>
-                    <span style={statusStyle(tenant.status)}>{tenant.status}</span>
                   </div>
-
-                  <div style={{ color: '#4b5563', fontSize: 13 }}>{capabilitySummary(tenant.id)}</div>
 
                   <button
                     type="button"
-                    disabled={disabled || activeTenantId === tenant.id}
+                    disabled={disabled || selected}
                     onClick={() => {
                       selectTenant(tenant.id);
                       void navigate('/select-location', { replace: true });
@@ -121,16 +135,17 @@ export function SelectTenantPage() {
                     style={{
                       justifySelf: 'start',
                       border: '1px solid #2563eb',
-                      background: disabled || activeTenantId === tenant.id ? '#eff6ff' : '#2563eb',
-                      color: disabled || activeTenantId === tenant.id ? '#1d4ed8' : '#fff',
+                      background: disabled || selected ? '#eff6ff' : '#2563eb',
+                      color: disabled || selected ? '#1d4ed8' : '#fff',
                       borderRadius: 6,
                       padding: '8px 12px',
                       fontWeight: 700,
                       cursor: disabled ? 'not-allowed' : 'pointer',
                       fontFamily: 'inherit',
+                      fontSize: 13,
                     }}
                   >
-                    {activeTenantId === tenant.id ? 'Selected' : 'Select tenant'}
+                    {selected ? 'Selected' : 'Select tenant'}
                   </button>
                 </article>
               );

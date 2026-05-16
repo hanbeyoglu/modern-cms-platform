@@ -3,13 +3,25 @@ import { NAV_ITEMS, NAV_GROUPS } from '../../navigation/config';
 import { usePermission } from '../../hooks/usePermission';
 import { useCapability } from '../../hooks/useCapability';
 import { useAuth } from '../../auth/useAuth';
+import { BrandAvatar } from '../ui/BrandAvatar';
+import {
+  formatContextLabel,
+  resolveSidebarBrandImage,
+  resolveSidebarBrandName,
+} from '../../lib/branding';
 
 const SIDEBAR_WIDTH = 220;
 
 export function Sidebar() {
   const { can } = usePermission();
   const { has } = useCapability();
-  const { user } = useAuth();
+  const { user, tenants, malls, activeTenantId, activeMallId } = useAuth();
+
+  const activeTenant = tenants.find((tenant) => tenant.id === activeTenantId);
+  const activeMall = malls.find((mall) => mall.id === activeMallId);
+  const brandImageUrl = resolveSidebarBrandImage(activeTenant, activeMall);
+  const brandName = resolveSidebarBrandName(activeTenant, activeMall);
+  const contextLabel = formatContextLabel(activeTenant, activeMall);
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.superAdminOnly && !user?.isSuperAdmin) return false;
@@ -39,15 +51,47 @@ export function Sidebar() {
       {/* Brand */}
       <div
         style={{
-          padding: '16px 18px',
+          padding: '14px 18px 16px',
           borderBottom: '1px solid #e5e7eb',
-          fontWeight: 700,
-          fontSize: 15,
-          color: '#111827',
-          letterSpacing: '-0.3px',
+          display: 'grid',
+          gap: 10,
         }}
       >
-        CMS Admin
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: 15,
+            color: '#111827',
+            letterSpacing: '-0.3px',
+          }}
+        >
+          CMS Admin
+        </div>
+        {(activeTenant || activeMall) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <BrandAvatar
+              name={brandName || contextLabel}
+              imageUrl={brandImageUrl}
+              size={32}
+            />
+            <div style={{ minWidth: 0, display: 'grid', gap: 2 }}>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#374151',
+                  lineHeight: 1.3,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={contextLabel}
+              >
+                {contextLabel}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Nav */}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../auth/useAuth';
 import { apiMediaGet, apiMediaList, apiMediaUpload, type MediaAsset } from '../lib/api';
-import { MEDIA_CONTEXTS, type MediaContextPreset, type MediaUsageContextKey } from '../lib/media-contexts';
+import type { MediaContextPreset, MediaUsageContextKey } from '../lib/media-contexts';
 import { resolveMediaPreset, useMediaGuidelines } from '../hooks/useMediaGuidelines';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

@@ -36,12 +36,35 @@ export class TenantsService {
   // Legacy /tenants/my
   async my(user: User) {
     const tenants = await this.access.listTenantsForUser(user);
+    if (tenants.length === 0) {
+      return { tenants: [] };
+    }
+
+    const settings = await this.prisma.tenantSetting.findMany({
+      where: {
+        tenantId: { in: tenants.map((t) => t.id) },
+        key: 'general',
+      },
+      select: { tenantId: true, value: true },
+    });
+
+    const logoUrlByTenant = new Map<string, string | null>();
+    for (const row of settings) {
+      const value = row.value as Record<string, unknown> | null;
+      const logoUrl =
+        typeof value?.logoUrl === 'string' && value.logoUrl.trim().length > 0
+          ? value.logoUrl.trim()
+          : null;
+      logoUrlByTenant.set(row.tenantId, logoUrl);
+    }
+
     return {
       tenants: tenants.map((t) => ({
         id: t.id,
         name: t.name,
         slug: t.slug,
         status: t.status,
+        logoUrl: logoUrlByTenant.get(t.id) ?? null,
       })),
     };
   }

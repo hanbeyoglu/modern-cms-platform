@@ -156,7 +156,7 @@ export function MediaGuidelinesPage() {
     <PageContainer>
       <PageHeader
         title="Medya Boyut Ayarları"
-        description="Her kullanım alanı için önerilen görsel boyutlarını tenant bazında yapılandırın."
+        subtitle="Her kullanım alanı için önerilen görsel boyutlarını tenant bazında yapılandırın."
       />
 
       {error && <ErrorBanner message={error} />}

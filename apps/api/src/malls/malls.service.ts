@@ -31,13 +31,33 @@ export class MallsService {
 
   async my(user: User, tenantId?: string) {
     const malls = await this.access.listMallsForUser(user, tenantId);
+    if (malls.length === 0) {
+      return { malls: [] };
+    }
+
+    const rows = await this.prisma.mall.findMany({
+      where: { id: { in: malls.map((m) => m.id) }, deletedAt: null },
+      include: {
+        logoMedia: { select: { id: true, publicUrl: true } },
+        coverMedia: { select: { id: true, publicUrl: true } },
+      },
+      orderBy: { name: 'asc' },
+    });
+
     return {
-      malls: malls.map((m) => ({
+      malls: rows.map((m) => ({
         id: m.id,
         tenantId: m.tenantId,
         name: m.name,
         slug: m.slug,
         status: m.status,
+        type: m.type,
+        logoMedia: m.logoMedia
+          ? { id: m.logoMedia.id, publicUrl: m.logoMedia.publicUrl }
+          : null,
+        coverMedia: m.coverMedia
+          ? { id: m.coverMedia.id, publicUrl: m.coverMedia.publicUrl }
+          : null,
       })),
     };
   }

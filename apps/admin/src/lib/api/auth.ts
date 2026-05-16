@@ -33,10 +33,25 @@ export type MeResponse = {
   memberships: MeMembership[];
 };
 
-export type Tenant = { id: string; name: string; slug: string; status: string };
+export type Tenant = {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  logoUrl?: string | null;
+};
 export type TenantsResponse = { tenants: Tenant[] };
 
-export type Mall = { id: string; tenantId: string; name: string; slug: string; status: string };
+export type Mall = {
+  id: string;
+  tenantId: string;
+  name: string;
+  slug: string;
+  status: string;
+  type?: string;
+  logoMedia?: { id: string; publicUrl: string } | null;
+  coverMedia?: { id: string; publicUrl: string } | null;
+};
 export type MallsResponse = { malls: Mall[] };
 
 export async function apiLogin(email: string, password: string): Promise<LoginResponse> {
