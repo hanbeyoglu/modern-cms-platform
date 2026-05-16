@@ -62,21 +62,46 @@ export interface CmsErrorEnvelope {
 
 // ── Entity Types ──────────────────────────────────────────────────────────────
 
+export interface CmsSliderItem {
+  id: string;
+  title: string | null;
+  description: string | null;
+  buttonText: string | null;
+  linkUrl: string | null;
+  desktopMedia: CmsMediaAsset | null;
+  mobileMedia: CmsMediaAsset | null;
+  sortOrder: number;
+  status: string;
+}
+
 export interface CmsSlider {
   id: string;
   title: string;
-  subtitle: string | null;
-  description: string | null;
-  desktopMedia: CmsMediaAsset | null;
-  mobileMedia: CmsMediaAsset | null;
-  videoMedia: CmsMediaAsset | null;
-  linkType: string;
-  linkValue: string | null;
-  buttonText: string | null;
-  targetDevice: string;
+  placementType: string;
+  linkedEntityType: string | null;
+  linkedEntityId: string | null;
   sortOrder: number;
   startAt: string | null;
   endAt: string | null;
+  items: CmsSliderItem[];
+  /** @deprecated Use items[]. Populated from first item for backward compatibility. */
+  subtitle: string | null;
+  /** @deprecated Use items[]. */
+  description: string | null;
+  /** @deprecated Use items[]. */
+  desktopMedia: CmsMediaAsset | null;
+  /** @deprecated Use items[]. */
+  mobileMedia: CmsMediaAsset | null;
+  /** @deprecated Always null. */
+  videoMedia: CmsMediaAsset | null;
+  /** @deprecated Use items[].linkUrl */
+  linkType: string;
+  /** @deprecated Use items[].linkUrl */
+  linkValue: string | null;
+  /** @deprecated Use items[].buttonText */
+  buttonText: string | null;
+  /** @deprecated Always ALL */
+  targetDevice: string;
 }
 
 export interface CmsEvent {

@@ -19,6 +19,7 @@ import {
   type CmsCinema,
   type CreateCinemaPayload,
   type MediaAsset,
+  API_MAX_PAGE_SIZE,
 } from '../lib/api';
 
 const STATUS_STYLE: Record<CinemaStatus, { bg: string; color: string; label: string }> = {
@@ -135,7 +136,7 @@ export function CinemasPage() {
   const loadMedia = useCallback(async () => {
     if (!accessToken || !tenantId) return;
     try {
-      const data = await apiMediaList(accessToken, tenantId, { limit: 200, mallId });
+      const data = await apiMediaList(accessToken, tenantId, { limit: API_MAX_PAGE_SIZE, mallId });
       setMediaAssets(data.assets);
     } catch {
       setMediaAssets([]);

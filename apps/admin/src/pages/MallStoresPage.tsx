@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
 import { usePermission } from '../hooks/usePermission';
 import { MALL_STORE_I18N_FIELDS, MultilingualContentFields } from '../components/MultilingualContentFields';
+import { LinkedSliderGroupsSection } from '../components/LinkedSliderGroupsSection';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -649,6 +650,13 @@ export function MallStoresPage() {
               Konum (JSON nesnesi, opsiyonel)
               <textarea value={locationJson} onChange={(e) => setLocationJson(e.target.value)} rows={2} style={{ display: 'block', width: '100%', marginTop: 2, fontFamily: 'monospace', fontSize: 12 }} />
             </label>
+            {editing && mallId && (
+              <LinkedSliderGroupsSection
+                entityType="STORE"
+                entityId={editing.id}
+                mallId={mallId}
+              />
+            )}
             <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8 }}>
               <button type="button" disabled={saving} onClick={() => void save()} style={{ padding: '6px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6 }}>
                 Kaydet

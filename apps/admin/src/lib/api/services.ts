@@ -1,3 +1,4 @@
+import { appendLimitParam } from './constants';
 import { request } from './client';
 import type { MediaAsset } from './media';
 
@@ -70,7 +71,7 @@ export async function apiServicesList(
   if (opts?.search) params.set('search', opts.search);
   if (opts?.category) params.set('category', opts.category);
   if (opts?.page) params.set('page', String(opts.page));
-  if (opts?.limit) params.set('limit', String(opts.limit));
+  appendLimitParam(params, opts?.limit);
   const qs = params.toString();
   return request<ServiceListResponse>(`/services${qs ? `?${qs}` : ''}`, {
     method: 'GET',

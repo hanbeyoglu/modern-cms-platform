@@ -1,19 +1,23 @@
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { Channel, SliderStatus, SliderTargetDevice } from '@prisma/client';
+import {
+  Channel,
+  SliderLinkedEntityType,
+  SliderPlacementType,
+  SliderStatus,
+} from '@prisma/client';
 
 export class ListSlidersDto {
   @IsOptional()
-  @Transform(({ value }: { value: string }) => Number(value))
+  @Transform(({ value }: { value: unknown }) => (value !== undefined ? Number(value) : 1))
   @IsInt()
   @Min(1)
   page?: number = 1;
 
   @IsOptional()
-  @Transform(({ value }: { value: string }) => Number(value))
+  @Transform(({ value }: { value: unknown }) => (value !== undefined ? Number(value) : 20))
   @IsInt()
   @Min(1)
-  @Max(100)
   limit?: number = 20;
 
   @IsOptional()
@@ -21,8 +25,16 @@ export class ListSlidersDto {
   status?: SliderStatus;
 
   @IsOptional()
-  @IsEnum(SliderTargetDevice)
-  targetDevice?: SliderTargetDevice;
+  @IsEnum(SliderPlacementType)
+  placementType?: SliderPlacementType;
+
+  @IsOptional()
+  @IsEnum(SliderLinkedEntityType)
+  linkedEntityType?: SliderLinkedEntityType;
+
+  @IsOptional()
+  @IsString()
+  linkedEntityId?: string;
 
   @IsOptional()
   @IsEnum(Channel)

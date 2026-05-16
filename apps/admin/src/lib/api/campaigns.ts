@@ -1,3 +1,4 @@
+import { appendLimitParam } from './constants';
 import { request } from './client';
 import type { ContentStatus, ContentChannel, EventMediaPreview } from './events';
 import type { GlobalStore } from './stores';
@@ -94,7 +95,7 @@ export async function apiCampaignsList(
   if (opts?.endFrom) params.set('endFrom', opts.endFrom);
   if (opts?.endTo) params.set('endTo', opts.endTo);
   if (opts?.page) params.set('page', String(opts.page));
-  if (opts?.limit) params.set('limit', String(opts.limit));
+  appendLimitParam(params, opts?.limit);
   const qs = params.toString();
   return request<CampaignListResponse>(`/campaigns${qs ? `?${qs}` : ''}`, {
     method: 'GET',

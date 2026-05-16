@@ -1,6 +1,8 @@
 export { request, onUnauthorized } from './client';
 export type { RequestOptions } from './client';
 
+export { API_MAX_PAGE_SIZE, clampApiLimit, appendLimitParam } from './constants';
+
 export {
   apiLogin,
   apiMe,
@@ -49,16 +51,24 @@ export {
   apiSliderPublish,
   apiSliderArchive,
   apiSliderReorder,
+  apiSliderItemsList,
+  apiSliderItemCreate,
+  apiSliderItemUpdate,
+  apiSliderItemDelete,
+  apiSliderItemsReorder,
 } from './sliders';
 export type {
   SliderStatus,
-  SliderTargetDevice,
-  SliderLinkType,
+  SliderPlacementType,
+  SliderLinkedEntityType,
   SliderChannel,
   SliderMediaPreview,
   Slider,
+  SliderItem,
   SliderListResponse,
   CreateSliderPayload,
+  UpdateSliderPayload,
+  CreateSliderItemPayload,
   ReorderItem,
 } from './sliders';
 

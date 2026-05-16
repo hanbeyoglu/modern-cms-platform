@@ -1,3 +1,4 @@
+import { appendLimitParam } from './constants';
 import { request } from './client';
 
 export type StoreCategoryStatus = 'ACTIVE' | 'PASSIVE';
@@ -110,7 +111,7 @@ export async function apiStoreCategoriesList(
   if (opts?.search) params.set('search', opts.search);
   if (opts?.status) params.set('status', opts.status);
   if (opts?.page) params.set('page', String(opts.page));
-  if (opts?.limit) params.set('limit', String(opts.limit));
+  appendLimitParam(params, opts?.limit);
   const qs = params.toString();
   return request<StoreCategoryListResponse>(`/store-categories${qs ? `?${qs}` : ''}`, {
     method: 'GET',
@@ -162,7 +163,7 @@ export async function apiGlobalStoresList(
   if (opts?.categoryId) params.set('categoryId', opts.categoryId);
   if (opts?.status) params.set('status', opts.status);
   if (opts?.page) params.set('page', String(opts.page));
-  if (opts?.limit) params.set('limit', String(opts.limit));
+  appendLimitParam(params, opts?.limit);
   const qs = params.toString();
   return request<GlobalStoreListResponse>(`/global-stores${qs ? `?${qs}` : ''}`, {
     method: 'GET',
@@ -242,7 +243,7 @@ export async function apiMallStoresList(
     params.set('isFeatured', opts.isFeatured ? 'true' : 'false');
   }
   if (opts?.page) params.set('page', String(opts.page));
-  if (opts?.limit) params.set('limit', String(opts.limit));
+  appendLimitParam(params, opts?.limit);
   const qs = params.toString();
   return request<MallStoreListResponse>(`/mall-stores${qs ? `?${qs}` : ''}`, {
     method: 'GET',

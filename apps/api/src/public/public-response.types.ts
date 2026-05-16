@@ -68,21 +68,46 @@ export function makeEnvelope<T>(
 
 // ── Entity Types ──────────────────────────────────────────────────────────────
 
+export interface PublicSliderItem {
+  id: string;
+  title: string | null;
+  description: string | null;
+  buttonText: string | null;
+  linkUrl: string | null;
+  desktopMedia: PublicMediaAsset | null;
+  mobileMedia: PublicMediaAsset | null;
+  sortOrder: number;
+  status: string;
+}
+
 export interface PublicSlider {
   id: string;
   title: string;
-  subtitle: string | null;
-  description: string | null;
-  desktopMedia: PublicMediaAsset | null;
-  mobileMedia: PublicMediaAsset | null;
-  videoMedia: PublicMediaAsset | null;
-  linkType: string;
-  linkValue: string | null;
-  buttonText: string | null;
-  targetDevice: string;
+  placementType: string;
+  linkedEntityType: string | null;
+  linkedEntityId: string | null;
   sortOrder: number;
   startAt: string | null;
   endAt: string | null;
+  items: PublicSliderItem[];
+  /** @deprecated Use items[]. Populated from first item for backward compatibility. */
+  subtitle: string | null;
+  /** @deprecated Use items[]. Populated from first item for backward compatibility. */
+  description: string | null;
+  /** @deprecated Use items[]. Populated from first item for backward compatibility. */
+  desktopMedia: PublicMediaAsset | null;
+  /** @deprecated Use items[]. Populated from first item for backward compatibility. */
+  mobileMedia: PublicMediaAsset | null;
+  /** @deprecated Use items[]. Always null. */
+  videoMedia: PublicMediaAsset | null;
+  /** @deprecated Use items[].linkUrl */
+  linkType: string;
+  /** @deprecated Use items[].linkUrl */
+  linkValue: string | null;
+  /** @deprecated Use items[].buttonText */
+  buttonText: string | null;
+  /** @deprecated Removed; always ALL */
+  targetDevice: string;
 }
 
 export interface PublicEvent {

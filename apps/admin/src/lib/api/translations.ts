@@ -5,6 +5,7 @@ export type LocalizedEntityType =
   | 'PAGE'
   | 'PAGE_BLOCK'
   | 'SLIDER'
+  | 'SLIDER_ITEM'
   | 'EVENT'
   | 'CAMPAIGN'
   | 'LOCATION'

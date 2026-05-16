@@ -1,3 +1,4 @@
+import { appendLimitParam } from './constants';
 import { request } from './client';
 
 export type AuditSeverity = 'INFO' | 'WARNING' | 'ERROR' | 'SECURITY' | 'CRITICAL';
@@ -70,7 +71,7 @@ function buildQs(filters?: AuditLogFilters): string {
   const qs = new URLSearchParams();
   if (!filters) return '';
   if (filters.page) qs.set('page', String(filters.page));
-  if (filters.limit) qs.set('limit', String(filters.limit));
+  appendLimitParam(qs, filters.limit);
   if (filters.tenantId) qs.set('tenantId', filters.tenantId);
   if (filters.mallId) qs.set('mallId', filters.mallId);
   if (filters.actorId) qs.set('actorId', filters.actorId);
@@ -109,7 +110,7 @@ export function apiAuditLogsRecentActivity(
 ): Promise<AuditLog[]> {
   const qs = new URLSearchParams();
   if (tenantId) qs.set('tenantId', tenantId);
-  if (limit) qs.set('limit', String(limit));
+  appendLimitParam(qs, limit);
   const s = qs.toString();
   return request(`/audit-logs/recent-activity${s ? `?${s}` : ''}`, { token });
 }
@@ -121,7 +122,7 @@ export function apiAuditLogsSecurityEvents(
 ): Promise<AuditLog[]> {
   const qs = new URLSearchParams();
   if (tenantId) qs.set('tenantId', tenantId);
-  if (limit) qs.set('limit', String(limit));
+  appendLimitParam(qs, limit);
   const s = qs.toString();
   return request(`/audit-logs/security-events${s ? `?${s}` : ''}`, { token });
 }

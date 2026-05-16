@@ -184,7 +184,15 @@ export class SearchIndexerService {
   }
 
   async syncSlider(sliderId: string): Promise<void> {
-    const row = await this.prisma.slider.findFirst({ where: { id: sliderId } });
+    const row = await this.prisma.slider.findFirst({
+      where: { id: sliderId },
+      include: {
+        items: {
+          where: { deletedAt: null },
+          select: { title: true, description: true, buttonText: true, linkUrl: true },
+        },
+      },
+    });
     if (!row || row.deletedAt) {
       await this.remove('SLIDER', sliderId);
       return;
@@ -192,11 +200,9 @@ export class SearchIndexerService {
     const loc = await this.translationBlob(row.tenantId, 'SLIDER', row.id);
     const document = this.normalizer.buildDocument([
       row.title,
-      row.subtitle,
-      row.description,
-      row.buttonText,
-      row.linkValue,
-      String(row.linkType),
+      String(row.placementType),
+      row.linkedEntityId,
+      ...row.items.flatMap((i) => [i.title, i.description, i.buttonText, i.linkUrl]),
       loc,
     ]);
     await this.upsertRow('SLIDER', row.id, {
@@ -209,6 +215,15 @@ export class SearchIndexerService {
       isFeatured: false,
       publishedAt: null,
     });
+  }
+
+  async syncSliderItem(itemId: string): Promise<void> {
+    const item = await this.prisma.sliderItem.findFirst({
+      where: { id: itemId },
+      include: { slider: { select: { id: true, tenantId: true, deletedAt: true } } },
+    });
+    if (!item?.slider || item.slider.deletedAt || item.deletedAt) return;
+    await this.syncSlider(item.slider.id);
   }
 
   async syncGlobalStore(storeId: string): Promise<void> {
@@ -398,6 +413,7 @@ export class SearchIndexerService {
       EVENT: () => this.syncEvent(entityId),
       CAMPAIGN: () => this.syncCampaign(entityId),
       SLIDER: () => this.syncSlider(entityId),
+      SLIDER_ITEM: () => this.syncSliderItem(entityId),
       STORE: () => this.syncMallStore(entityId),
       MOVIE: () => this.syncMovie(entityId),
       CINEMA: () => this.syncCinema(entityId),

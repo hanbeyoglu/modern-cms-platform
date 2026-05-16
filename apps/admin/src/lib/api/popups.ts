@@ -1,3 +1,4 @@
+import { appendLimitParam } from './constants';
 import { request } from './client';
 import type { MediaAsset } from './media';
 import type { ContentChannel } from '../content-channels';
@@ -65,7 +66,7 @@ export async function apiPopupsList(
   if (opts?.status) params.set('status', opts.status);
   if (opts?.search) params.set('search', opts.search);
   if (opts?.page) params.set('page', String(opts.page));
-  if (opts?.limit) params.set('limit', String(opts.limit));
+  appendLimitParam(params, opts?.limit);
   const qs = params.toString();
   return request<PopupListResponse>(`/popups${qs ? `?${qs}` : ''}`, {
     method: 'GET',

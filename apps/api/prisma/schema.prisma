@@ -336,9 +336,8 @@ model MediaAsset {
   popupImages         Popup[]          @relation("PopupImageMedia")
   serviceCovers       Service[]        @relation("ServiceCoverMedia")
   serviceIcons        Service[]        @relation("ServiceIconMedia")
-  slidersDesktop      Slider[]         @relation("SliderDesktopMedia")
-  slidersMobile       Slider[]         @relation("SliderMobileMedia")
-  slidersVideo        Slider[]         @relation("SliderVideoMedia")
+  sliderItemDesktop   SliderItem[]     @relation("SliderItemDesktopMedia")
+  sliderItemMobile    SliderItem[]     @relation("SliderItemMobileMedia")
 
   @@index([tenantId, createdAt])
   @@index([tenantId, folderId])
@@ -363,42 +362,58 @@ model MediaVariant {
 }
 
 model Slider {
-  id             String             @id @default(cuid())
-  tenantId       String
-  mallId         String?
-  title          String
-  subtitle       String?
-  description    String?
-  desktopMediaId String?
-  mobileMediaId  String?
-  videoMediaId   String?
-  linkType       SliderLinkType     @default(NONE)
-  linkValue      String?
-  buttonText     String?
-  startAt        DateTime?
-  endAt          DateTime?
-  sortOrder      Int                @default(0)
-  status         SliderStatus       @default(DRAFT)
-  targetDevice   SliderTargetDevice @default(ALL)
-  createdBy      String
-  updatedBy      String?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  deletedAt      DateTime?
-  channels       Channel[]
-  createdByUser  User               @relation("SliderCreator", fields: [createdBy], references: [id])
-  desktopMedia   MediaAsset?        @relation("SliderDesktopMedia", fields: [desktopMediaId], references: [id])
-  mall           Mall?              @relation(fields: [mallId], references: [id])
-  mobileMedia    MediaAsset?        @relation("SliderMobileMedia", fields: [mobileMediaId], references: [id])
-  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  updatedByUser  User?              @relation("SliderUpdater", fields: [updatedBy], references: [id])
-  videoMedia     MediaAsset?        @relation("SliderVideoMedia", fields: [videoMediaId], references: [id])
+  id               String                  @id @default(cuid())
+  tenantId         String
+  mallId           String?
+  title            String
+  placementType    SliderPlacementType     @default(HOME)
+  linkedEntityType SliderLinkedEntityType?
+  linkedEntityId   String?
+  startAt          DateTime?
+  endAt            DateTime?
+  sortOrder        Int                     @default(0)
+  status           SliderStatus            @default(DRAFT)
+  createdBy        String
+  updatedBy        String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  deletedAt        DateTime?
+  channels         Channel[]
+  createdByUser    User                    @relation("SliderCreator", fields: [createdBy], references: [id])
+  mall             Mall?                   @relation(fields: [mallId], references: [id])
+  tenant           Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser    User?                   @relation("SliderUpdater", fields: [updatedBy], references: [id])
+  items            SliderItem[]
 
   @@index([tenantId, status])
   @@index([tenantId, mallId])
   @@index([tenantId, sortOrder])
+  @@index([tenantId, placementType])
+  @@index([tenantId, linkedEntityType, linkedEntityId])
   @@index([status, startAt])
   @@index([status, endAt])
+}
+
+model SliderItem {
+  id             String       @id @default(cuid())
+  sliderId       String
+  desktopMediaId String?
+  mobileMediaId  String?
+  title          String?
+  description    String?
+  buttonText     String?
+  linkUrl        String?
+  sortOrder      Int          @default(0)
+  status         SliderStatus @default(DRAFT)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+  desktopMedia   MediaAsset?  @relation("SliderItemDesktopMedia", fields: [desktopMediaId], references: [id])
+  mobileMedia    MediaAsset?  @relation("SliderItemMobileMedia", fields: [mobileMediaId], references: [id])
+  slider         Slider       @relation(fields: [sliderId], references: [id], onDelete: Cascade)
+
+  @@index([sliderId, sortOrder])
+  @@index([sliderId, status])
 }
 
 model StoreCategory {
@@ -1050,19 +1065,20 @@ enum SliderStatus {
   ARCHIVED
 }
 
-enum SliderTargetDevice {
-  ALL
-  DESKTOP
-  MOBILE
+enum SliderPlacementType {
+  HOME
+  CAMPAIGN
+  EVENT
+  STORE
+  LOCATION
+  CUSTOM
 }
 
-enum SliderLinkType {
-  NONE
-  EXTERNAL_URL
-  INTERNAL_PAGE
-  EVENT
+enum SliderLinkedEntityType {
   CAMPAIGN
+  EVENT
   STORE
+  LOCATION
 }
 
 enum StoreCategoryStatus {
@@ -1142,6 +1158,7 @@ enum LocalizedEntityType {
   PAGE
   PAGE_BLOCK
   SLIDER
+  SLIDER_ITEM
   EVENT
   CAMPAIGN
   STORE

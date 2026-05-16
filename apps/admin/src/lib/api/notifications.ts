@@ -1,3 +1,4 @@
+import { appendLimitParam } from './constants';
 import { request } from './client';
 
 export type NotificationType = 'SYSTEM' | 'CONTENT' | 'SCHEDULING' | 'ANALYTICS' | 'SECURITY';
@@ -39,7 +40,7 @@ function buildQuery(params?: ListNotificationsParams): string {
   if (params.unread === false) q.set('unread', 'false');
   if (params.severity) q.set('severity', params.severity);
   if (params.type) q.set('type', params.type);
-  if (params.limit != null) q.set('limit', String(params.limit));
+  appendLimitParam(q, params.limit);
   if (params.skip != null) q.set('skip', String(params.skip));
   const s = q.toString();
   return s ? `?${s}` : '';

@@ -1,3 +1,4 @@
+import { appendLimitParam } from './constants';
 import { request } from './client';
 
 export type AnalyticsSummary = {
@@ -36,7 +37,7 @@ function toQuery(params: AnalyticsQueryParams): string {
   sp.set('dateTo', params.dateTo);
   if (params.entityType) sp.set('entityType', params.entityType);
   if (params.eventType) sp.set('eventType', params.eventType);
-  if (params.limit != null) sp.set('limit', String(params.limit));
+  appendLimitParam(sp, params.limit);
   return sp.toString();
 }
 

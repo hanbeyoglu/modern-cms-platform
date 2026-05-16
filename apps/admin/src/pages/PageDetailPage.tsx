@@ -12,6 +12,7 @@ import {
   apiTranslationsList,
   apiTranslationUpsert,
   apiMediaList,
+  API_MAX_PAGE_SIZE,
   type CmsLocale,
   type MediaAsset,
 } from '../lib/api';
@@ -205,7 +206,10 @@ export function PageDetailPage() {
       const [p, b, media] = await Promise.all([
         apiPageGet(accessToken, activeTenantId, id, activeMallId ?? undefined),
         apiPageBlocksList(accessToken, activeTenantId, id, activeMallId ?? undefined),
-        apiMediaList(accessToken, activeTenantId, { limit: 200, mallId: activeMallId ?? undefined }),
+        apiMediaList(accessToken, activeTenantId, {
+          limit: API_MAX_PAGE_SIZE,
+          mallId: activeMallId ?? undefined,
+        }),
       ]);
       setPage(p);
       setBlocks(b);

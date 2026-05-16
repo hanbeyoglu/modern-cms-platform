@@ -24,6 +24,7 @@ import {
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
 import { AuditTimeline } from '../components/AuditTimeline';
+import { LinkedSliderGroupsSection } from '../components/LinkedSliderGroupsSection';
 
 const STATUS_LABELS: Record<string, string> = {
   LIVE: 'Yayında', DRAFT: 'Taslak', MAINTENANCE: 'Bakımda', CLOSED: 'Kapalı',
@@ -492,6 +493,20 @@ export function LocationDetailPage() {
           </div>
         )}
       </div>
+
+      {id && (
+        <div
+          style={{
+            background: '#fff',
+            border: '1px solid #e5e7eb',
+            borderRadius: 8,
+            padding: '20px 24px',
+            marginTop: 24,
+          }}
+        >
+          <LinkedSliderGroupsSection entityType="LOCATION" entityId={id} />
+        </div>
+      )}
 
       {/* Danger zone */}
       {canDelete && (

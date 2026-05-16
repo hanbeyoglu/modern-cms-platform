@@ -1,3 +1,4 @@
+import { appendLimitParam } from './constants';
 import { request } from './client';
 
 export type MediaAssetStatus = 'ACTIVE' | 'ARCHIVED';
@@ -119,7 +120,7 @@ export async function apiMediaList(
   if (opts?.folderId) params.set('folderId', opts.folderId);
   if (opts?.mallId) params.set('mallId', opts.mallId);
   if (opts?.page) params.set('page', String(opts.page));
-  if (opts?.limit) params.set('limit', String(opts.limit));
+  appendLimitParam(params, opts?.limit);
   if (opts?.mimeType) params.set('mimeType', opts.mimeType);
   if (opts?.tag) params.set('tag', opts.tag);
   if (opts?.search) params.set('search', opts.search);

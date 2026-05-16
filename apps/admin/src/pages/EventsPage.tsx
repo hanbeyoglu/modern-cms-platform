@@ -14,6 +14,7 @@ import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import { validateRangeSchedule } from '../lib/publishing-workflow';
 import { DEFAULT_CONTENT_CHANNELS, formatChannels } from '../lib/content-channels';
 import { Button } from '../components/ui/Button';
+import { LinkedSliderGroupsSection } from '../components/LinkedSliderGroupsSection';
 import {
   apiEventArchive,
   apiEventCreate,
@@ -664,6 +665,13 @@ export function EventsPage() {
                 placeholder='{"sponsor":"..."}'
               />
             </div>
+            {editing && (
+              <LinkedSliderGroupsSection
+                entityType="EVENT"
+                entityId={editing.id}
+                mallId={mallId}
+              />
+            )}
           </div>
           <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
             <button type="button" disabled={saving} onClick={() => void handleSubmit()} style={{ padding: '6px 14px' }}>

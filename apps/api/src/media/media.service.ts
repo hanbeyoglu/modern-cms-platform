@@ -273,7 +273,6 @@ export class MediaService {
     const [
       slidersDesktop,
       slidersMobile,
-      slidersVideo,
       globalStoreLogos,
       mallStoreLogos,
       eventCovers,
@@ -284,17 +283,31 @@ export class MediaService {
       mallCovers,
       pageAttachments,
     ] = await Promise.all([
-      this.prisma.slider.findMany({
-        where: { desktopMediaId: id, tenantId, deletedAt: null },
-        select: { id: true, title: true, mallId: true },
+      this.prisma.sliderItem.findMany({
+        where: {
+          desktopMediaId: id,
+          deletedAt: null,
+          slider: { tenantId, deletedAt: null },
+        },
+        select: {
+          id: true,
+          title: true,
+          sliderId: true,
+          slider: { select: { title: true, mallId: true } },
+        },
       }),
-      this.prisma.slider.findMany({
-        where: { mobileMediaId: id, tenantId, deletedAt: null },
-        select: { id: true, title: true, mallId: true },
-      }),
-      this.prisma.slider.findMany({
-        where: { videoMediaId: id, tenantId, deletedAt: null },
-        select: { id: true, title: true, mallId: true },
+      this.prisma.sliderItem.findMany({
+        where: {
+          mobileMediaId: id,
+          deletedAt: null,
+          slider: { tenantId, deletedAt: null },
+        },
+        select: {
+          id: true,
+          title: true,
+          sliderId: true,
+          slider: { select: { title: true, mallId: true } },
+        },
       }),
       this.prisma.globalStore.findMany({
         where: { logoMediaId: id, deletedAt: null },
@@ -335,13 +348,24 @@ export class MediaService {
     ]);
 
     for (const s of slidersDesktop) {
-      usages.push({ entityType: 'slider', entityId: s.id, entityName: s.title, field: 'desktopMedia', route: `/sliders/${s.id}` });
+      const name = s.title || s.slider.title;
+      usages.push({
+        entityType: 'slider',
+        entityId: s.sliderId,
+        entityName: name,
+        field: 'desktopMedia',
+        route: `/sliders/${s.sliderId}`,
+      });
     }
     for (const s of slidersMobile) {
-      usages.push({ entityType: 'slider', entityId: s.id, entityName: s.title, field: 'mobileMedia', route: `/sliders/${s.id}` });
-    }
-    for (const s of slidersVideo) {
-      usages.push({ entityType: 'slider', entityId: s.id, entityName: s.title, field: 'videoMedia', route: `/sliders/${s.id}` });
+      const name = s.title || s.slider.title;
+      usages.push({
+        entityType: 'slider',
+        entityId: s.sliderId,
+        entityName: name,
+        field: 'mobileMedia',
+        route: `/sliders/${s.sliderId}`,
+      });
     }
     for (const s of globalStoreLogos) {
       usages.push({ entityType: 'global_store', entityId: s.id, entityName: s.name, field: 'logo', route: `/stores/global/${s.id}` });

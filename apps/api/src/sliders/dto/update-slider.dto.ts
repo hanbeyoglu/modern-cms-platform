@@ -8,7 +8,12 @@ import {
   Min,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { Channel, SliderLinkType, SliderStatus, SliderTargetDevice } from '@prisma/client';
+import {
+  Channel,
+  SliderLinkedEntityType,
+  SliderPlacementType,
+  SliderStatus,
+} from '@prisma/client';
 
 export class UpdateSliderDto {
   @IsOptional()
@@ -16,44 +21,24 @@ export class UpdateSliderDto {
   title?: string;
 
   @IsOptional()
-  @IsString()
-  subtitle?: string;
+  @IsEnum(SliderPlacementType)
+  placementType?: SliderPlacementType;
+
+  @IsOptional()
+  @IsEnum(SliderLinkedEntityType)
+  linkedEntityType?: SliderLinkedEntityType | null;
 
   @IsOptional()
   @IsString()
-  description?: string;
-
-  @IsOptional()
-  @IsString()
-  desktopMediaId?: string;
-
-  @IsOptional()
-  @IsString()
-  mobileMediaId?: string;
-
-  @IsOptional()
-  @IsString()
-  videoMediaId?: string;
-
-  @IsOptional()
-  @IsEnum(SliderLinkType)
-  linkType?: SliderLinkType;
-
-  @IsOptional()
-  @IsString()
-  linkValue?: string;
-
-  @IsOptional()
-  @IsString()
-  buttonText?: string;
+  linkedEntityId?: string | null;
 
   @IsOptional()
   @IsDateString()
-  startAt?: string;
+  startAt?: string | null;
 
   @IsOptional()
   @IsDateString()
-  endAt?: string;
+  endAt?: string | null;
 
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (value !== undefined ? Number(value) : undefined))
@@ -64,10 +49,6 @@ export class UpdateSliderDto {
   @IsOptional()
   @IsEnum(SliderStatus)
   status?: SliderStatus;
-
-  @IsOptional()
-  @IsEnum(SliderTargetDevice)
-  targetDevice?: SliderTargetDevice;
 
   @IsOptional()
   @IsArray()

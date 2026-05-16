@@ -8,6 +8,7 @@ import { SelectLocationPage } from '../pages/SelectLocationPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { MediaPage } from '../pages/MediaPage';
 import { SlidersPage } from '../pages/SlidersPage';
+import { SliderDetailPage } from '../pages/SliderDetailPage';
 import { EventsPage } from '../pages/EventsPage';
 import { CampaignsPage } from '../pages/CampaignsPage';
 import { StoreCategoriesPage } from '../pages/StoreCategoriesPage';
@@ -63,6 +64,7 @@ export const router = createBrowserRouter([
           { path: '/search', element: <SearchPage /> },
           { path: '/media', element: <MediaPage /> },
           { path: '/sliders', element: <SlidersPage /> },
+          { path: '/sliders/:id', element: <SliderDetailPage /> },
           { path: '/events', element: <EventsPage /> },
           { path: '/campaigns', element: <CampaignsPage /> },
           { path: '/popups', element: <PopupsPage /> },

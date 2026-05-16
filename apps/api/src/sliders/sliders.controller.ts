@@ -25,6 +25,9 @@ import { CreateSliderDto } from './dto/create-slider.dto';
 import { UpdateSliderDto } from './dto/update-slider.dto';
 import { ListSlidersDto } from './dto/list-sliders.dto';
 import { ReorderSlidersDto } from './dto/reorder-sliders.dto';
+import { CreateSliderItemDto } from './dto/create-slider-item.dto';
+import { UpdateSliderItemDto } from './dto/update-slider-item.dto';
+import { ReorderSliderItemsDto } from './dto/reorder-slider-items.dto';
 
 @Controller('sliders')
 @RequireTenantContext()
@@ -39,7 +42,6 @@ export class SlidersController {
     return this.sliders.list(req.tenantId!, req.mallId, query);
   }
 
-  // NOTE: 'reorder' must be declared before ':id' to avoid being matched as an id param
   @Patch('reorder')
   @RequirePermission('slider:reorder')
   reorder(
@@ -106,5 +108,57 @@ export class SlidersController {
     @Req() req: Request,
   ) {
     return this.sliders.archive(id, user, req.tenantId!);
+  }
+
+  @Get(':id/items')
+  @RequirePermission('slider:read')
+  listItems(@Param('id') id: string, @Req() req: Request) {
+    return this.sliders.listItems(id, req.tenantId!);
+  }
+
+  @Post(':id/items')
+  @RequirePermission('slider:update')
+  createItem(
+    @Param('id') id: string,
+    @Body() dto: CreateSliderItemDto,
+    @CurrentUser() user: User,
+    @Req() req: Request,
+  ) {
+    return this.sliders.createItem(id, dto, user, req.tenantId!);
+  }
+
+  @Patch(':id/items/reorder')
+  @RequirePermission('slider:reorder')
+  reorderItems(
+    @Param('id') id: string,
+    @Body() dto: ReorderSliderItemsDto,
+    @CurrentUser() user: User,
+    @Req() req: Request,
+  ) {
+    return this.sliders.reorderItems(id, dto, user, req.tenantId!);
+  }
+
+  @Patch(':id/items/:itemId')
+  @RequirePermission('slider:update')
+  updateItem(
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Body() dto: UpdateSliderItemDto,
+    @CurrentUser() user: User,
+    @Req() req: Request,
+  ) {
+    return this.sliders.updateItem(id, itemId, dto, user, req.tenantId!);
+  }
+
+  @Delete(':id/items/:itemId')
+  @HttpCode(204)
+  @RequirePermission('slider:update')
+  async removeItem(
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @CurrentUser() user: User,
+    @Req() req: Request,
+  ) {
+    await this.sliders.removeItem(id, itemId, user, req.tenantId!);
   }
 }

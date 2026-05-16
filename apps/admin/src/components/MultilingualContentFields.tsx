@@ -11,9 +11,18 @@ export const CAMPAIGN_I18N_FIELDS = [
   'buttonText',
 ] as const;
 export type CampaignI18nField = (typeof CAMPAIGN_I18N_FIELDS)[number];
-export const SLIDER_I18N_FIELDS = ['title', 'subtitle', 'description', 'buttonText'] as const;
+export const SLIDER_I18N_FIELDS = ['title'] as const;
 export type SliderI18nField = (typeof SLIDER_I18N_FIELDS)[number];
-export const PAGE_I18N_FIELDS = ['title', 'customTypeLabel', 'contentHtml', 'seoTitle', 'seoDescription'] as const;
+export const SLIDER_ITEM_I18N_FIELDS = ['title', 'description', 'buttonText'] as const;
+export type SliderItemI18nField = (typeof SLIDER_ITEM_I18N_FIELDS)[number];
+export const PAGE_I18N_FIELDS = [
+  'title',
+  'subtitle',
+  'customTypeLabel',
+  'contentHtml',
+  'seoTitle',
+  'seoDescription',
+] as const;
 export type PageI18nField = (typeof PAGE_I18N_FIELDS)[number];
 export const LOCATION_I18N_FIELDS = ['displayName', 'shortDescription', 'description'] as const;
 export type LocationI18nField = (typeof LOCATION_I18N_FIELDS)[number];
@@ -25,6 +34,7 @@ export type MultilingualContentField =
   | EventI18nField
   | CampaignI18nField
   | SliderI18nField
+  | SliderItemI18nField
   | PageI18nField
   | LocationI18nField
   | GlobalStoreI18nField

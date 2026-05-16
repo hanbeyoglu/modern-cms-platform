@@ -1,3 +1,4 @@
+import { appendLimitParam } from './constants';
 import { request } from './client';
 
 export type MovieSessionStatus = 'SCHEDULED' | 'CANCELLED' | 'ARCHIVED';
@@ -71,7 +72,7 @@ export async function apiMovieSessionsList(
   if (opts?.sortBy) params.set('sortBy', opts.sortBy);
   if (opts?.sortDir) params.set('sortDir', opts.sortDir);
   if (opts?.page) params.set('page', String(opts.page));
-  if (opts?.limit) params.set('limit', String(opts.limit));
+  appendLimitParam(params, opts?.limit);
   const qs = params.toString();
   return request<MovieSessionListResponse>(`/movie-sessions${qs ? `?${qs}` : ''}`, {
     method: 'GET',

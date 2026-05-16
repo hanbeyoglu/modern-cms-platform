@@ -9,7 +9,12 @@ import {
   Min,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { Channel, SliderLinkType, SliderStatus, SliderTargetDevice } from '@prisma/client';
+import {
+  Channel,
+  SliderLinkedEntityType,
+  SliderPlacementType,
+  SliderStatus,
+} from '@prisma/client';
 
 export class CreateSliderDto {
   @IsString()
@@ -17,36 +22,16 @@ export class CreateSliderDto {
   title!: string;
 
   @IsOptional()
-  @IsString()
-  subtitle?: string;
+  @IsEnum(SliderPlacementType)
+  placementType?: SliderPlacementType = SliderPlacementType.HOME;
+
+  @IsOptional()
+  @IsEnum(SliderLinkedEntityType)
+  linkedEntityType?: SliderLinkedEntityType;
 
   @IsOptional()
   @IsString()
-  description?: string;
-
-  @IsOptional()
-  @IsString()
-  desktopMediaId?: string;
-
-  @IsOptional()
-  @IsString()
-  mobileMediaId?: string;
-
-  @IsOptional()
-  @IsString()
-  videoMediaId?: string;
-
-  @IsOptional()
-  @IsEnum(SliderLinkType)
-  linkType?: SliderLinkType = SliderLinkType.NONE;
-
-  @IsOptional()
-  @IsString()
-  linkValue?: string;
-
-  @IsOptional()
-  @IsString()
-  buttonText?: string;
+  linkedEntityId?: string;
 
   @IsOptional()
   @IsDateString()
@@ -65,10 +50,6 @@ export class CreateSliderDto {
   @IsOptional()
   @IsEnum(SliderStatus)
   status?: SliderStatus = SliderStatus.DRAFT;
-
-  @IsOptional()
-  @IsEnum(SliderTargetDevice)
-  targetDevice?: SliderTargetDevice = SliderTargetDevice.ALL;
 
   @IsOptional()
   @IsArray()

@@ -50,6 +50,9 @@ export interface GetStoresOpts {
 export interface GetSlidersOpts {
   locale?: string;
   targetDevice?: string;
+  placement?: string;
+  entityId?: string;
+  channel?: string;
 }
 
 export interface GetMovieSessionsOpts {
@@ -104,7 +107,13 @@ export class CmsPublicClient {
   // ── Sliders ───────────────────────────────────────────────────────────────
 
   getSliders(opts: GetSlidersOpts = {}): Promise<CmsEnvelope<CmsSlider[]>> {
-    return this.get('/public/sliders', { locale: opts.locale, targetDevice: opts.targetDevice });
+    return this.get('/public/sliders', {
+      locale: opts.locale,
+      targetDevice: opts.targetDevice,
+      placement: opts.placement,
+      entityId: opts.entityId,
+      channel: opts.channel,
+    });
   }
 
   // ── Events ────────────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import { appendLimitParam } from './constants';
 import { request } from './client';
 
 export type SearchIndexEntityType =
@@ -47,7 +48,7 @@ export function apiGlobalSearch(
 ): Promise<GlobalSearchResponse> {
   const sp = new URLSearchParams();
   sp.set('q', params.q);
-  if (params.limit != null) sp.set('limit', String(params.limit));
+  appendLimitParam(sp, params.limit);
   return request<GlobalSearchResponse>(`/search/global?${sp.toString()}`, {
     method: 'GET',
     token,

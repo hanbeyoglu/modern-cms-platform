@@ -48,10 +48,13 @@ export class PublicContentService {
   async getSliders(opts: {
     tenantId: string;
     mallId?: string;
-    targetDevice?: string;
+    placement?: string;
+    entityId?: string;
     channel?: string;
     limit?: number;
     localeId?: string;
+    /** @deprecated No longer filtered; kept for query compat */
+    targetDevice?: string;
   }): Promise<PublicSlider[]> {
     const now = new Date();
     const rows = await this.prisma.slider.findMany({
@@ -60,9 +63,13 @@ export class PublicContentService {
         deletedAt: null,
         status: 'PUBLISHED',
         ...(opts.mallId !== undefined ? { mallId: opts.mallId } : {}),
-        ...(opts.targetDevice
-          ? { targetDevice: opts.targetDevice as Prisma.EnumSliderTargetDeviceFilter['equals'] }
+        ...(opts.placement
+          ? {
+              placementType:
+                opts.placement as Prisma.EnumSliderPlacementTypeFilter['equals'],
+            }
           : {}),
+        ...(opts.entityId ? { linkedEntityId: opts.entityId } : {}),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(opts.channel ? { channels: { has: opts.channel as any } } : {}),
         AND: [
@@ -71,26 +78,46 @@ export class PublicContentService {
         ],
       },
       include: {
-        desktopMedia: { select: MEDIA_SELECT },
-        mobileMedia: { select: MEDIA_SELECT },
-        videoMedia: { select: MEDIA_SELECT },
+        items: {
+          where: { deletedAt: null, status: 'PUBLISHED' },
+          include: {
+            desktopMedia: { select: MEDIA_SELECT },
+            mobileMedia: { select: MEDIA_SELECT },
+          },
+          orderBy: { sortOrder: 'asc' },
+        },
       },
       orderBy: { sortOrder: 'asc' },
       take: opts.limit ?? 10,
     });
 
-    const sliders = rows.map(mapSlider);
+    let sliders = rows.map(mapSliderGroup);
     if (!opts.localeId || sliders.length === 0) return sliders;
 
-    const tMap = await this.resolver.getTranslationsForEntities(
-      opts.tenantId,
-      opts.localeId,
-      'SLIDER',
-      sliders.map((s) => s.id),
-    );
-    return sliders.map((s) =>
-      this.applyFromMap(s, tMap, s.id, ['title', 'subtitle', 'description', 'buttonText']),
-    );
+    const groupIds = sliders.map((s) => s.id);
+    const itemIds = sliders.flatMap((s) => s.items.map((i) => i.id));
+
+    const [groupTMap, itemTMap] = await Promise.all([
+      this.resolver.getTranslationsForEntities(opts.tenantId, opts.localeId, 'SLIDER', groupIds),
+      itemIds.length > 0
+        ? this.resolver.getTranslationsForEntities(
+            opts.tenantId,
+            opts.localeId,
+            'SLIDER_ITEM',
+            itemIds,
+          )
+        : Promise.resolve({}),
+    ]);
+
+    sliders = sliders.map((s) => {
+      const withGroup = this.applyFromMap(s, groupTMap, s.id, ['title']);
+      const items = withGroup.items.map((item) =>
+        this.applyFromMap(item, itemTMap, item.id, ['title', 'description', 'buttonText']),
+      );
+      return applySliderLegacyFields({ ...withGroup, items });
+    });
+
+    return sliders;
   }
 
   // ── Events ───────────────────────────────────────────────────────────────
@@ -597,6 +624,7 @@ export class PublicContentService {
         this.getSliders({
           tenantId: opts.tenantId,
           mallId: opts.mallId,
+          placement: 'HOME',
           limit: 10,
           localeId: opts.localeId,
         }),
@@ -830,37 +858,91 @@ function buildSeo(opts: {
   };
 }
 
-function mapSlider(s: {
+function mapSliderItem(item: {
   id: string;
-  title: string;
-  subtitle: string | null;
+  title: string | null;
   description: string | null;
+  buttonText: string | null;
+  linkUrl: string | null;
+  sortOrder: number;
+  status: string;
   desktopMedia: RichMediaRow;
   mobileMedia: RichMediaRow;
-  videoMedia: RichMediaRow;
-  linkType: string;
-  linkValue: string | null;
-  buttonText: string | null;
-  targetDevice: string;
+}): PublicSlider['items'][number] {
+  return {
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    buttonText: item.buttonText,
+    linkUrl: item.linkUrl,
+    desktopMedia: toMediaAsset(item.desktopMedia),
+    mobileMedia: toMediaAsset(item.mobileMedia),
+    sortOrder: item.sortOrder,
+    status: item.status,
+  };
+}
+
+function mapSliderGroup(s: {
+  id: string;
+  title: string;
+  placementType: string;
+  linkedEntityType: string | null;
+  linkedEntityId: string | null;
   sortOrder: number;
   startAt: Date | null;
   endAt: Date | null;
+  items: Array<{
+    id: string;
+    title: string | null;
+    description: string | null;
+    buttonText: string | null;
+    linkUrl: string | null;
+    sortOrder: number;
+    status: string;
+    desktopMedia: RichMediaRow;
+    mobileMedia: RichMediaRow;
+  }>;
 }): PublicSlider {
-  return {
+  const items = s.items.map(mapSliderItem);
+  return applySliderLegacyFields({
     id: s.id,
     title: s.title,
-    subtitle: s.subtitle,
-    description: s.description,
-    desktopMedia: toMediaAsset(s.desktopMedia),
-    mobileMedia: toMediaAsset(s.mobileMedia),
-    videoMedia: toMediaAsset(s.videoMedia),
-    linkType: s.linkType,
-    linkValue: s.linkValue,
-    buttonText: s.buttonText,
-    targetDevice: s.targetDevice,
+    placementType: s.placementType,
+    linkedEntityType: s.linkedEntityType,
+    linkedEntityId: s.linkedEntityId,
     sortOrder: s.sortOrder,
     startAt: toDate(s.startAt),
     endAt: toDate(s.endAt),
+    items,
+  });
+}
+
+function applySliderLegacyFields(
+  slider: Omit<
+    PublicSlider,
+    | 'subtitle'
+    | 'description'
+    | 'desktopMedia'
+    | 'mobileMedia'
+    | 'videoMedia'
+    | 'linkType'
+    | 'linkValue'
+    | 'buttonText'
+    | 'targetDevice'
+  >,
+): PublicSlider {
+  const first = slider.items[0];
+  return {
+    ...slider,
+    subtitle: null,
+    description: first?.description ?? null,
+    desktopMedia: first?.desktopMedia ?? null,
+    mobileMedia: first?.mobileMedia ?? null,
+    videoMedia: null,
+    linkType: first?.linkUrl ? 'EXTERNAL_URL' : 'NONE',
+    linkValue: first?.linkUrl ?? null,
+    buttonText: first?.buttonText ?? null,
+    targetDevice: 'ALL',
   };
 }
 

@@ -172,12 +172,16 @@ export class PublicController {
   async getSliders(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
+    @Query('placement') placement: string | undefined,
+    @Query('entityId') entityId: string | undefined,
+    @Query('channel') channel: string | undefined,
     @Query('targetDevice') targetDevice: string | undefined,
     @Query('locale') locale: string | undefined,
   ) {
     const context = await this.ctx.resolve(tenantId, mallId, locale);
     const cacheKey =
-      `public:${context.tenantId}:${context.mallId ?? 'none'}:sliders:${targetDevice ?? 'all'}` +
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:sliders:` +
+      `${placement ?? 'all'}:${entityId ?? 'all'}:${channel ?? 'all'}:${targetDevice ?? 'all'}` +
       lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
@@ -186,6 +190,9 @@ export class PublicController {
     const data = await this.content.getSliders({
       tenantId: context.tenantId,
       mallId: context.mallId,
+      placement,
+      entityId,
+      channel,
       targetDevice,
       localeId: context.locale?.id,
     });

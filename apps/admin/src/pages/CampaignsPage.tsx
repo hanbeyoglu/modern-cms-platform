@@ -14,6 +14,7 @@ import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import { validateRangeSchedule } from '../lib/publishing-workflow';
 import { DEFAULT_CONTENT_CHANNELS } from '../lib/content-channels';
 import { Button } from '../components/ui/Button';
+import { LinkedSliderGroupsSection } from '../components/LinkedSliderGroupsSection';
 import {
   apiCampaignArchive,
   apiCampaignCreate,
@@ -26,6 +27,7 @@ import {
   apiTranslationDelete,
   apiTranslationsList,
   apiTranslationUpsert,
+  API_MAX_PAGE_SIZE,
   type CmsLocale,
 } from '../lib/api';
 import type {
@@ -197,7 +199,7 @@ export function CampaignsPage() {
       return;
     }
     try {
-      const data = await apiMallStoresList(accessToken, tenantId, mallId, { limit: 200 });
+      const data = await apiMallStoresList(accessToken, tenantId, mallId, { limit: API_MAX_PAGE_SIZE });
       setMallStores(data.items);
     } catch {
       setMallStores([]);
@@ -715,6 +717,13 @@ export function CampaignsPage() {
                 }}
               />
             </div>
+            {editing && (
+              <LinkedSliderGroupsSection
+                entityType="CAMPAIGN"
+                entityId={editing.id}
+                mallId={mallId}
+              />
+            )}
           </div>
           <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
             <button type="button" disabled={saving} onClick={() => void handleSubmit()} style={{ padding: '6px 14px' }}>

@@ -21,6 +21,7 @@ import {
   type CreateMovieSessionPayload,
   type MovieSessionRow,
   type MovieSessionStatus,
+  API_MAX_PAGE_SIZE,
 } from '../lib/api';
 
 const STATUS_STYLE: Record<MovieSessionStatus, { bg: string; color: string; label: string }> = {
@@ -120,7 +121,7 @@ export function MovieSessionsPage() {
     try {
       const [cRes, mRes] = await Promise.all([
         apiCinemasList(accessToken, tenantId, mallId, { limit: 100, status: 'ACTIVE' }),
-        apiMoviesList(accessToken, tenantId, { limit: 200, status: 'ACTIVE' }),
+        apiMoviesList(accessToken, tenantId, { limit: API_MAX_PAGE_SIZE, status: 'ACTIVE' }),
       ]);
       setCinemas(cRes.cinemas);
       setMovies(mRes.movies);
