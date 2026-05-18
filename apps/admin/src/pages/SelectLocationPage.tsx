@@ -73,21 +73,21 @@ export function SelectLocationPage() {
     <main style={pageStyle}>
       <section style={panelStyle}>
         <div>
-          <h1 style={{ margin: '0 0 6px', fontSize: 24, color: '#111827' }}>Select location</h1>
+          <h1 style={{ margin: '0 0 6px', fontSize: 24, color: '#111827' }}>Lokasyon Seçin</h1>
           <p style={{ margin: 0, color: '#6b7280', fontSize: 14 }}>
             {activeTenant
-              ? `${activeTenant.name} has multiple locations. Choose where you want to work.`
-              : 'Choose the location context before opening the admin workspace.'}
+              ? `${activeTenant.name} için birden fazla lokasyon mevcut. Çalışmak istediğiniz lokasyonu seçin.`
+              : 'Yönetim panelini açmadan önce çalışmak istediğiniz lokasyonu seçin.'}
           </p>
         </div>
 
         {mallsLoading ? (
-          <div style={cardStyle}>Locations loading…</div>
+          <div style={cardStyle}>Lokasyonlar yükleniyor…</div>
         ) : malls.length === 0 ? (
           <div style={cardStyle}>
-            <strong>No locations available</strong>
+            <strong>Erişilebilir lokasyon yok</strong>
             <span style={{ color: '#6b7280' }}>
-              This tenant does not have any locations assigned to your account.
+              Hesabınıza atanmış herhangi bir lokasyon bulunmamaktadır.
             </span>
           </div>
         ) : (
@@ -149,7 +149,7 @@ export function SelectLocationPage() {
                       fontSize: 13,
                     }}
                   >
-                    {selected ? 'Selected' : 'Select location'}
+                    {selected ? 'Seçili' : 'Lokasyonu Seç'}
                   </button>
                 </article>
               );

@@ -15,6 +15,20 @@ import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
 import { AuditTimeline } from '../components/AuditTimeline';
 
+// ── Dangerous permissions — shown with a red warning indicator ────────────────
+
+const DANGEROUS_PERMISSIONS = new Set([
+  'role:update',
+  'role:delete',
+  'user:delete',
+  'tenant:delete',
+  'capability:update',
+  'audit:security',
+  'audit:export',
+  'location:delete',
+  'settings:update',
+]);
+
 // ── Permission metadata ────────────────────────────────────────────────────────
 
 const PERMISSION_LABELS: Record<string, string> = {
@@ -283,7 +297,31 @@ export function RoleDetailPage() {
     <PageContainer>
       <PageHeader
         title={role.name}
-        subtitle={role.isSystem ? 'Sistem Rolü' : `Özel Rol${!role.isActive ? ' · Pasif' : ''}`}
+        subtitle={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span
+              style={{
+                fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+                background: role.isSystem ? '#eff6ff' : '#f5f3ff',
+                color: role.isSystem ? '#2563eb' : '#7c3aed',
+              }}
+            >
+              {role.isSystem ? 'Sistem Rolü' : 'Özel Rol'}
+            </span>
+            <span
+              style={{
+                fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+                background: role.tenantId ? '#f0fdf4' : '#fff7ed',
+                color: role.tenantId ? '#16a34a' : '#c2410c',
+              }}
+            >
+              {role.tenantId ? 'Tenant Kapsamlı' : 'Platform Geneli'}
+            </span>
+            {!role.isActive && (
+              <span style={{ fontSize: 11, color: '#9ca3af', fontStyle: 'italic' }}>· Pasif</span>
+            )}
+          </span>
+        }
         action={
           <button onClick={() => navigate('/roles')}
             style={{ padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13, cursor: 'pointer', background: '#fff' }}>
@@ -370,7 +408,7 @@ export function RoleDetailPage() {
 
       {/* Permission Matrix */}
       <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' }}>
             İzin Matrisi
             <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: '#6b7280' }}>
@@ -406,6 +444,14 @@ export function RoleDetailPage() {
           </div>
         </div>
 
+        {/* Dangerous permission legend */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14, padding: '6px 10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, fontSize: 12 }}>
+          <span style={{ color: '#ef4444' }}>⚠</span>
+          <span style={{ color: '#92400e' }}>
+            <strong>Tehlikeli yetki</strong> olarak işaretlenen izinler sistem bütünlüğünü etkileyebilir — dikkatli kullanın.
+          </span>
+        </div>
+
         {visibleGroups.length === 0 ? (
           <div style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center', padding: '24px 0' }}>
             Arama kriterlerine uyan izin bulunamadı
@@ -438,26 +484,33 @@ export function RoleDetailPage() {
                   {group.perms.map((perm) => {
                     const checked = selectedIds.has(perm.id);
                     const label = PERMISSION_LABELS[perm.code];
+                    const isDangerous = DANGEROUS_PERMISSIONS.has(perm.code);
                     return (
                       <div
                         key={perm.id}
+                        title={isDangerous ? 'Tehlikeli yetki — dikkatli kullanın' : undefined}
                         onClick={() => isEditable && togglePerm(perm.id)}
                         style={{
                           display: 'flex', flexDirection: 'column',
                           padding: '6px 12px',
-                          border: `1px solid ${checked ? '#bfdbfe' : '#e5e7eb'}`,
+                          border: `1px solid ${isDangerous && checked ? '#fca5a5' : checked ? '#bfdbfe' : isDangerous ? '#fde8e8' : '#e5e7eb'}`,
                           borderRadius: 8,
-                          background: checked ? '#eff6ff' : '#fafafa',
-                          color: checked ? '#1d4ed8' : '#374151',
+                          background: isDangerous && checked ? '#fff1f1' : checked ? '#eff6ff' : isDangerous ? '#fffafa' : '#fafafa',
+                          color: isDangerous && checked ? '#b91c1c' : checked ? '#1d4ed8' : '#374151',
                           cursor: isEditable ? 'pointer' : 'default',
                           userSelect: 'none',
                           minWidth: 140,
                         }}
                       >
-                        {label && (
-                          <span style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>{label}</span>
-                        )}
-                        <span style={{ fontSize: 10, fontFamily: 'monospace', color: checked ? '#3b82f6' : '#9ca3af' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                          {isDangerous && (
+                            <span title="Tehlikeli yetki" style={{ fontSize: 10, color: '#ef4444', lineHeight: 1 }}>⚠</span>
+                          )}
+                          {label && (
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>{label}</span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: 10, fontFamily: 'monospace', color: isDangerous && checked ? '#ef4444' : checked ? '#3b82f6' : '#9ca3af' }}>
                           {perm.code}
                         </span>
                       </div>

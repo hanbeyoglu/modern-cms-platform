@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { ProtectedRoute } from './ProtectedRoute';
+import { PermissionGate } from './PermissionGate';
 import { LoginPage } from '../pages/LoginPage';
 import { SelectTenantPage } from '../pages/SelectTenantPage';
 import { SelectLocationPage } from '../pages/SelectLocationPage';
@@ -59,42 +60,72 @@ export const router = createBrowserRouter([
         element: <DashboardLayout />,
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
+
+          // Always accessible to any authenticated user
           { path: '/dashboard', element: <DashboardPage /> },
-          { path: '/analytics', element: <AnalyticsPage /> },
-          { path: '/notifications', element: <NotificationsPage /> },
-          { path: '/search', element: <SearchPage /> },
-          { path: '/media', element: <MediaPage /> },
-          { path: '/media/guidelines', element: <MediaGuidelinesPage /> },
-          { path: '/sliders', element: <SlidersPage /> },
-          { path: '/sliders/:id', element: <SliderDetailPage /> },
-          { path: '/events', element: <EventsPage /> },
-          { path: '/campaigns', element: <CampaignsPage /> },
-          { path: '/popups', element: <PopupsPage /> },
-          { path: '/services', element: <ServicesPage /> },
-          { path: '/pages', element: <PagesPage /> },
-          { path: '/pages/:id', element: <PageDetailPage /> },
-          { path: '/locales', element: <Navigate to="/settings/localization" replace /> },
-          { path: '/settings/localization', element: <LocalesPage /> },
-          { path: '/cinemas', element: <CinemasPage /> },
-          { path: '/movies', element: <MoviesPage /> },
-          { path: '/movie-sessions', element: <MovieSessionsPage /> },
-          { path: '/store-categories', element: <StoreCategoriesPage /> },
-          { path: '/global-stores', element: <GlobalStoresPage /> },
-          { path: '/mall-stores', element: <MallStoresPage /> },
-          { path: '/capabilities', element: <CapabilitiesPage /> },
-          { path: '/users', element: <UsersPage /> },
-          { path: '/users/:id', element: <UserDetailPage /> },
-          { path: '/roles', element: <RolesPage /> },
-          { path: '/roles/:id', element: <RoleDetailPage /> },
-          { path: '/settings/general', element: <SettingsGeneralPage /> },
-          { path: '/settings/security', element: <SettingsSecurityPage /> },
           { path: '/account', element: <AccountPage /> },
-          { path: '/tenants', element: <TenantsPage /> },
-          { path: '/tenants/:id', element: <TenantDetailPage /> },
-          { path: '/locations', element: <LocationsPage /> },
-          { path: '/locations/:id', element: <LocationDetailPage /> },
-          { path: '/audit-logs', element: <AuditLogsPage /> },
-          { path: '/audit-logs/:id', element: <AuditLogDetailPage /> },
+
+          // Analytic
+          { path: '/analytics', element: <PermissionGate permission="analytics:view" capability="analytics"><AnalyticsPage /></PermissionGate> },
+
+          // Notifications
+          { path: '/notifications', element: <PermissionGate permission="notification:read" capability="notifications"><NotificationsPage /></PermissionGate> },
+
+          // Search
+          { path: '/search', element: <PermissionGate permission="search:global" capability="search"><SearchPage /></PermissionGate> },
+
+          // Media
+          { path: '/media', element: <PermissionGate permission="media:read" capability="media"><MediaPage /></PermissionGate> },
+          { path: '/media/guidelines', element: <PermissionGate permission="media:read" capability="media"><MediaGuidelinesPage /></PermissionGate> },
+
+          // Sliders
+          { path: '/sliders', element: <PermissionGate permission="slider:read" capability="sliders"><SlidersPage /></PermissionGate> },
+          { path: '/sliders/:id', element: <PermissionGate permission="slider:read" capability="sliders"><SliderDetailPage /></PermissionGate> },
+
+          // Content
+          { path: '/events', element: <PermissionGate permission="event:read" capability="events"><EventsPage /></PermissionGate> },
+          { path: '/campaigns', element: <PermissionGate permission="campaign:read" capability="campaigns"><CampaignsPage /></PermissionGate> },
+          { path: '/popups', element: <PermissionGate permission="popup:read" capability="popups"><PopupsPage /></PermissionGate> },
+          { path: '/services', element: <PermissionGate permission="service:read" capability="location_services"><ServicesPage /></PermissionGate> },
+          { path: '/pages', element: <PermissionGate permission="page:read" capability="pages"><PagesPage /></PermissionGate> },
+          { path: '/pages/:id', element: <PermissionGate permission="page:read" capability="pages"><PageDetailPage /></PermissionGate> },
+
+          // Localization
+          { path: '/locales', element: <Navigate to="/settings/localization" replace /> },
+          { path: '/settings/localization', element: <PermissionGate permission="locale:read" capability="localization"><LocalesPage /></PermissionGate> },
+
+          // Cinema
+          { path: '/cinemas', element: <PermissionGate permission="cinema:read" capability="cinema"><CinemasPage /></PermissionGate> },
+          { path: '/movies', element: <PermissionGate permission="movie:read" capability="cinema"><MoviesPage /></PermissionGate> },
+          { path: '/movie-sessions', element: <PermissionGate permission="movie-session:read" capability="cinema"><MovieSessionsPage /></PermissionGate> },
+
+          // Stores
+          { path: '/store-categories', element: <PermissionGate permission="store-category:read" capability="stores"><StoreCategoriesPage /></PermissionGate> },
+          { path: '/global-stores', element: <PermissionGate permission="global-store:read" capability="stores"><GlobalStoresPage /></PermissionGate> },
+          { path: '/mall-stores', element: <PermissionGate permission="mall-store:read" capability="stores"><MallStoresPage /></PermissionGate> },
+
+          // Platform — Super Admin only
+          { path: '/capabilities', element: <PermissionGate permission="capability:read" superAdminOnly><CapabilitiesPage /></PermissionGate> },
+
+          // Platform — Audit logs
+          { path: '/audit-logs', element: <PermissionGate permission="audit:read"><AuditLogsPage /></PermissionGate> },
+          { path: '/audit-logs/:id', element: <PermissionGate permission="audit:read"><AuditLogDetailPage /></PermissionGate> },
+
+          // Management — Tenants (Super Admin only)
+          { path: '/tenants', element: <PermissionGate permission="tenant:read" superAdminOnly><TenantsPage /></PermissionGate> },
+          { path: '/tenants/:id', element: <PermissionGate permission="tenant:read" superAdminOnly><TenantDetailPage /></PermissionGate> },
+
+          // Management
+          { path: '/locations', element: <PermissionGate permission="location:read"><LocationsPage /></PermissionGate> },
+          { path: '/locations/:id', element: <PermissionGate permission="location:read"><LocationDetailPage /></PermissionGate> },
+          { path: '/users', element: <PermissionGate permission="user:read"><UsersPage /></PermissionGate> },
+          { path: '/users/:id', element: <PermissionGate permission="user:read"><UserDetailPage /></PermissionGate> },
+          { path: '/roles', element: <PermissionGate permission="role:read"><RolesPage /></PermissionGate> },
+          { path: '/roles/:id', element: <PermissionGate permission="role:read"><RoleDetailPage /></PermissionGate> },
+
+          // Settings
+          { path: '/settings/general', element: <PermissionGate permission="settings:read"><SettingsGeneralPage /></PermissionGate> },
+          { path: '/settings/security', element: <PermissionGate permission="settings:read"><SettingsSecurityPage /></PermissionGate> },
         ],
       },
     ],

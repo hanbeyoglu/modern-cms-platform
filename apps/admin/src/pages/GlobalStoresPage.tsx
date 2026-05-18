@@ -39,8 +39,10 @@ function StatusBadge({ status }: { status: StoreStatus }) {
 }
 
 export function GlobalStoresPage() {
-  const { accessToken, activeTenantId } = useAuth();
+  const { accessToken, activeTenantId, user } = useAuth();
   const { can } = usePermission();
+  // Global stores are platform-level master data (Option A). Only Super Admin can write.
+  const canWrite = user?.isSuperAdmin === true;
   const [items, setItems] = useState<GlobalStore[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -275,7 +277,7 @@ export function GlobalStoresPage() {
       <PageHeader
         title="Global Mağazalar"
         meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} mağaza</span>}
-        action={<Button variant="primary" onClick={openCreate}>+ Yeni Mağaza</Button>}
+        action={canWrite ? <Button variant="primary" onClick={openCreate}>+ Yeni Mağaza</Button> : undefined}
       />
     <div style={{ fontSize: 13 }}>
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
@@ -297,12 +299,19 @@ export function GlobalStoresPage() {
           Filtrele
         </button>
         <span style={{ color: '#6b7280' }}>{total} kayıt</span>
-        <button type="button" onClick={openCreate} style={{ marginLeft: 'auto', padding: '6px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6 }}>
-          + Global mağaza
-        </button>
+        {canWrite && (
+          <button type="button" onClick={openCreate} style={{ marginLeft: 'auto', padding: '6px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6 }}>
+            + Global mağaza
+          </button>
+        )}
+        {!canWrite && (
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>
+            Salt okunur — Global mağaza yönetimi yalnızca Super Admin yetkisine sahiptir
+          </span>
+        )}
       </div>
 
-      {showForm && (
+      {showForm && canWrite && (
         <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, marginBottom: 16, background: '#fafafa' }}>
           <h3 style={{ marginTop: 0, fontSize: 14 }}>{editing ? 'Düzenle' : 'Yeni global mağaza'}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, maxWidth: 720 }}>
@@ -431,12 +440,16 @@ export function GlobalStoresPage() {
                   <StatusBadge status={g.status} />
                 </td>
                 <td style={{ padding: 8 }}>
-                  <button type="button" onClick={() => openEdit(g)} style={{ marginRight: 6, fontSize: 12 }}>
-                    Düzenle
-                  </button>
-                  <button type="button" onClick={() => void remove(g.id)} style={{ fontSize: 12, color: '#b91c1c' }}>
-                    Sil
-                  </button>
+                  {canWrite && (
+                    <>
+                      <button type="button" onClick={() => openEdit(g)} style={{ marginRight: 6, fontSize: 12 }}>
+                        Düzenle
+                      </button>
+                      <button type="button" onClick={() => void remove(g.id)} style={{ fontSize: 12, color: '#b91c1c' }}>
+                        Sil
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

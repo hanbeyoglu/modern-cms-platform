@@ -62,9 +62,9 @@ export function SelectTenantPage() {
   }, [navigate, selectTenant, tenants, user?.isSuperAdmin]);
 
   function capabilitySummary(tenantId: string): string {
-    if (user?.isSuperAdmin) return 'Platform-wide access';
+    if (user?.isSuperAdmin) return 'Platform geneli erişim';
     const membership = user?.memberships?.find((item) => item.tenantId === tenantId);
-    if (!membership) return 'No membership details';
+    if (!membership) return 'Üyelik bilgisi yok';
 
     const capabilities = membership.capabilities ?? [];
     if (capabilities.length === 0) return membership.role.name;
@@ -78,17 +78,17 @@ export function SelectTenantPage() {
     <main style={pageStyle}>
       <section style={panelStyle}>
         <div>
-          <h1 style={{ margin: '0 0 6px', fontSize: 24, color: '#111827' }}>Select tenant</h1>
+          <h1 style={{ margin: '0 0 6px', fontSize: 24, color: '#111827' }}>Müşteri Seçin</h1>
           <p style={{ margin: 0, color: '#6b7280', fontSize: 14 }}>
-            Choose the tenant context before opening the admin workspace.
+            Yönetim panelini açmadan önce çalışmak istediğiniz müşteriyi seçin.
           </p>
         </div>
 
         {tenants.length === 0 ? (
           <div style={cardStyle}>
-            <strong>No tenants available</strong>
+            <strong>Erişilebilir müşteri yok</strong>
             <span style={{ color: '#6b7280' }}>
-              Your account does not currently have access to an enabled tenant.
+              Hesabınızın şu anda erişebildiği aktif bir müşteri bulunmamaktadır.
             </span>
           </div>
         ) : (
@@ -145,7 +145,7 @@ export function SelectTenantPage() {
                       fontSize: 13,
                     }}
                   >
-                    {selected ? 'Selected' : 'Select tenant'}
+                    {selected ? 'Seçili' : 'Müşteriyi Seç'}
                   </button>
                 </article>
               );

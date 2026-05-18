@@ -133,13 +133,24 @@ export function RolesPage() {
                     <div style={{ fontSize: 11, color: '#9ca3af', fontFamily: 'monospace' }}>{r.code}</div>
                   </td>
                   <td style={{ padding: '10px 14px' }}>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
-                      background: r.isSystem ? '#eff6ff' : '#f5f3ff',
-                      color: r.isSystem ? '#2563eb' : '#7c3aed',
-                    }}>
-                      {r.isSystem ? 'Sistem' : 'Özel'}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
+                        background: r.isSystem ? '#eff6ff' : '#f5f3ff',
+                        color: r.isSystem ? '#2563eb' : '#7c3aed',
+                        alignSelf: 'flex-start',
+                      }}>
+                        {r.isSystem ? 'Sistem' : 'Özel'}
+                      </span>
+                      <span style={{
+                        fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 8,
+                        background: r.tenantId ? '#f0fdf4' : '#fff7ed',
+                        color: r.tenantId ? '#16a34a' : '#c2410c',
+                        alignSelf: 'flex-start',
+                      }}>
+                        {r.tenantId ? 'Tenant' : 'Platform'}
+                      </span>
+                    </div>
                   </td>
                   <td style={{ padding: '10px 14px', color: '#374151' }}>{r.permissions.length}</td>
                   <td style={{ padding: '10px 14px', color: '#374151' }}>{r.usageCount}</td>

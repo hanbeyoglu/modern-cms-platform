@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   Param,
@@ -21,6 +22,11 @@ import { CreateGlobalStoreDto } from './dto/create-global-store.dto';
 import { UpdateGlobalStoreDto } from './dto/update-global-store.dto';
 import { ListGlobalStoresDto } from './dto/list-global-stores.dto';
 
+/**
+ * Global stores are platform-level brand master data (Option A ownership model).
+ * Read access: any role with global-store:read in tenant context.
+ * Write access: Super Admin only (permission check + isSuperAdmin guard).
+ */
 @Controller('global-stores')
 @RequireTenantContext()
 @UseGuards(TenantAccessGuard, PermissionsGuard)
@@ -42,12 +48,18 @@ export class GlobalStoresController {
   @Post()
   @RequirePermission('global-store:create')
   create(@Body() dto: CreateGlobalStoreDto, @CurrentUser() user: User) {
+    if (!user.isSuperAdmin) {
+      throw new ForbiddenException('Global mağaza yalnızca Super Admin tarafından oluşturulabilir');
+    }
     return this.globalStores.create(dto, user);
   }
 
   @Patch(':id')
   @RequirePermission('global-store:update')
   update(@Param('id') id: string, @Body() dto: UpdateGlobalStoreDto, @CurrentUser() user: User) {
+    if (!user.isSuperAdmin) {
+      throw new ForbiddenException('Global mağaza yalnızca Super Admin tarafından güncellenebilir');
+    }
     return this.globalStores.update(id, dto, user);
   }
 
@@ -55,6 +67,9 @@ export class GlobalStoresController {
   @HttpCode(204)
   @RequirePermission('global-store:delete')
   async remove(@Param('id') id: string, @CurrentUser() user: User) {
+    if (!user.isSuperAdmin) {
+      throw new ForbiddenException('Global mağaza yalnızca Super Admin tarafından silinebilir');
+    }
     await this.globalStores.remove(id, user);
   }
 }

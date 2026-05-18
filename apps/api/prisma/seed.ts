@@ -204,8 +204,17 @@ async function main(): Promise<void> {
       code: 'TENANT_ADMIN',
       name: 'Tenant Admin',
       permissions: PERMISSIONS.filter((p) =>
-        // Tenant Admin cannot create/delete tenants, delete locations, or use security/export audit
-        !['tenant:create', 'tenant:delete', 'audit:security', 'audit:export'].includes(p)
+        // Tenant Admin cannot: create/delete tenants, use security/export audit,
+        // or mutate global store master data (platform-level, Option A ownership).
+        ![
+          'tenant:create',
+          'tenant:delete',
+          'audit:security',
+          'audit:export',
+          'global-store:create',
+          'global-store:update',
+          'global-store:delete',
+        ].includes(p)
       ),
     },
     {
