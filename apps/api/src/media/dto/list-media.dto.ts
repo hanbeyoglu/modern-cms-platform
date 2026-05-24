@@ -1,6 +1,7 @@
-import { IsEnum, IsInt, IsISO8601, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsISO8601, IsOptional, IsString, Max, Min, IsIn } from 'class-validator';
+import { MEDIA_ASSET_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
-import { MediaAssetStatus } from '@prisma/client';
+import type { MediaAssetStatus } from '@prisma/client';
 
 export class ListMediaDto {
   @IsOptional()
@@ -24,7 +25,7 @@ export class ListMediaDto {
   search?: string;
 
   @IsOptional()
-  @IsEnum(MediaAssetStatus)
+  @IsIn(MEDIA_ASSET_STATUSES)
   status?: MediaAssetStatus;
 
   @IsOptional()

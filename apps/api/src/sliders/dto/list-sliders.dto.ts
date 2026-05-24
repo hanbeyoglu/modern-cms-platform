@@ -1,11 +1,7 @@
-import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min, IsIn } from 'class-validator';
+import { CHANNELS, SLIDER_STATUSES, SLIDER_PLACEMENT_TYPES, SLIDER_LINKED_ENTITY_TYPES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
-import {
-  Channel,
-  SliderLinkedEntityType,
-  SliderPlacementType,
-  SliderStatus,
-} from '@prisma/client';
+import type { Channel, SliderLinkedEntityType, SliderPlacementType, SliderStatus } from '@prisma/client';
 
 export class ListSlidersDto {
   @IsOptional()
@@ -21,15 +17,15 @@ export class ListSlidersDto {
   limit?: number = 20;
 
   @IsOptional()
-  @IsEnum(SliderStatus)
+  @IsIn(SLIDER_STATUSES)
   status?: SliderStatus;
 
   @IsOptional()
-  @IsEnum(SliderPlacementType)
+  @IsIn(SLIDER_PLACEMENT_TYPES)
   placementType?: SliderPlacementType;
 
   @IsOptional()
-  @IsEnum(SliderLinkedEntityType)
+  @IsIn(SLIDER_LINKED_ENTITY_TYPES)
   linkedEntityType?: SliderLinkedEntityType;
 
   @IsOptional()
@@ -37,7 +33,7 @@ export class ListSlidersDto {
   linkedEntityId?: string;
 
   @IsOptional()
-  @IsEnum(Channel)
+  @IsIn(CHANNELS)
   channel?: Channel;
 
   @IsOptional()

@@ -1,5 +1,6 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { TenantStatus } from '@prisma/client';
+import { IsOptional, IsString, IsIn } from 'class-validator';
+import { TENANT_STATUSES } from '../../common/prisma-validation-enums.js';
+import type { TenantStatus } from '@prisma/client';
 
 export class UpdateTenantDto {
   @IsOptional() @IsString() name?: string;
@@ -14,5 +15,5 @@ export class UpdateTenantDto {
 }
 
 export class UpdateTenantStatusDto {
-  @IsEnum(TenantStatus) status!: TenantStatus;
+  @IsIn(TENANT_STATUSES) status!: TenantStatus;
 }

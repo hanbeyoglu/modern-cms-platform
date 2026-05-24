@@ -13,13 +13,23 @@ export type LoginResponse = {
   };
 };
 
+export type MeMallSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  type?: string;
+  logoMedia?: { id: string; publicUrl: string } | null;
+  coverMedia?: { id: string; publicUrl: string } | null;
+};
+
 export type MeMembership = {
   tenantId: string;
   tenantName: string;
   role: { code: string; name: string };
   permissions?: string[];
   capabilities?: string[];
-  malls: Array<{ id: string; name: string; slug: string }>;
+  malls: MeMallSummary[];
 };
 
 export type MeResponse = {

@@ -1,6 +1,7 @@
-import { CinemaProviderType, CinemaStatus } from '@prisma/client';
+import type { CinemaProviderType, CinemaStatus } from '@prisma/client';
+import { CINEMA_STATUSES, CINEMA_PROVIDER_TYPES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MinLength, IsIn } from 'class-validator';
 
 export class CreateCinemaDto {
   @IsString()
@@ -20,7 +21,7 @@ export class CreateCinemaDto {
   description?: string;
 
   @IsOptional()
-  @IsEnum(CinemaProviderType)
+  @IsIn(CINEMA_PROVIDER_TYPES)
   providerType?: CinemaProviderType;
 
   @IsOptional()
@@ -38,6 +39,6 @@ export class CreateCinemaDto {
   providerConfigJson?: Record<string, unknown>;
 
   @IsOptional()
-  @IsEnum(CinemaStatus)
+  @IsIn(CINEMA_STATUSES)
   status?: CinemaStatus;
 }

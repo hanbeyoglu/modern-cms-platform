@@ -1,18 +1,12 @@
-import {
-  IsBoolean,
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsString,
-  MaxLength,
-} from 'class-validator';
-import { LocationType, MallStatus } from '@prisma/client';
+import { IsBoolean, IsNumber, IsOptional, IsString, MaxLength, IsIn } from 'class-validator';
+import { MALL_STATUSES, LOCATION_TYPES } from '../../common/prisma-validation-enums.js';
+import type { LocationType, MallStatus } from '@prisma/client';
 
 export class UpdateLocationDto {
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsString() slug?: string;
-  @IsOptional() @IsEnum(LocationType) type?: LocationType;
-  @IsOptional() @IsEnum(MallStatus) status?: MallStatus;
+  @IsOptional() @IsIn(LOCATION_TYPES) type?: LocationType;
+  @IsOptional() @IsIn(MALL_STATUSES) status?: MallStatus;
   @IsOptional() @IsString() legalName?: string;
   @IsOptional() @IsString() displayName?: string;
   @IsOptional() @IsString() @MaxLength(500) shortDescription?: string;

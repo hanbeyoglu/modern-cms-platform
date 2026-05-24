@@ -1,6 +1,7 @@
-import { ContentStatus } from '@prisma/client';
+import type { ContentStatus } from '@prisma/client';
+import { CONTENT_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
-import { IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsDateString, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class ListEventsDto {
   @IsOptional()
@@ -17,7 +18,7 @@ export class ListEventsDto {
   limit?: number = 20;
 
   @IsOptional()
-  @IsEnum(ContentStatus)
+  @IsIn(CONTENT_STATUSES)
   status?: ContentStatus;
 
   @IsOptional()

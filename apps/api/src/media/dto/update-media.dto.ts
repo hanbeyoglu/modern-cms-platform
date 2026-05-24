@@ -1,5 +1,6 @@
-import { IsArray, IsEnum, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
-import { MediaAssetStatus } from '@prisma/client';
+import { IsArray, IsNumber, IsOptional, IsString, Max, MaxLength, Min, IsIn } from 'class-validator';
+import { MEDIA_ASSET_STATUSES } from '../../common/prisma-validation-enums.js';
+import type { MediaAssetStatus } from '@prisma/client';
 
 export class UpdateMediaDto {
   @IsOptional()
@@ -34,6 +35,6 @@ export class UpdateMediaDto {
   focalPointY?: number;
 
   @IsOptional()
-  @IsEnum(MediaAssetStatus)
+  @IsIn(MEDIA_ASSET_STATUSES)
   status?: MediaAssetStatus;
 }

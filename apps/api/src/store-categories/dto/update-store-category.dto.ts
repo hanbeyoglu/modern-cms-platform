@@ -1,6 +1,7 @@
-import { IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, MaxLength, Min, IsIn } from 'class-validator';
+import { STORE_CATEGORY_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
-import { StoreCategoryStatus } from '@prisma/client';
+import type { StoreCategoryStatus } from '@prisma/client';
 
 export class UpdateStoreCategoryDto {
   @IsOptional()
@@ -25,6 +26,6 @@ export class UpdateStoreCategoryDto {
   sortOrder?: number;
 
   @IsOptional()
-  @IsEnum(StoreCategoryStatus)
+  @IsIn(STORE_CATEGORY_STATUSES)
   status?: StoreCategoryStatus;
 }

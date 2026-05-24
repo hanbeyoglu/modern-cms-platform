@@ -20,6 +20,7 @@ import type {
   PublicSlider,
   PublicStore,
 } from './public-response.types';
+import type { PaginatedItems } from './public-pagination.util';
 
 // ── Shared Prisma select shapes ──────────────────────────────────────────────
 
@@ -127,37 +128,47 @@ export class PublicContentService {
     mallId?: string;
     category?: string;
     search?: string;
+    page?: number;
     limit?: number;
     localeId?: string;
-  }): Promise<PublicEvent[]> {
+  }): Promise<PaginatedItems<PublicEvent>> {
     const now = new Date();
+    const page = opts.page ?? 1;
+    const limit = opts.limit ?? 20;
+    const skip = (page - 1) * limit;
     const mallScope: Prisma.EventWhereInput =
       opts.mallId !== undefined
         ? { OR: [{ mallId: opts.mallId }, { mallId: null }] }
         : {};
 
-    const rows = await this.prisma.event.findMany({
-      where: {
-        tenantId: opts.tenantId,
-        deletedAt: null,
-        status: 'PUBLISHED',
-        ...mallScope,
-        AND: [
-          { OR: [{ startAt: null }, { startAt: { lte: now } }] },
-          { OR: [{ endAt: null }, { endAt: { gte: now } }] },
-        ],
-        ...(opts.category ? { category: opts.category } : {}),
-        ...(opts.search
-          ? { title: { contains: opts.search, mode: 'insensitive' as const } }
-          : {}),
-      },
-      include: { coverMedia: { select: MEDIA_SELECT } },
-      orderBy: [{ sortOrder: 'asc' }, { startAt: 'asc' }],
-      take: opts.limit ?? 20,
-    });
+    const where: Prisma.EventWhereInput = {
+      tenantId: opts.tenantId,
+      deletedAt: null,
+      status: 'PUBLISHED',
+      ...mallScope,
+      AND: [
+        { OR: [{ startAt: null }, { startAt: { lte: now } }] },
+        { OR: [{ endAt: null }, { endAt: { gte: now } }] },
+      ],
+      ...(opts.category ? { category: opts.category } : {}),
+      ...(opts.search
+        ? { title: { contains: opts.search, mode: 'insensitive' as const } }
+        : {}),
+    };
+
+    const [total, rows] = await Promise.all([
+      this.prisma.event.count({ where }),
+      this.prisma.event.findMany({
+        where,
+        include: { coverMedia: { select: MEDIA_SELECT } },
+        orderBy: [{ sortOrder: 'asc' }, { startAt: 'asc' }],
+        skip,
+        take: limit,
+      }),
+    ]);
 
     const events = rows.map(mapEvent);
-    if (!opts.localeId || events.length === 0) return events;
+    if (!opts.localeId || events.length === 0) return { items: events, total };
 
     const tMap = await this.resolver.getTranslationsForEntities(
       opts.tenantId,
@@ -165,14 +176,17 @@ export class PublicContentService {
       'EVENT',
       events.map((e) => e.id),
     );
-    return events.map((e) =>
-      this.applyFromMap(e, tMap, e.id, [
-        'title',
-        'shortDescription',
-        'description',
-        'buttonText',
-      ]),
-    );
+    return {
+      items: events.map((e) =>
+        this.applyFromMap(e, tMap, e.id, [
+          'title',
+          'shortDescription',
+          'description',
+          'buttonText',
+        ]),
+      ),
+      total,
+    };
   }
 
   async getEventBySlug(opts: {
@@ -227,46 +241,56 @@ export class PublicContentService {
     mallId?: string;
     storeId?: string;
     search?: string;
+    page?: number;
     limit?: number;
     localeId?: string;
-  }): Promise<PublicCampaign[]> {
+  }): Promise<PaginatedItems<PublicCampaign>> {
     const now = new Date();
+    const page = opts.page ?? 1;
+    const limit = opts.limit ?? 20;
+    const skip = (page - 1) * limit;
     const mallScope: Prisma.CampaignWhereInput =
       opts.mallId !== undefined
         ? { OR: [{ mallId: opts.mallId }, { mallId: null }] }
         : {};
 
-    const rows = await this.prisma.campaign.findMany({
-      where: {
-        tenantId: opts.tenantId,
-        deletedAt: null,
-        status: 'PUBLISHED',
-        ...mallScope,
-        AND: [
-          { OR: [{ startAt: null }, { startAt: { lte: now } }] },
-          { OR: [{ endAt: null }, { endAt: { gte: now } }] },
-        ],
-        ...(opts.storeId ? { storeId: opts.storeId } : {}),
-        ...(opts.search
-          ? { title: { contains: opts.search, mode: 'insensitive' as const } }
-          : {}),
-      },
-      include: {
-        coverMedia: { select: MEDIA_SELECT },
-        store: {
-          select: {
-            id: true,
-            localName: true,
-            globalStore: { select: { name: true, slug: true } },
+    const where: Prisma.CampaignWhereInput = {
+      tenantId: opts.tenantId,
+      deletedAt: null,
+      status: 'PUBLISHED',
+      ...mallScope,
+      AND: [
+        { OR: [{ startAt: null }, { startAt: { lte: now } }] },
+        { OR: [{ endAt: null }, { endAt: { gte: now } }] },
+      ],
+      ...(opts.storeId ? { storeId: opts.storeId } : {}),
+      ...(opts.search
+        ? { title: { contains: opts.search, mode: 'insensitive' as const } }
+        : {}),
+    };
+
+    const [total, rows] = await Promise.all([
+      this.prisma.campaign.count({ where }),
+      this.prisma.campaign.findMany({
+        where,
+        include: {
+          coverMedia: { select: MEDIA_SELECT },
+          store: {
+            select: {
+              id: true,
+              localName: true,
+              globalStore: { select: { name: true, slug: true } },
+            },
           },
         },
-      },
-      orderBy: [{ sortOrder: 'asc' }, { startAt: 'asc' }],
-      take: opts.limit ?? 20,
-    });
+        orderBy: [{ sortOrder: 'asc' }, { startAt: 'asc' }],
+        skip,
+        take: limit,
+      }),
+    ]);
 
     const campaigns = rows.map(mapCampaign);
-    if (!opts.localeId || campaigns.length === 0) return campaigns;
+    if (!opts.localeId || campaigns.length === 0) return { items: campaigns, total };
 
     const tMap = await this.resolver.getTranslationsForEntities(
       opts.tenantId,
@@ -274,15 +298,18 @@ export class PublicContentService {
       'CAMPAIGN',
       campaigns.map((c) => c.id),
     );
-    return campaigns.map((c) =>
-      this.applyFromMap(c, tMap, c.id, [
-        'title',
-        'shortDescription',
-        'description',
-        'terms',
-        'buttonText',
-      ]),
-    );
+    return {
+      items: campaigns.map((c) =>
+        this.applyFromMap(c, tMap, c.id, [
+          'title',
+          'shortDescription',
+          'description',
+          'terms',
+          'buttonText',
+        ]),
+      ),
+      total,
+    };
   }
 
   async getCampaignBySlug(opts: {
@@ -348,57 +375,68 @@ export class PublicContentService {
     categoryId?: string;
     search?: string;
     featuredOnly?: boolean;
+    page?: number;
     limit?: number;
     localeId?: string;
-  }): Promise<PublicStore[]> {
-    const rows = await this.prisma.mallStore.findMany({
-      where: {
-        tenantId: opts.tenantId,
-        mallId: opts.mallId,
-        deletedAt: null,
-        status: 'ACTIVE',
-        ...(opts.featuredOnly ? { isFeatured: true } : {}),
-        ...(opts.categoryId
-          ? {
-              categoryLinks: {
-                some: { storeCategoryId: opts.categoryId, storeCategory: { deletedAt: null } },
-              },
-            }
-          : {}),
-        globalStore: {
-          is: {
-            deletedAt: null,
-            status: 'ACTIVE',
-            ...(opts.search
-              ? {
-                  OR: [
-                    { name: { contains: opts.search, mode: 'insensitive' as const } },
-                    { description: { contains: opts.search, mode: 'insensitive' as const } },
-                  ],
-                }
-              : {}),
-          },
+  }): Promise<PaginatedItems<PublicStore>> {
+    const page = opts.page ?? 1;
+    const limit = opts.limit ?? 50;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.MallStoreWhereInput = {
+      tenantId: opts.tenantId,
+      mallId: opts.mallId,
+      deletedAt: null,
+      status: 'ACTIVE',
+      ...(opts.featuredOnly ? { isFeatured: true } : {}),
+      ...(opts.categoryId
+        ? {
+            categoryLinks: {
+              some: { storeCategoryId: opts.categoryId, storeCategory: { deletedAt: null } },
+            },
+          }
+        : {}),
+      globalStore: {
+        is: {
+          deletedAt: null,
+          status: 'ACTIVE',
+          ...(opts.search
+            ? {
+                OR: [
+                  { name: { contains: opts.search, mode: 'insensitive' as const } },
+                  { description: { contains: opts.search, mode: 'insensitive' as const } },
+                ],
+              }
+            : {}),
         },
       },
-      include: {
-        categoryLinks: {
-          include: {
-            storeCategory: { select: { id: true, name: true, slug: true } },
+    };
+
+    const [total, rows] = await Promise.all([
+      this.prisma.mallStore.count({ where }),
+      this.prisma.mallStore.findMany({
+        where,
+        include: {
+          categoryLinks: {
+            include: {
+              storeCategory: { select: { id: true, name: true, slug: true } },
+            },
+            orderBy: { storeCategory: { sortOrder: 'asc' } },
           },
-          orderBy: { storeCategory: { sortOrder: 'asc' } },
-        },
-        globalStore: {
-          include: {
-            logoMedia: { select: MEDIA_SELECT },
+          globalStore: {
+            include: {
+              logoMedia: { select: MEDIA_SELECT },
+            },
           },
         },
-      },
-      orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }, { globalStore: { name: 'asc' } }],
-      take: opts.limit ?? 50,
-    });
+        orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }, { globalStore: { name: 'asc' } }],
+        skip,
+        take: limit,
+      }),
+    ]);
 
     const stores = rows.map(mapStore);
-    if (!opts.localeId || stores.length === 0) return stores;
+    if (!opts.localeId || stores.length === 0) return { items: stores, total };
 
     const tMap = await this.resolver.getTranslationsForEntities(
       opts.tenantId,
@@ -406,7 +444,10 @@ export class PublicContentService {
       'STORE',
       stores.map((s) => s.id),
     );
-    return stores.map((s) => this.applyFromMap(s, tMap, s.id, ['name', 'description']));
+    return {
+      items: stores.map((s) => this.applyFromMap(s, tMap, s.id, ['name', 'description'])),
+      total,
+    };
   }
 
   async getStoreBySlug(opts: {
@@ -619,7 +660,7 @@ export class PublicContentService {
   }): Promise<PublicHomeResponse> {
     const todayStr = new Date().toISOString().split('T')[0];
 
-    const [sliders, upcomingEvents, activeCampaigns, featuredStores, todayMovieSessions] =
+    const [sliders, upcomingEventsResult, activeCampaignsResult, featuredStoresResult, todayMovieSessions] =
       await Promise.all([
         this.getSliders({
           tenantId: opts.tenantId,
@@ -648,7 +689,7 @@ export class PublicContentService {
               limit: 12,
               localeId: opts.localeId,
             })
-          : Promise.resolve([]),
+          : Promise.resolve({ items: [], total: 0 }),
         opts.mallId
           ? this.getMovieSessions({
               tenantId: opts.tenantId,
@@ -664,9 +705,9 @@ export class PublicContentService {
       locale: opts.localeCode ?? null,
       defaultLocale: opts.defaultLocaleCode ?? null,
       sliders,
-      upcomingEvents,
-      activeCampaigns,
-      featuredStores,
+      upcomingEvents: upcomingEventsResult.items,
+      activeCampaigns: activeCampaignsResult.items,
+      featuredStores: featuredStoresResult.items,
       todayMovieSessions,
     };
   }
@@ -677,28 +718,41 @@ export class PublicContentService {
     tenantId: string;
     mallId?: string;
     channel?: string;
+    page?: number;
+    limit?: number;
     localeId?: string;
-  }): Promise<PublicPopup[]> {
+  }): Promise<PaginatedItems<PublicPopup>> {
     const now = new Date();
-    const rows = await this.prisma.popup.findMany({
-      where: {
-        tenantId: opts.tenantId,
-        deletedAt: null,
-        status: 'PUBLISHED',
-        ...(opts.mallId !== undefined ? { mallId: opts.mallId } : {}),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...(opts.channel ? { channels: { has: opts.channel as any } } : {}),
-        AND: [
-          { OR: [{ startAt: null }, { startAt: { lte: now } }] },
-          { OR: [{ endAt: null }, { endAt: { gte: now } }] },
-        ],
-      },
-      include: { imageMedia: { select: MEDIA_SELECT } },
-      orderBy: { sortOrder: 'asc' },
-    });
+    const page = opts.page ?? 1;
+    const limit = opts.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.PopupWhereInput = {
+      tenantId: opts.tenantId,
+      deletedAt: null,
+      status: 'PUBLISHED',
+      ...(opts.mallId !== undefined ? { mallId: opts.mallId } : {}),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(opts.channel ? { channels: { has: opts.channel as any } } : {}),
+      AND: [
+        { OR: [{ startAt: null }, { startAt: { lte: now } }] },
+        { OR: [{ endAt: null }, { endAt: { gte: now } }] },
+      ],
+    };
+
+    const [total, rows] = await Promise.all([
+      this.prisma.popup.count({ where }),
+      this.prisma.popup.findMany({
+        where,
+        include: { imageMedia: { select: MEDIA_SELECT } },
+        orderBy: { sortOrder: 'asc' },
+        skip,
+        take: limit,
+      }),
+    ]);
 
     const popups = rows.map(mapPopup);
-    if (!opts.localeId || popups.length === 0) return popups;
+    if (!opts.localeId || popups.length === 0) return { items: popups, total };
 
     const tMap = await this.resolver.getTranslationsForEntities(
       opts.tenantId,
@@ -707,9 +761,12 @@ export class PublicContentService {
       'POPUP' as any,
       popups.map((p) => p.id),
     );
-    return popups.map((p) =>
-      this.applyFromMap(p, tMap, p.id, ['title', 'description', 'buttonText']),
-    );
+    return {
+      items: popups.map((p) =>
+        this.applyFromMap(p, tMap, p.id, ['title', 'description', 'buttonText']),
+      ),
+      total,
+    };
   }
 
   // ── Location Services ─────────────────────────────────────────────────────
@@ -732,24 +789,46 @@ export class PublicContentService {
   async getLocationServices(opts: {
     tenantId: string;
     mallId: string;
+    search?: string;
+    page?: number;
+    limit?: number;
     localeId?: string;
-  }): Promise<PublicLocationService[]> {
-    const rows = await this.prisma.service.findMany({
-      where: {
-        tenantId: opts.tenantId,
-        mallId: opts.mallId,
-        deletedAt: null,
-        status: 'ACTIVE',
-      },
-      include: {
-        iconMedia: { select: MEDIA_SELECT },
-        coverMedia: { select: MEDIA_SELECT },
-      },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-    });
+  }): Promise<PaginatedItems<PublicLocationService>> {
+    const page = opts.page ?? 1;
+    const limit = opts.limit ?? 50;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.ServiceWhereInput = {
+      tenantId: opts.tenantId,
+      mallId: opts.mallId,
+      deletedAt: null,
+      status: 'ACTIVE',
+      ...(opts.search
+        ? {
+            OR: [
+              { name: { contains: opts.search, mode: 'insensitive' as const } },
+              { description: { contains: opts.search, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, rows] = await Promise.all([
+      this.prisma.service.count({ where }),
+      this.prisma.service.findMany({
+        where,
+        include: {
+          iconMedia: { select: MEDIA_SELECT },
+          coverMedia: { select: MEDIA_SELECT },
+        },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        skip,
+        take: limit,
+      }),
+    ]);
 
     const services = rows.map(mapLocationService);
-    if (!opts.localeId || services.length === 0) return services;
+    if (!opts.localeId || services.length === 0) return { items: services, total };
 
     const tMap = await this.resolver.getTranslationsForEntities(
       opts.tenantId,
@@ -758,9 +837,12 @@ export class PublicContentService {
       'SERVICE' as any,
       services.map((s) => s.id),
     );
-    return services.map((s) =>
-      this.applyFromMap(s, tMap, s.id, ['name', 'description', 'locationLabel']),
-    );
+    return {
+      items: services.map((s) =>
+        this.applyFromMap(s, tMap, s.id, ['name', 'description', 'locationLabel']),
+      ),
+      total,
+    };
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────

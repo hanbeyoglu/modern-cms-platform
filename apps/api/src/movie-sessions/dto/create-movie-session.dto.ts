@@ -1,5 +1,6 @@
-import { MovieSessionStatus } from '@prisma/client';
-import { IsDateString, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import type { MovieSessionStatus } from '@prisma/client';
+import { MOVIE_SESSION_STATUSES } from '../../common/prisma-validation-enums.js';
+import { IsDateString, IsOptional, IsString, MinLength, IsIn } from 'class-validator';
 
 export class CreateMovieSessionDto {
   @IsString()
@@ -38,6 +39,6 @@ export class CreateMovieSessionDto {
   ticketUrl?: string;
 
   @IsOptional()
-  @IsEnum(MovieSessionStatus)
+  @IsIn(MOVIE_SESSION_STATUSES)
   status?: MovieSessionStatus;
 }

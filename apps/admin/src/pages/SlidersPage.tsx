@@ -56,7 +56,7 @@ function StatusBadge({ status }: { status: SliderStatus }) {
 }
 
 export function SlidersPage() {
-  const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { accessToken, activeTenantId, activeMallId, mallsLoading } = useAuth();
   const navigate = useNavigate();
   const { can } = usePermission();
   const canCreate = can('slider:create');
@@ -146,7 +146,9 @@ export function SlidersPage() {
 
       {error && <ErrorBanner message={error} onDismiss={() => void load()} />}
 
-      {loading ? (
+      {mallsLoading ? (
+        <LoadingState label="AVM bilgileri yükleniyor…" />
+      ) : loading ? (
         <LoadingState label="Slider grupları yükleniyor…" />
       ) : !activeTenantId ? (
         <EmptyState

@@ -35,11 +35,11 @@ Login
 
 ### Tenant Change
 - Changing active tenant clears the active mall/location.
-- If the new tenant has exactly one mall, it is auto-selected.
+- If the new tenant has exactly one mall, it is auto-selected (header hides “— tümü —”).
 - If the new tenant has multiple malls, user is prompted at `/select-location`.
 
 ### Invalid Context
-- If the stored mall/location no longer belongs to the active tenant, it is cleared.
+- If the stored mall/location is invalid for the active tenant, it is cleared and re-selected when only one mall exists.
 - ProtectedRoute enforces: no `activeTenantId` → redirect to `/select-tenant`.
 - ProtectedRoute enforces: `activeTenantId` + `malls.length > 1` + no `activeMallId` → redirect to `/select-location`.
 
@@ -102,17 +102,17 @@ A user needs **both** the capability enabled for their tenant **and** the requir
 | Cinemas | `cinema:read` | `cinema` | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Movies | `movie:read` | `cinema` | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Sessions | `movie-session:read` | `cinema` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Store Categories | `store-category:read` | `stores` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Global Stores | `global-store:read` | `stores` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Store Categories | `store-category:read` | `stores` | ✓ | ✓ | ✗ | ✓ | ✓ |
+| Global Stores | `global-store:read` | `stores` | ✓ | ✓ | ✗ | ✓ | ✓ |
 | Mall Stores | `mall-store:read` | `stores` | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Capabilities | `capability:read` + SA | — | ✓ | ✗ | ✗ | ✗ | ✗ |
-| Audit Logs | `audit:read` | — | ✓ | ✓ | ✓ | ✗ | ✗ |
+| Audit Logs | `audit:read` | — | ✓ | ✓ | ✗ | ✗ | ✗ |
 | Tenants | `tenant:read` + SA | — | ✓ | ✗ | ✗ | ✗ | ✗ |
-| Locations | `location:read` | — | ✓ | ✓ | ✓ | ✗ | ✓ |
-| Users | `user:read` | — | ✓ | ✓ | ✓ | ✗ | ✗ |
-| Roles | `role:read` | — | ✓ | ✓ | ✓ | ✗ | ✗ |
-| Settings General | `settings:read` | — | ✓ | ✓ | ✓ | ✗ | ✗ |
-| Settings Security | `settings:read` | — | ✓ | ✓ | ✓ | ✗ | ✗ |
+| Locations | `location:read` | — | ✓ | ✓ | ✗ | ✗ | ✓ |
+| Users | `user:read` | — | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Roles | `role:read` | — | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Settings General | `settings:read` | — | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Settings Security | `settings:read` | — | ✓ | ✓ | ✗ | ✗ | ✗ |
 | Localization | `locale:read` | `localization` | ✓ | ✓ | ✓ | ✓ | ✗ |
 | Account | — | — | ✓ | ✓ | ✓ | ✓ | ✓ |
 
@@ -137,11 +137,11 @@ Gets all permissions **except**:
 - `capability:update` (platform-level; gets `capability:read`)
 
 ### 5.3 MALL_MANAGER
-Content management for assigned mall:
+Content management for assigned mall/location only:
 
 | Area | Permissions |
 |------|------------|
-| Location | `mall:read`, `mall:switch`, `location:read` |
+| Mall context | `mall:read`, `mall:switch` |
 | Analytics | `analytics:view` |
 | Media | `media:read`, `media:upload`, `media:update`, `media:delete`, `media:manage-folders` |
 | Sliders | `slider:read/create/update/delete/publish/reorder` |
@@ -151,14 +151,12 @@ Content management for assigned mall:
 | Services | `service:read/create/update/delete` |
 | Pages | `page:read/create/update/publish/archive`, `page-block:*` |
 | Cinema | `cinema:read/create/update/delete`, `movie:read/create/update`, `movie-session:*` |
-| Stores | `store-category:read`, `global-store:read`, `mall-store:read/assign/update/feature` |
+| Mall stores | `mall-store:read/assign/update/feature` |
 | Localization | `locale:read`, `translation:read/create/update` |
-| Audit | `audit:read` |
-| Users | `user:read` |
-| Settings | `settings:read` |
+| Notifications | `notification:read/update` |
 | Search | `search:global` |
 
-**Cannot**: manage tenant users/roles, create/delete locations, mutate global store master data, access security audit or capabilities management.
+**Cannot**: manage tenants, capabilities, locations list, users/roles, tenant settings, audit logs, global store catalog, or store categories. Single-mall tenants auto-select that mall in the header (no “— tümü —”).
 
 ### 5.4 CONTENT_EDITOR
 Focused on content creation and editing:
@@ -257,11 +255,10 @@ For non-SA users, `AccessService.getEffectivePermissionCodes(user, tenantId)` re
 
 ### Example: MALL_MANAGER (Mall of İstanbul)
 - Logs in → auto-selected to Mall Group → auto-selected/forced to Mall of İstanbul
-- Sees: content pages (events, campaigns, sliders, etc.), media, mall stores, locations, users (read), audit logs
-- Does NOT see: Tenants, Capabilities, Roles (if they don't have `role:read`)
-  - Note: MALL_MANAGER has `user:read` so they see Users page (read-only)
-  - Note: MALL_MANAGER has `audit:read` so they see Audit Logs
-- Cannot: manage other malls' content, delete global stores, manage roles, change settings
+- Header shows role name (e.g. “Mall Manager”) under the user display name
+- Sees: content pages (events, campaigns, sliders, popups, services, etc.), media, mall stores, localization
+- Does NOT see: Tenants, Capabilities, Locations, Users, Roles, Settings, Audit Logs, Global Stores, Store Categories
+- Cannot: manage other malls' content, tenant admin pages, or platform-level catalog/settings
 
 ### Example: CONTENT_EDITOR
 - Logs in → auto-selected tenant → mall selection if multiple

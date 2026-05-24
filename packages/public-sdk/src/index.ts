@@ -1,13 +1,16 @@
 // Types
 export type {
   CmsMediaAsset,
+  CmsMediaGuideline,
   CmsSeoMeta,
   CmsEnvelopeTenant,
   CmsEnvelope,
   CmsPaginationMeta,
+  CmsPagination,
   CmsPaginatedEnvelope,
   CmsErrorEnvelope,
   CmsSlider,
+  CmsSliderItem,
   CmsEvent,
   CmsCampaign,
   CmsPageBlock,
@@ -15,12 +18,15 @@ export type {
   CmsStore,
   CmsCinema,
   CmsMovieSession,
+  CmsPopup,
+  CmsService,
   CmsHomeResponse,
   CmsSupportedLocale,
   CmsLocationInfo,
   CmsSiteConfig,
   CmsSearchHit,
   CmsSearchResponse,
+  CmsSearchPaginatedEnvelope,
   CmsAnalyticsEvent,
   CmsAnalyticsEventType,
 } from './types';
@@ -29,10 +35,13 @@ export type {
 export { CmsPublicClient, CmsApiError } from './client';
 export type {
   CmsClientConfig,
+  PaginatedListOpts,
   GetEventsOpts,
   GetCampaignsOpts,
   GetStoresOpts,
   GetSlidersOpts,
+  GetPopupsOpts,
+  GetServicesOpts,
   GetMovieSessionsOpts,
   SearchOpts,
 } from './client';
@@ -46,11 +55,15 @@ export {
   resolveSeo,
   parsePagination,
   isSuccess,
+  isPaginatedEnvelope,
+  isPlainEnvelope,
   unwrap,
+  unwrapPaginated,
+  unwrapAny,
   formatCmsDate,
   isActiveNow,
 } from './helpers';
-export type { PaginationState } from './helpers';
+export type { PaginationState, CmsSuccessResponse } from './helpers';
 
 // Analytics
 export {

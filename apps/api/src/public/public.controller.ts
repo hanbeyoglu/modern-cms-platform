@@ -15,10 +15,14 @@ import { PublicSearchService } from '../search/public-search.service';
 import { MediaGuidelinesService } from '../media/media-guidelines.service';
 import {
   makeEnvelope,
+  buildPaginationMeta,
+  makePaginatedEnvelope,
   type PublicEnvelope,
   type PublicMediaGuideline,
+  type PublicPaginatedEnvelope,
   type PublicSiteConfig,
 } from './public-response.types';
+import { parsePagination, parseLimit } from './public-pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
 
 // Cache TTLs in seconds
@@ -41,6 +45,24 @@ function envelop<T>(data: T, ctx: PublicContext): PublicEnvelope<T> {
     mallId: ctx.mallId,
     locale: ctx.locale?.code ?? ctx.defaultLocale?.code ?? null,
   });
+}
+
+function envelopeContext(ctx: PublicContext) {
+  return {
+    tenantId: ctx.tenantId,
+    mallId: ctx.mallId,
+    locale: ctx.locale?.code ?? ctx.defaultLocale?.code ?? null,
+  };
+}
+
+function paginatedEnvelop<T>(
+  items: T[],
+  total: number,
+  page: number,
+  limit: number,
+  ctx: PublicContext,
+): PublicPaginatedEnvelope<T> {
+  return makePaginatedEnvelope(items, buildPaginationMeta(page, limit, total), envelopeContext(ctx));
 }
 
 @Public()
@@ -246,27 +268,29 @@ export class PublicController {
     @Headers('x-mall-id') mallId: string | undefined,
     @Query('category') category: string | undefined,
     @Query('search') search: string | undefined,
+    @Query('page') pageStr: string | undefined,
     @Query('limit') limitStr: string | undefined,
     @Query('locale') locale: string | undefined,
   ) {
     const context = await this.ctx.resolve(tenantId, mallId, locale);
-    const limit = parseLimit(limitStr, 20, 50);
+    const { page, limit } = parsePagination(pageStr, limitStr, 20, 50);
     const cacheKey =
-      `public:${context.tenantId}:${context.mallId ?? 'none'}:events:${category ?? ''}:${search ?? ''}:${limit}` +
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:events:${category ?? ''}:${search ?? ''}:${page}:${limit}` +
       lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const data = await this.content.getEvents({
+    const { items, total } = await this.content.getEvents({
       tenantId: context.tenantId,
       mallId: context.mallId,
       category,
       search,
+      page,
       limit,
       localeId: context.locale?.id,
     });
-    const result = envelop(data, context);
+    const result = paginatedEnvelop(items, total, page, limit, context);
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }
@@ -307,27 +331,29 @@ export class PublicController {
     @Headers('x-mall-id') mallId: string | undefined,
     @Query('storeId') storeId: string | undefined,
     @Query('search') search: string | undefined,
+    @Query('page') pageStr: string | undefined,
     @Query('limit') limitStr: string | undefined,
     @Query('locale') locale: string | undefined,
   ) {
     const context = await this.ctx.resolve(tenantId, mallId, locale);
-    const limit = parseLimit(limitStr, 20, 50);
+    const { page, limit } = parsePagination(pageStr, limitStr, 20, 50);
     const cacheKey =
-      `public:${context.tenantId}:${context.mallId ?? 'none'}:campaigns:${storeId ?? ''}:${search ?? ''}:${limit}` +
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:campaigns:${storeId ?? ''}:${search ?? ''}:${page}:${limit}` +
       lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const data = await this.content.getCampaigns({
+    const { items, total } = await this.content.getCampaigns({
       tenantId: context.tenantId,
       mallId: context.mallId,
       storeId,
       search,
+      page,
       limit,
       localeId: context.locale?.id,
     });
-    const result = envelop(data, context);
+    const result = paginatedEnvelop(items, total, page, limit, context);
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }
@@ -369,6 +395,7 @@ export class PublicController {
     @Query('categoryId') categoryId: string | undefined,
     @Query('search') search: string | undefined,
     @Query('featuredOnly') featuredOnlyStr: string | undefined,
+    @Query('page') pageStr: string | undefined,
     @Query('limit') limitStr: string | undefined,
     @Query('locale') locale: string | undefined,
   ) {
@@ -376,25 +403,26 @@ export class PublicController {
     if (!context.mallId) {
       throw new BadRequestException('x-mall-id header is required for the stores endpoint');
     }
-    const limit = parseLimit(limitStr, 50, 100);
+    const { page, limit } = parsePagination(pageStr, limitStr, 50, 100);
     const featuredOnly = featuredOnlyStr === 'true';
     const cacheKey =
-      `public:${context.tenantId}:${context.mallId}:stores:${categoryId ?? ''}:${search ?? ''}:${featuredOnly}:${limit}` +
+      `public:${context.tenantId}:${context.mallId}:stores:${categoryId ?? ''}:${search ?? ''}:${featuredOnly}:${page}:${limit}` +
       lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const data = await this.content.getStores({
+    const { items, total } = await this.content.getStores({
       tenantId: context.tenantId,
       mallId: context.mallId,
       categoryId,
       search,
       featuredOnly,
+      page,
       limit,
       localeId: context.locale?.id,
     });
-    const result = envelop(data, context);
+    const result = paginatedEnvelop(items, total, page, limit, context);
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }
@@ -537,22 +565,27 @@ export class PublicController {
     @Headers('x-mall-id') mallId: string | undefined,
     @Query('locale') locale: string | undefined,
     @Query('channel') channel: string | undefined,
+    @Query('page') pageStr: string | undefined,
+    @Query('limit') limitStr: string | undefined,
   ) {
     const context = await this.ctx.resolve(tenantId, mallId, locale);
+    const { page, limit } = parsePagination(pageStr, limitStr, 20, 50);
     const cacheKey =
-      `public:${context.tenantId}:${context.mallId ?? 'none'}:popups:${channel ?? 'all'}` +
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:popups:${channel ?? 'all'}:${page}:${limit}` +
       lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const data = await this.content.getPopups({
+    const { items, total } = await this.content.getPopups({
       tenantId: context.tenantId,
       mallId: context.mallId,
       channel,
+      page,
+      limit,
       localeId: context.locale?.id,
     });
-    const result = envelop(data, context);
+    const result = paginatedEnvelop(items, total, page, limit, context);
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }
@@ -564,23 +597,31 @@ export class PublicController {
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
     @Query('locale') locale: string | undefined,
+    @Query('search') search: string | undefined,
+    @Query('page') pageStr: string | undefined,
+    @Query('limit') limitStr: string | undefined,
   ) {
     const context = await this.ctx.resolve(tenantId, mallId, locale);
     if (!context.mallId) {
       throw new BadRequestException('x-mall-id header is required for /public/services');
     }
+    const { page, limit } = parsePagination(pageStr, limitStr, 50, 100);
     const cacheKey =
-      `public:${context.tenantId}:${context.mallId}:services` + lseg(context.locale?.code);
+      `public:${context.tenantId}:${context.mallId}:services:${search ?? ''}:${page}:${limit}` +
+      lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const data = await this.content.getLocationServices({
+    const { items, total } = await this.content.getLocationServices({
       tenantId: context.tenantId,
       mallId: context.mallId,
+      search,
+      page,
+      limit,
       localeId: context.locale?.id,
     });
-    const result = envelop(data, context);
+    const result = paginatedEnvelop(items, total, page, limit, context);
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }
@@ -620,38 +661,40 @@ export class PublicController {
     @Query('locale') locale: string | undefined,
     @Query('q') q: string | undefined,
     @Query('type') type: string | undefined,
+    @Query('page') pageStr: string | undefined,
     @Query('limit') limitStr: string | undefined,
   ) {
     const context = await this.ctx.resolve(tenantId, mallId, locale);
-    const limit = parseLimit(limitStr, 12, 50);
+    const { page, limit } = parsePagination(pageStr, limitStr, 12, 50);
     const qKey = (q ?? '').trim().slice(0, 120);
     const cacheKey =
-      `public:${context.tenantId}:${context.mallId ?? 'none'}:search:${qKey}:${type ?? ''}:${limit}` +
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:search:${qKey}:${type ?? ''}:${page}:${limit}` +
       lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const data = await this.publicSearch.search({
+    const { results, total } = await this.publicSearch.search({
       tenantId: context.tenantId,
       mallId: context.mallId,
       q,
       type,
+      page,
       limit,
       localeId: context.locale?.id ?? null,
       localeCode: context.locale?.code ?? context.defaultLocale?.code ?? null,
     });
-    const result = envelop(data, context);
+    const result = {
+      success: true as const,
+      locale: envelopeContext(context).locale,
+      tenant: {
+        id: envelopeContext(context).tenantId,
+        mallId: envelopeContext(context).mallId ?? null,
+      },
+      pagination: buildPaginationMeta(page, limit, total),
+      data: { results },
+    };
     await this.cache.set(cacheKey, result, TTL.search);
     return result;
   }
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function parseLimit(str: string | undefined, defaultVal: number, max: number): number {
-  if (!str) return defaultVal;
-  const n = parseInt(str, 10);
-  if (Number.isNaN(n) || n < 1) return defaultVal;
-  return Math.min(n, max);
 }

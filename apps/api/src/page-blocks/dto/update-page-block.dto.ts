@@ -1,6 +1,7 @@
-import { PageBlockStatus } from '@prisma/client';
+import type { PageBlockStatus } from '@prisma/client';
+import { PAGE_BLOCK_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsInt, IsObject, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsObject, IsOptional, IsString, Min, IsIn } from 'class-validator';
 
 export class UpdatePageBlockDto {
   @IsOptional()
@@ -33,6 +34,6 @@ export class UpdatePageBlockDto {
   sortOrder?: number;
 
   @IsOptional()
-  @IsEnum(PageBlockStatus)
+  @IsIn(PAGE_BLOCK_STATUSES)
   status?: PageBlockStatus;
 }

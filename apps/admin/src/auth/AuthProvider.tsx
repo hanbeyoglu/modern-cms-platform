@@ -9,19 +9,39 @@ import {
   type AuthState,
   type AuthUser,
 } from './auth-context';
+import { mallsFromMembership } from './mall-context';
 
 type Action =
   | { type: 'SET_SESSION'; accessToken: string; refreshToken: string; email: string }
   | { type: 'CLEAR_SESSION' }
   | { type: 'SET_PROFILE'; user: AuthUser; tenants: Tenant[] }
-  | { type: 'SET_MALLS'; malls: Mall[] }
+  | { type: 'SET_MALLS'; tenantId: string; malls: Mall[] }
+  | { type: 'SET_MALLS_FAILED'; tenantId: string; error: string }
   | { type: 'CLEAR_TENANT_CONTEXT' }
-  | { type: 'SELECT_TENANT'; tenantId: string }
+  | { type: 'SELECT_TENANT'; tenantId: string; malls?: Mall[] }
   | { type: 'SELECT_MALL'; mallId: string | null }
   | { type: 'PROFILE_LOADING'; loading: boolean };
 
 function isTenantSelectable(tenant: Tenant): boolean {
   return tenant.status.toUpperCase() !== 'DISABLED';
+}
+
+function resolveActiveMallId(
+  malls: Mall[],
+  currentMallId: string | null,
+): string | null {
+  if (malls.length === 0) return null;
+
+  const validIds = new Set(malls.map((mall) => mall.id));
+  if (currentMallId && validIds.has(currentMallId)) {
+    return currentMallId;
+  }
+
+  if (malls.length === 1) {
+    return malls[0].id;
+  }
+
+  return null;
 }
 
 function reducer(state: AuthState, action: Action): AuthState {
@@ -39,6 +59,7 @@ function reducer(state: AuthState, action: Action): AuthState {
         activeMallId: null,
         profileLoading: true,
         mallsLoading: false,
+        mallsError: null,
       };
     case 'CLEAR_SESSION':
       return {
@@ -52,6 +73,7 @@ function reducer(state: AuthState, action: Action): AuthState {
         activeMallId: null,
         profileLoading: false,
         mallsLoading: false,
+        mallsError: null,
       };
     case 'SET_PROFILE': {
       const selectableTenants = action.tenants.filter(isTenantSelectable);
@@ -59,40 +81,71 @@ function reducer(state: AuthState, action: Action): AuthState {
       const nextTenantId =
         existingTenant?.id ??
         (!action.user.isSuperAdmin && selectableTenants.length === 1 ? selectableTenants[0].id : null);
+      const tenantUnchanged = nextTenantId === state.activeTenantId;
+      const membershipMalls =
+        nextTenantId && !action.user.isSuperAdmin
+          ? mallsFromMembership(action.user, nextTenantId)
+          : null;
+      const nextMalls =
+        membershipMalls ??
+        (tenantUnchanged ? state.malls : []);
+      const preservedMallId = tenantUnchanged ? state.activeMallId : null;
       return {
         ...state,
         user: action.user,
         tenants: action.tenants,
         activeTenantId: nextTenantId,
-        activeMallId: nextTenantId === state.activeTenantId ? state.activeMallId : null,
-        malls: nextTenantId === state.activeTenantId ? state.malls : [],
+        malls: nextMalls,
+        activeMallId: resolveActiveMallId(nextMalls, preservedMallId),
         profileLoading: false,
-        mallsLoading: nextTenantId === state.activeTenantId ? state.mallsLoading : !!nextTenantId,
+        mallsLoading: Boolean(nextTenantId && action.user.isSuperAdmin && nextMalls.length === 0),
+        mallsError: tenantUnchanged ? state.mallsError : null,
       };
     }
     case 'SET_MALLS': {
-      const activeMallBelongsToTenant = action.malls.some(
-        (mall) => mall.id === state.activeMallId && mall.tenantId === state.activeTenantId,
-      );
-      const nextMallId =
-        activeMallBelongsToTenant || action.malls.length !== 1 ? state.activeMallId : action.malls[0].id;
+      if (action.tenantId !== state.activeTenantId) {
+        return state;
+      }
       return {
         ...state,
         malls: action.malls,
-        activeMallId: activeMallBelongsToTenant || action.malls.length === 1 ? nextMallId : null,
+        activeMallId: resolveActiveMallId(action.malls, state.activeMallId),
         mallsLoading: false,
+        mallsError: null,
+      };
+    }
+    case 'SET_MALLS_FAILED': {
+      if (action.tenantId !== state.activeTenantId) {
+        return state;
+      }
+      return {
+        ...state,
+        malls: [],
+        activeMallId: null,
+        mallsLoading: false,
+        mallsError: action.error,
       };
     }
     case 'CLEAR_TENANT_CONTEXT':
-      return { ...state, activeTenantId: null, malls: [], activeMallId: null, mallsLoading: false };
-    case 'SELECT_TENANT':
+      return {
+        ...state,
+        activeTenantId: null,
+        malls: [],
+        activeMallId: null,
+        mallsLoading: false,
+        mallsError: null,
+      };
+    case 'SELECT_TENANT': {
+      const malls = action.malls ?? [];
       return {
         ...state,
         activeTenantId: action.tenantId,
-        malls: [],
-        activeMallId: null,
-        mallsLoading: action.tenantId.length > 0,
+        malls,
+        activeMallId: resolveActiveMallId(malls, state.activeMallId),
+        mallsLoading: action.malls === undefined && action.tenantId.length > 0,
+        mallsError: null,
       };
+    }
     case 'SELECT_MALL':
       return { ...state, activeMallId: action.mallId };
     case 'PROFILE_LOADING':
@@ -132,17 +185,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [state.accessToken]);
 
-  // Auto-load malls whenever active tenant changes
+  // Super admins enrich context via /malls/my; others hydrate from /auth/me memberships only.
   useEffect(() => {
-    if (!state.accessToken || !state.activeTenantId) return;
+    if (!state.accessToken || !state.activeTenantId || !state.user?.isSuperAdmin) return;
+
+    const tenantId = state.activeTenantId;
     let cancelled = false;
 
     async function loadMalls() {
       try {
-        const data = await apiMalls(state.accessToken!, state.activeTenantId!);
-        if (!cancelled) dispatch({ type: 'SET_MALLS', malls: data.malls });
-      } catch {
-        if (!cancelled) dispatch({ type: 'SET_MALLS', malls: [] });
+        const data = await apiMalls(state.accessToken!, tenantId);
+        if (!cancelled) {
+          dispatch({ type: 'SET_MALLS', tenantId, malls: data.malls });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const message =
+            err instanceof Error ? err.message : 'AVM listesi yüklenemedi';
+          dispatch({ type: 'SET_MALLS_FAILED', tenantId, error: message });
+        }
       }
     }
 
@@ -150,7 +211,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [state.accessToken, state.activeTenantId]);
+  }, [state.accessToken, state.activeTenantId, state.user?.isSuperAdmin]);
+
+  // Keep single-mall tenants pinned to their only location.
+  useEffect(() => {
+    if (state.mallsLoading || state.malls.length !== 1 || state.activeMallId) return;
+    dispatch({ type: 'SELECT_MALL', mallId: state.malls[0].id });
+  }, [state.malls, state.mallsLoading, state.activeMallId]);
 
   useEffect(() => {
     persistAdminContext({
@@ -185,17 +252,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_PROFILE', user, tenants });
   }, []);
 
-  const setMalls = useCallback((malls: Mall[]) => {
-    dispatch({ type: 'SET_MALLS', malls });
-  }, []);
+  const setMalls = useCallback(
+    (malls: Mall[]) => {
+      if (!state.activeTenantId) return;
+      dispatch({ type: 'SET_MALLS', tenantId: state.activeTenantId, malls });
+    },
+    [state.activeTenantId],
+  );
 
-  const selectTenant = useCallback((tenantId: string) => {
-    if (!tenantId) {
-      dispatch({ type: 'CLEAR_TENANT_CONTEXT' });
-      return;
-    }
-    dispatch({ type: 'SELECT_TENANT', tenantId });
-  }, []);
+  const selectTenant = useCallback(
+    (tenantId: string) => {
+      if (!tenantId) {
+        dispatch({ type: 'CLEAR_TENANT_CONTEXT' });
+        return;
+      }
+      if (state.user && !state.user.isSuperAdmin) {
+        dispatch({
+          type: 'SELECT_TENANT',
+          tenantId,
+          malls: mallsFromMembership(state.user, tenantId),
+        });
+      } else {
+        dispatch({ type: 'SELECT_TENANT', tenantId });
+      }
+    },
+    [state.user],
+  );
 
   const selectMall = useCallback((mallId: string | null) => {
     dispatch({ type: 'SELECT_MALL', mallId });

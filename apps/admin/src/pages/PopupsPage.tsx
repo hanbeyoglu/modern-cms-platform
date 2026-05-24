@@ -26,6 +26,7 @@ import {
   type PopupStatus,
 } from '../lib/api';
 import { usePermission } from '../hooks/usePermission';
+import { useMallRequired } from '../hooks/useMallRequired';
 
 const STATUS_STYLE: Record<PopupStatus, { bg: string; color: string; label: string }> = {
   DRAFT: { bg: '#f3f4f6', color: '#374151', label: 'Taslak' },
@@ -121,7 +122,8 @@ function toPayload(f: FormState): CreatePopupPayload {
 }
 
 export function PopupsPage() {
-  const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { accessToken } = useAuth();
+  const mallCtx = useMallRequired();
   const { can } = usePermission();
   const [rows, setRows] = useState<CmsPopup[]>([]);
   const [total, setTotal] = useState(0);
@@ -135,11 +137,43 @@ export function PopupsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const tenantId = activeTenantId;
-  const mallId = activeMallId ?? undefined;
+  if (mallCtx.status === 'no-tenant') {
+    return (
+      <PageContainer>
+        <PageHeader title="Popuplar" />
+        <EmptyState title="Tenant seçilmedi" description="Üstten tenant seçin." />
+      </PageContainer>
+    );
+  }
+  if (mallCtx.status === 'loading') {
+    return (
+      <PageContainer>
+        <PageHeader title="Popuplar" />
+        <LoadingState label="AVM bilgileri yükleniyor…" />
+      </PageContainer>
+    );
+  }
+  if (mallCtx.status === 'no-malls') {
+    return (
+      <PageContainer>
+        <PageHeader title="Popuplar" />
+        <EmptyState title="AVM bulunamadı" description={mallCtx.message} />
+      </PageContainer>
+    );
+  }
+  if (mallCtx.status === 'no-selection') {
+    return (
+      <PageContainer>
+        <PageHeader title="Popuplar" />
+        <EmptyState title="AVM seçilmedi" description="Popuplar AVM kapsamlıdır; üstten bir AVM seçin." />
+      </PageContainer>
+    );
+  }
+
+  const { tenantId, mallId } = mallCtx;
 
   const load = useCallback(async () => {
-    if (!accessToken || !tenantId || !mallId) return;
+    if (!accessToken) return;
     setLoading(true);
     setError(null);
     try {
@@ -246,23 +280,6 @@ export function PopupsPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Silinemedi');
     }
-  }
-
-  if (!tenantId) {
-    return (
-      <PageContainer>
-        <PageHeader title="Popuplar" />
-        <EmptyState title="Tenant seçilmedi" description="Üstten tenant seçin." />
-      </PageContainer>
-    );
-  }
-  if (!mallId) {
-    return (
-      <PageContainer>
-        <PageHeader title="Popuplar" />
-        <EmptyState title="AVM seçilmedi" description="Popuplar AVM kapsamlıdır; üstten bir AVM seçin." />
-      </PageContainer>
-    );
   }
 
   return (

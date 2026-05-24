@@ -19,6 +19,8 @@ import {
   type ServiceStatus,
 } from '../lib/api';
 import { usePermission } from '../hooks/usePermission';
+import { useMallRequired } from '../hooks/useMallRequired';
+import { MallRequiredStates } from '../components/MallRequiredStates';
 
 const STATUS_STYLE: Record<ServiceStatus, { bg: string; color: string; label: string }> = {
   ACTIVE: { bg: '#d1fae5', color: '#065f46', label: 'Aktif' },
@@ -139,7 +141,8 @@ function toPayload(f: FormState): CreateServicePayload {
 }
 
 export function ServicesPage() {
-  const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { accessToken } = useAuth();
+  const mallCtx = useMallRequired();
   const { can } = usePermission();
   const [rows, setRows] = useState<CmsService[]>([]);
   const [total, setTotal] = useState(0);
@@ -153,11 +156,11 @@ export function ServicesPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const tenantId = activeTenantId;
-  const mallId = activeMallId ?? undefined;
+  const tenantId = mallCtx.status === 'ready' ? mallCtx.tenantId : '';
+  const mallId = mallCtx.status === 'ready' ? mallCtx.mallId : '';
 
   const load = useCallback(async () => {
-    if (!accessToken || !tenantId || !mallId) return;
+    if (!accessToken || mallCtx.status !== 'ready') return;
     setLoading(true);
     setError(null);
     try {
@@ -174,7 +177,7 @@ export function ServicesPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, tenantId, mallId, filterStatus, filterSearch]);
+  }, [accessToken, mallCtx.status, tenantId, mallId, filterStatus, filterSearch]);
 
   useEffect(() => {
     void load();
@@ -239,24 +242,12 @@ export function ServicesPage() {
     }
   }
 
-  if (!tenantId) {
-    return (
-      <PageContainer>
-        <PageHeader title="Lokasyon Hizmetleri" />
-        <EmptyState title="Tenant seçilmedi" description="Üstten tenant seçin." />
-      </PageContainer>
-    );
-  }
-  if (!mallId) {
-    return (
-      <PageContainer>
-        <PageHeader title="Lokasyon Hizmetleri" />
-        <EmptyState title="AVM seçilmedi" description="Hizmetler AVM kapsamlıdır; üstten bir AVM seçin." />
-      </PageContainer>
-    );
-  }
-
   return (
+    <MallRequiredStates
+      title="Lokasyon Hizmetleri"
+      status={mallCtx}
+      noSelectionDescription="Hizmetler AVM kapsamlıdır; üstten bir AVM seçin."
+    >
     <PageContainer>
       <PageHeader
         title="Lokasyon Hizmetleri"
@@ -468,5 +459,6 @@ export function ServicesPage() {
         )}
       </div>
     </PageContainer>
+    </MallRequiredStates>
   );
 }

@@ -1,6 +1,7 @@
-import { PageStatus, PageType } from '@prisma/client';
+import type { PageStatus, PageType } from '@prisma/client';
+import { PAGE_STATUSES, PAGE_TYPES } from '../../common/prisma-validation-enums.js';
 import { Type } from 'class-transformer';
-import { IsArray, IsDateString, IsEnum, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsDateString, IsNotEmpty, IsOptional, IsString, ValidateNested, IsIn } from 'class-validator';
 import { PageAttachmentDto } from './page-attachment.dto';
 
 export class CreatePageDto {
@@ -13,8 +14,8 @@ export class CreatePageDto {
   slug?: string;
 
   @IsOptional()
-  @IsEnum(PageType)
-  type?: PageType = PageType.STANDARD;
+  @IsIn(PAGE_TYPES)
+  type?: PageType = 'STANDARD';
 
   @IsOptional()
   @IsString()
@@ -25,8 +26,8 @@ export class CreatePageDto {
   contentHtml?: string;
 
   @IsOptional()
-  @IsEnum(PageStatus)
-  status?: PageStatus = PageStatus.DRAFT;
+  @IsIn(PAGE_STATUSES)
+  status?: PageStatus = 'DRAFT';
 
   @IsOptional()
   @IsString()

@@ -1,12 +1,6 @@
-import {
-  IsEnum,
-  IsObject,
-  IsOptional,
-  IsString,
-  IsUrl,
-  MaxLength,
-} from 'class-validator';
-import { StoreStatus } from '@prisma/client';
+import { IsObject, IsOptional, IsString, IsUrl, MaxLength, IsIn } from 'class-validator';
+import { STORE_STATUSES } from '../../common/prisma-validation-enums.js';
+import type { StoreStatus } from '@prisma/client';
 
 export class UpdateGlobalStoreDto {
   @IsOptional()
@@ -52,6 +46,6 @@ export class UpdateGlobalStoreDto {
   socialLinksJson?: Record<string, unknown> | null;
 
   @IsOptional()
-  @IsEnum(StoreStatus)
+  @IsIn(STORE_STATUSES)
   status?: StoreStatus;
 }

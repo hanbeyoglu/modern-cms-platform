@@ -78,6 +78,29 @@ export function makeEnvelope<T>(
   };
 }
 
+export function buildPaginationMeta(
+  page: number,
+  limit: number,
+  total: number,
+): PublicPaginationMeta {
+  const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
+  return { page, limit, total, totalPages };
+}
+
+export function makePaginatedEnvelope<T>(
+  data: T[],
+  pagination: PublicPaginationMeta,
+  context: { tenantId: string; mallId?: string | null; locale: string | null },
+): PublicPaginatedEnvelope<T> {
+  return {
+    success: true,
+    locale: context.locale,
+    tenant: { id: context.tenantId, mallId: context.mallId ?? null },
+    pagination,
+    data,
+  };
+}
+
 // ── Entity Types ──────────────────────────────────────────────────────────────
 
 export interface PublicSliderItem {

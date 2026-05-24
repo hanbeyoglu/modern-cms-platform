@@ -56,6 +56,9 @@ export interface CmsPaginationMeta {
   totalPages: number;
 }
 
+/** Alias for {@link CmsPaginationMeta}. */
+export type CmsPagination = CmsPaginationMeta;
+
 export interface CmsPaginatedEnvelope<T> {
   success: true;
   locale: string | null;
@@ -241,6 +244,42 @@ export interface CmsMovieSession {
   ticketUrl: string | null;
 }
 
+export interface CmsPopup {
+  id: string;
+  title: string;
+  description: string | null;
+  image: CmsMediaAsset | null;
+  linkUrl: string | null;
+  buttonText: string | null;
+  channels: string[];
+  showOnce: boolean;
+  closable: boolean;
+  startAt: string | null;
+  endAt: string | null;
+  sortOrder: number;
+}
+
+export interface CmsService {
+  id: string;
+  mallId: string;
+  name: string;
+  description: string | null;
+  icon: CmsMediaAsset | null;
+  cover: CmsMediaAsset | null;
+  category: string | null;
+  floor: string | null;
+  unitNo: string | null;
+  phone: string | null;
+  email: string | null;
+  websiteUrl: string | null;
+  locationLabel: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  searchTags: string[];
+  isSoon: boolean;
+  sortOrder: number;
+}
+
 export interface CmsHomeResponse {
   locale: string | null;
   defaultLocale: string | null;
@@ -313,6 +352,15 @@ export interface CmsSearchHit {
 
 export interface CmsSearchResponse {
   results: CmsSearchHit[];
+}
+
+/** Search list response — pagination envelope with nested `data.results`. */
+export interface CmsSearchPaginatedEnvelope {
+  success: true;
+  locale: string | null;
+  tenant: CmsEnvelopeTenant;
+  pagination: CmsPaginationMeta;
+  data: CmsSearchResponse;
 }
 
 // ── Analytics Events ──────────────────────────────────────────────────────────

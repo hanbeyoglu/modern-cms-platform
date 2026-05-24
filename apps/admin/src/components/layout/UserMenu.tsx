@@ -1,7 +1,9 @@
 import { useAuth } from '../../auth/useAuth';
+import { useActiveMembership } from '../../hooks/useActiveMembership';
 
 export function UserMenu() {
   const { user, email, clearSession } = useAuth();
+  const membership = useActiveMembership();
 
   const displayName =
     user?.firstName || user?.lastName
@@ -12,6 +14,9 @@ export function UserMenu() {
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <div style={{ textAlign: 'right' }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{displayName}</div>
+        {!user?.isSuperAdmin && membership?.role.name && (
+          <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 500 }}>{membership.role.name}</div>
+        )}
         {user?.isSuperAdmin && (
           <span
             style={{

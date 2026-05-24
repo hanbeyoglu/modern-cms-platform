@@ -17,6 +17,7 @@ export type AuthState = {
   activeMallId: string | null;
   profileLoading: boolean;
   mallsLoading: boolean;
+  mallsError: string | null;
 };
 
 export type AuthContextValue = AuthState & {
@@ -108,5 +109,6 @@ export function initialAuthState(): AuthState {
     activeMallId: context.activeMallId,
     profileLoading: tokens.accessToken !== null,
     mallsLoading: tokens.accessToken !== null && context.activeTenantId !== null,
+    mallsError: null,
   };
 }

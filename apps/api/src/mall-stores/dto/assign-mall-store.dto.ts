@@ -1,20 +1,7 @@
-import {
-  ArrayUnique,
-  IsArray,
-  IsBoolean,
-  IsEmail,
-  IsEnum,
-  IsInt,
-  IsNotEmpty,
-  IsObject,
-  IsOptional,
-  IsString,
-  MaxLength,
-  Min,
-  ValidateIf,
-} from 'class-validator';
+import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsInt, IsNotEmpty, IsObject, IsOptional, IsString, MaxLength, Min, ValidateIf, IsIn } from 'class-validator';
+import { STORE_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
-import { StoreStatus } from '@prisma/client';
+import type { StoreStatus } from '@prisma/client';
 
 export class AssignMallStoreDto {
   @IsString()
@@ -84,8 +71,8 @@ export class AssignMallStoreDto {
   sortOrder?: number = 0;
 
   @IsOptional()
-  @IsEnum(StoreStatus)
-  status?: StoreStatus = StoreStatus.ACTIVE;
+  @IsIn(STORE_STATUSES)
+  status?: StoreStatus = 'ACTIVE';
 
   @IsOptional()
   @IsArray()

@@ -1,6 +1,12 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { AuditSeverity } from '@prisma/client';
+
+/** Runtime-safe values for audit log severity (mirrors Prisma AuditSeverity). */
+export const AUDIT_SEVERITIES = ['INFO', 'WARNING', 'ERROR', 'SECURITY', 'CRITICAL'] as const;
+export type AuditSeverityValue = (typeof AUDIT_SEVERITIES)[number];
+
+export const AUDIT_EXPORT_FORMATS = ['csv', 'json'] as const;
+export type AuditExportFormat = (typeof AUDIT_EXPORT_FORMATS)[number];
 
 export class ListAuditLogsDto {
   @IsOptional()
@@ -37,11 +43,11 @@ export class ListAuditLogsDto {
   action?: string;
 
   @IsOptional()
-  @IsEnum(AuditSeverity)
-  severity?: string;
+  @IsIn(AUDIT_SEVERITIES)
+  severity?: AuditSeverityValue;
 
   @IsOptional()
-  @Transform(({ value }) => value === 'true' ? true : value === 'false' ? false : undefined)
+  @Transform(({ value }) => (value === 'true' ? true : value === 'false' ? false : undefined))
   @IsBoolean()
   success?: boolean;
 
@@ -62,6 +68,6 @@ export class ListAuditLogsDto {
   correlationId?: string;
 
   @IsOptional()
-  @IsString()
-  format?: 'csv' | 'json';
+  @IsIn(AUDIT_EXPORT_FORMATS)
+  format?: AuditExportFormat;
 }

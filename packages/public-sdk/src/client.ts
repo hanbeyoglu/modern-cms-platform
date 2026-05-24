@@ -4,9 +4,13 @@ import type {
   CmsEnvelope,
   CmsEvent,
   CmsHomeResponse,
+  CmsMediaGuideline,
   CmsMovieSession,
   CmsPage,
-  CmsSearchResponse,
+  CmsPaginatedEnvelope,
+  CmsPopup,
+  CmsSearchPaginatedEnvelope,
+  CmsService,
   CmsSiteConfig,
   CmsSlider,
   CmsStore,
@@ -25,26 +29,26 @@ export interface CmsClientConfig {
   fetchImpl?: typeof fetch;
 }
 
-export interface GetEventsOpts {
+export interface PaginatedListOpts {
   locale?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface GetEventsOpts extends PaginatedListOpts {
   category?: string;
   search?: string;
-  limit?: number;
 }
 
-export interface GetCampaignsOpts {
-  locale?: string;
+export interface GetCampaignsOpts extends PaginatedListOpts {
   storeId?: string;
   search?: string;
-  limit?: number;
 }
 
-export interface GetStoresOpts {
-  locale?: string;
+export interface GetStoresOpts extends PaginatedListOpts {
   categoryId?: string;
   search?: string;
   featuredOnly?: boolean;
-  limit?: number;
 }
 
 export interface GetSlidersOpts {
@@ -55,6 +59,14 @@ export interface GetSlidersOpts {
   channel?: string;
 }
 
+export interface GetPopupsOpts extends PaginatedListOpts {
+  channel?: string;
+}
+
+export interface GetServicesOpts extends PaginatedListOpts {
+  search?: string;
+}
+
 export interface GetMovieSessionsOpts {
   locale?: string;
   date?: string;
@@ -63,11 +75,9 @@ export interface GetMovieSessionsOpts {
   limit?: number;
 }
 
-export interface SearchOpts {
+export interface SearchOpts extends PaginatedListOpts {
   q: string;
-  locale?: string;
   type?: string;
-  limit?: number;
 }
 
 /**
@@ -98,6 +108,10 @@ export class CmsPublicClient {
     return this.get('/public/site-config', { locale });
   }
 
+  getMediaGuidelines(locale?: string): Promise<CmsEnvelope<CmsMediaGuideline[]>> {
+    return this.get('/public/media-guidelines', { locale });
+  }
+
   // ── Home ──────────────────────────────────────────────────────────────────
 
   getHomePage(locale?: string): Promise<CmsEnvelope<CmsHomeResponse>> {
@@ -118,11 +132,12 @@ export class CmsPublicClient {
 
   // ── Events ────────────────────────────────────────────────────────────────
 
-  getEvents(opts: GetEventsOpts = {}): Promise<CmsEnvelope<CmsEvent[]>> {
+  getEvents(opts: GetEventsOpts = {}): Promise<CmsPaginatedEnvelope<CmsEvent>> {
     return this.get('/public/events', {
       locale: opts.locale,
       category: opts.category,
       search: opts.search,
+      page: opts.page,
       limit: opts.limit,
     });
   }
@@ -133,11 +148,12 @@ export class CmsPublicClient {
 
   // ── Campaigns ─────────────────────────────────────────────────────────────
 
-  getCampaigns(opts: GetCampaignsOpts = {}): Promise<CmsEnvelope<CmsCampaign[]>> {
+  getCampaigns(opts: GetCampaignsOpts = {}): Promise<CmsPaginatedEnvelope<CmsCampaign>> {
     return this.get('/public/campaigns', {
       locale: opts.locale,
       storeId: opts.storeId,
       search: opts.search,
+      page: opts.page,
       limit: opts.limit,
     });
   }
@@ -148,12 +164,13 @@ export class CmsPublicClient {
 
   // ── Stores ────────────────────────────────────────────────────────────────
 
-  getStores(opts: GetStoresOpts = {}): Promise<CmsEnvelope<CmsStore[]>> {
+  getStores(opts: GetStoresOpts = {}): Promise<CmsPaginatedEnvelope<CmsStore>> {
     return this.get('/public/stores', {
       locale: opts.locale,
       categoryId: opts.categoryId,
       search: opts.search,
       featuredOnly: opts.featuredOnly,
+      page: opts.page,
       limit: opts.limit,
     });
   }
@@ -166,6 +183,32 @@ export class CmsPublicClient {
 
   getPage(slug: string, locale?: string): Promise<CmsEnvelope<CmsPage>> {
     return this.get(`/public/pages/${encodeURIComponent(slug)}`, { locale });
+  }
+
+  // ── Popups ────────────────────────────────────────────────────────────────
+
+  getPopups(opts: GetPopupsOpts = {}): Promise<CmsPaginatedEnvelope<CmsPopup>> {
+    return this.get('/public/popups', {
+      locale: opts.locale,
+      channel: opts.channel,
+      page: opts.page,
+      limit: opts.limit,
+    });
+  }
+
+  // ── Location Services ─────────────────────────────────────────────────────
+
+  getServices(opts: GetServicesOpts = {}): Promise<CmsPaginatedEnvelope<CmsService>> {
+    return this.get('/public/services', {
+      locale: opts.locale,
+      search: opts.search,
+      page: opts.page,
+      limit: opts.limit,
+    });
+  }
+
+  getService(id: string, locale?: string): Promise<CmsEnvelope<CmsService>> {
+    return this.get(`/public/services/${encodeURIComponent(id)}`, { locale });
   }
 
   // ── Cinema ────────────────────────────────────────────────────────────────
@@ -188,11 +231,12 @@ export class CmsPublicClient {
 
   // ── Search ────────────────────────────────────────────────────────────────
 
-  search(opts: SearchOpts): Promise<CmsEnvelope<CmsSearchResponse>> {
+  search(opts: SearchOpts): Promise<CmsSearchPaginatedEnvelope> {
     return this.get('/public/search', {
       q: opts.q,
       locale: opts.locale,
       type: opts.type,
+      page: opts.page,
       limit: opts.limit,
     });
   }

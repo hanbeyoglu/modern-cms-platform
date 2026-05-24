@@ -133,24 +133,72 @@ export class AuthService {
                   rolePermissions: { include: { permission: true } },
                 },
               },
-              mallAccess: { include: { mall: true } },
+              mallAccess: {
+                include: {
+                  mall: {
+                    include: {
+                      logoMedia: { select: { id: true, publicUrl: true } },
+                      coverMedia: { select: { id: true, publicUrl: true } },
+                    },
+                  },
+                },
+              },
             },
           });
 
     const membershipResults = await Promise.all(
       memberships.map(async (m) => {
         const capSet = await this.capabilities.getEnabledCodesForTenant(m.tenantId);
+
+        type MallSummary = {
+          id: string;
+          name: string;
+          slug: string;
+          status: string;
+          type: string;
+          logoMedia: { id: string; publicUrl: string } | null;
+          coverMedia: { id: string; publicUrl: string } | null;
+        };
+
+        let malls: MallSummary[];
+
+        if (m.role.code === 'TENANT_ADMIN') {
+          const tenantMalls = await this.prisma.mall.findMany({
+            where: { tenantId: m.tenantId, deletedAt: null },
+            include: {
+              logoMedia: { select: { id: true, publicUrl: true } },
+              coverMedia: { select: { id: true, publicUrl: true } },
+            },
+            orderBy: { name: 'asc' },
+          });
+          malls = tenantMalls.map((mall) => ({
+            id: mall.id,
+            name: mall.name,
+            slug: mall.slug,
+            status: mall.status as string,
+            type: mall.type as string,
+            logoMedia: mall.logoMedia,
+            coverMedia: mall.coverMedia,
+          }));
+        } else {
+          malls = m.mallAccess.map((a) => ({
+            id: a.mall.id,
+            name: a.mall.name,
+            slug: a.mall.slug,
+            status: a.mall.status as string,
+            type: a.mall.type as string,
+            logoMedia: a.mall.logoMedia,
+            coverMedia: a.mall.coverMedia,
+          }));
+        }
+
         return {
           tenantId: m.tenantId,
           tenantName: m.tenant.name,
           role: { code: m.role.code, name: m.role.name },
           permissions: m.role.rolePermissions.map((rp) => rp.permission.code),
           capabilities: Array.from(capSet),
-          malls: m.mallAccess.map((a) => ({
-            id: a.mall.id,
-            name: a.mall.name,
-            slug: a.mall.slug,
-          })),
+          malls,
         };
       }),
     );

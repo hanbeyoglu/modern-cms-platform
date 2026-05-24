@@ -1,16 +1,7 @@
-import { Channel, ContentStatus } from '@prisma/client';
+import type { Channel, ContentStatus } from '@prisma/client';
+import { CHANNELS, CONTENT_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
-import {
-  IsArray,
-  IsDateString,
-  IsEnum,
-  IsInt,
-  IsNotEmpty,
-  IsObject,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator';
+import { IsArray, IsDateString, IsInt, IsNotEmpty, IsObject, IsOptional, IsString, Min, IsIn } from 'class-validator';
 
 export class CreateCampaignDto {
   @IsString()
@@ -80,12 +71,12 @@ export class CreateCampaignDto {
   sortOrder?: number = 0;
 
   @IsOptional()
-  @IsEnum(ContentStatus)
-  status?: ContentStatus = ContentStatus.DRAFT;
+  @IsIn(CONTENT_STATUSES)
+  status?: ContentStatus = 'DRAFT';
 
   @IsOptional()
   @IsArray()
-  @IsEnum(Channel, { each: true })
+  @IsIn(CHANNELS, { each: true })
   channels?: Channel[];
 
   @IsOptional()

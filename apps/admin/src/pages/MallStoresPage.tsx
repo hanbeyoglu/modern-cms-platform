@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
 import { usePermission } from '../hooks/usePermission';
+import { useMallRequired } from '../hooks/useMallRequired';
+import { MallRequiredStates } from '../components/MallRequiredStates';
 import { MALL_STORE_I18N_FIELDS, MultilingualContentFields } from '../components/MultilingualContentFields';
 import { LinkedSliderGroupsSection } from '../components/LinkedSliderGroupsSection';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
-import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -138,7 +139,8 @@ function parseJsonField(raw: string, label: string): Record<string, unknown> | u
 }
 
 export function MallStoresPage() {
-  const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { accessToken } = useAuth();
+  const mallCtx = useMallRequired();
   const { can } = usePermission();
   const [items, setItems] = useState<MallStore[]>([]);
   const [globals, setGlobals] = useState<GlobalStore[]>([]);
@@ -170,8 +172,8 @@ export function MallStoresPage() {
   const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
   const [i18nDirty, setI18nDirty] = useState(false);
 
-  const tenantId = activeTenantId;
-  const mallId = activeMallId;
+  const tenantId = mallCtx.status === 'ready' ? mallCtx.tenantId : '';
+  const mallId = mallCtx.status === 'ready' ? mallCtx.mallId : '';
 
   const load = useCallback(async () => {
     if (!accessToken || !tenantId || !mallId) return;
@@ -441,24 +443,12 @@ export function MallStoresPage() {
     }
   }
 
-  if (!tenantId) {
-    return (
-      <PageContainer>
-        <PageHeader title="AVM Mağazaları" />
-        <EmptyState title="Tenant seçilmedi" description="AVM mağazaları için üstten bir tenant seçin." />
-      </PageContainer>
-    );
-  }
-  if (!mallId) {
-    return (
-      <PageContainer>
-        <PageHeader title="AVM Mağazaları" />
-        <EmptyState title="Mall seçilmedi" description="AVM mağaza listesi için üstten bir AVM seçin." />
-      </PageContainer>
-    );
-  }
-
   return (
+    <MallRequiredStates
+      title="AVM Mağazaları"
+      status={mallCtx}
+      noSelectionDescription="AVM mağaza listesi için üstten bir AVM seçin."
+    >
     <PageContainer>
       <PageHeader
         title="AVM Mağazaları"
@@ -758,5 +748,6 @@ export function MallStoresPage() {
       )}
     </div>
     </PageContainer>
+    </MallRequiredStates>
   );
 }

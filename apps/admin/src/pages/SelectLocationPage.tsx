@@ -64,9 +64,6 @@ export function SelectLocationPage() {
       return;
     }
 
-    if (malls.length === 0) {
-      void navigate('/dashboard', { replace: true });
-    }
   }, [malls, mallsLoading, navigate, selectMall]);
 
   return (
@@ -85,9 +82,9 @@ export function SelectLocationPage() {
           <div style={cardStyle}>Lokasyonlar yükleniyor…</div>
         ) : malls.length === 0 ? (
           <div style={cardStyle}>
-            <strong>Erişilebilir lokasyon yok</strong>
+            <strong>AVM/lokasyon bulunamadı</strong>
             <span style={{ color: '#6b7280' }}>
-              Hesabınıza atanmış herhangi bir lokasyon bulunmamaktadır.
+              Bu tenant için tanımlı AVM/lokasyon bulunamadı veya hesabınızın erişimi yok.
             </span>
           </div>
         ) : (

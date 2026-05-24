@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
-import { NotificationSeverity, NotificationType } from '@prisma/client';
+import { NOTIFICATION_TYPES, NOTIFICATION_SEVERITIES } from '../../common/prisma-validation-enums.js';
+import { IsBoolean, IsInt, IsOptional, Max, Min, IsIn } from 'class-validator';
+import type { NotificationSeverity, NotificationType } from '@prisma/client';
 
 export class ListNotificationsDto {
   @IsOptional()
@@ -13,11 +14,11 @@ export class ListNotificationsDto {
   unread?: boolean;
 
   @IsOptional()
-  @IsEnum(NotificationSeverity)
+  @IsIn(NOTIFICATION_SEVERITIES)
   severity?: NotificationSeverity;
 
   @IsOptional()
-  @IsEnum(NotificationType)
+  @IsIn(NOTIFICATION_TYPES)
   type?: NotificationType;
 
   @IsOptional()

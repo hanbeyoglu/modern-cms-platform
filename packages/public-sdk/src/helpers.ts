@@ -1,4 +1,10 @@
-import type { CmsEnvelope, CmsPaginationMeta, CmsSeoMeta } from './types';
+import type {
+  CmsEnvelope,
+  CmsErrorEnvelope,
+  CmsPaginatedEnvelope,
+  CmsPaginationMeta,
+  CmsSeoMeta,
+} from './types';
 
 // ── Locale helpers ────────────────────────────────────────────────────────────
 
@@ -96,8 +102,10 @@ export function parsePagination(meta: CmsPaginationMeta): PaginationState {
 
 // ── Envelope helpers ──────────────────────────────────────────────────────────
 
-/** Type-guard: returns true if the response is a success envelope. */
-export function isSuccess<T>(response: unknown): response is CmsEnvelope<T> {
+export type CmsSuccessResponse<T> = CmsEnvelope<T> | CmsPaginatedEnvelope<T>;
+
+/** Type-guard: returns true if the response is a success envelope (plain or paginated). */
+export function isSuccess<T>(response: unknown): response is CmsSuccessResponse<T> {
   return (
     typeof response === 'object' &&
     response !== null &&
@@ -106,12 +114,63 @@ export function isSuccess<T>(response: unknown): response is CmsEnvelope<T> {
   );
 }
 
-/** Extracts the data payload from a success envelope, or throws on error. */
-export function unwrap<T>(response: CmsEnvelope<T> | { success: false; error: { code: string; message: string } }): T {
+/** Type-guard: paginated list envelope with `pagination` + `data: T[]`. */
+export function isPaginatedEnvelope<T>(response: unknown): response is CmsPaginatedEnvelope<T> {
+  return (
+    isSuccess(response) &&
+    'pagination' in response &&
+    typeof (response as CmsPaginatedEnvelope<T>).pagination === 'object' &&
+    Array.isArray((response as CmsPaginatedEnvelope<T>).data)
+  );
+}
+
+/** Type-guard: single-object envelope (`data: T`, no pagination). */
+export function isPlainEnvelope<T>(response: unknown): response is CmsEnvelope<T> {
+  return isSuccess(response) && !isPaginatedEnvelope(response);
+}
+
+type CmsFailureEnvelope = CmsErrorEnvelope;
+
+function assertSuccess<T>(
+  response: CmsSuccessResponse<T> | CmsPaginatedEnvelope<T> | CmsFailureEnvelope,
+): asserts response is CmsSuccessResponse<T> | CmsPaginatedEnvelope<T> {
   if (!response.success) {
     throw new Error(`CMS API error [${response.error.code}]: ${response.error.message}`);
   }
+}
+
+/** Extracts `data` from a plain success envelope, or throws on error. */
+export function unwrap<T>(
+  response: CmsEnvelope<T> | CmsFailureEnvelope,
+): T {
+  assertSuccess(response);
   return response.data;
+}
+
+/** Extracts `data` and `pagination` from a paginated success envelope, or throws on error. */
+export function unwrapPaginated<T>(
+  response: CmsPaginatedEnvelope<T> | CmsFailureEnvelope,
+): { data: T[]; pagination: CmsPaginationMeta } {
+  assertSuccess(response);
+  if (!isPaginatedEnvelope<T>(response)) {
+    throw new Error('Expected a paginated CMS API envelope with pagination metadata');
+  }
+  return { data: response.data, pagination: response.pagination };
+}
+
+/**
+ * Unwraps either envelope shape.
+ * - Plain: `{ data: T }`
+ * - Paginated: `{ data: T[], pagination }`
+ */
+export function unwrapAny<T>(
+  response: CmsEnvelope<T> | CmsPaginatedEnvelope<T> | CmsFailureEnvelope,
+): { data: T | T[]; pagination?: CmsPaginationMeta } {
+  assertSuccess(response);
+  if (isPaginatedEnvelope<T>(response)) {
+    return { data: response.data, pagination: response.pagination };
+  }
+  return { data: response.data };
 }
 
 // ── Date helpers ──────────────────────────────────────────────────────────────

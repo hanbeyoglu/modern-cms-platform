@@ -1,6 +1,7 @@
-import { PageStatus, PageType } from '@prisma/client';
+import type { PageStatus, PageType } from '@prisma/client';
+import { PAGE_STATUSES, PAGE_TYPES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min, IsIn } from 'class-validator';
 
 export class ListPagesDto {
   @IsOptional()
@@ -17,11 +18,11 @@ export class ListPagesDto {
   limit?: number = 20;
 
   @IsOptional()
-  @IsEnum(PageStatus)
+  @IsIn(PAGE_STATUSES)
   status?: PageStatus;
 
   @IsOptional()
-  @IsEnum(PageType)
+  @IsIn(PAGE_TYPES)
   type?: PageType;
 
   @IsOptional()
@@ -29,10 +30,10 @@ export class ListPagesDto {
   search?: string;
 
   @IsOptional()
-  @IsEnum(['createdAt', 'updatedAt', 'title'])
+  @IsIn(['createdAt', 'updatedAt', 'title'])
   sortBy?: 'createdAt' | 'updatedAt' | 'title';
 
   @IsOptional()
-  @IsEnum(['asc', 'desc'])
+  @IsIn(['asc', 'desc'])
   sortDir?: 'asc' | 'desc';
 }

@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
-import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { CAMPAIGN_I18N_FIELDS, MultilingualContentFields } from '../components/MultilingualContentFields';
@@ -38,6 +37,8 @@ import type {
   MallStore,
 } from '../lib/api';
 import { usePermission } from '../hooks/usePermission';
+import { useMallRequired } from '../hooks/useMallRequired';
+import { MallRequiredStates } from '../components/MallRequiredStates';
 
 const STATUS_STYLE: Record<ContentStatus, { bg: string; color: string; label: string }> = {
   DRAFT: { bg: '#f3f4f6', color: '#374151', label: 'Taslak' },
@@ -163,7 +164,8 @@ function formToPayload(f: FormState): CreateCampaignPayload {
 }
 
 export function CampaignsPage() {
-  const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { accessToken } = useAuth();
+  const mallCtx = useMallRequired();
   const { can } = usePermission();
   const [items, setItems] = useState<CmsCampaign[]>([]);
   const [total, setTotal] = useState(0);
@@ -183,8 +185,8 @@ export function CampaignsPage() {
   const [i18nDirty, setI18nDirty] = useState(false);
   const [campaignFormDirty, setCampaignFormDirty] = useState(false);
 
-  const tenantId = activeTenantId;
-  const mallId = activeMallId ?? undefined;
+  const tenantId = mallCtx.status === 'ready' ? mallCtx.tenantId : '';
+  const mallId = mallCtx.status === 'ready' ? mallCtx.mallId : '';
 
   const loadCampaigns = useCallback(async () => {
     if (!accessToken || !tenantId) return;
@@ -449,16 +451,8 @@ export function CampaignsPage() {
     marginBottom: 3,
   };
 
-  if (!tenantId) {
-    return (
-      <PageContainer>
-        <PageHeader title="Kampanyalar" />
-        <EmptyState title="Tenant seçilmedi" description="Kampanyalar için üstten bir tenant seçin." />
-      </PageContainer>
-    );
-  }
-
   return (
+    <MallRequiredStates title="Kampanyalar" status={mallCtx}>
     <PageContainer>
       <PageHeader
         title="Kampanyalar"
@@ -489,12 +483,6 @@ export function CampaignsPage() {
           Filtrele
         </button>
       </div>
-
-      {!mallId && (
-        <p style={{ fontSize: 12, color: '#92400e', marginBottom: 12 }}>
-          Mağaza seçimi için üstten bir AVM (mall) seçin; kampanya oluştururken <code>storeId</code> bu listeyle eşlenir.
-        </p>
-      )}
 
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
@@ -812,5 +800,6 @@ export function CampaignsPage() {
       </table>
     </div>
     </PageContainer>
+    </MallRequiredStates>
   );
 }

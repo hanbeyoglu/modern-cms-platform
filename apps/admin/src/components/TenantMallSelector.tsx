@@ -1,9 +1,11 @@
 import { useAuth } from '../auth/useAuth';
 
 export function TenantMallSelector() {
-  const { tenants, activeTenantId, malls, activeMallId, selectTenant, selectMall } = useAuth();
+  const { tenants, activeTenantId, malls, activeMallId, mallsLoading, selectTenant, selectMall } =
+    useAuth();
   const activeTenant = tenants.find((tenant) => tenant.id === activeTenantId);
   const activeMall = malls.find((mall) => mall.id === activeMallId);
+  const singleMall = malls.length === 1;
 
   if (tenants.length === 0) return null;
 
@@ -43,21 +45,37 @@ export function TenantMallSelector() {
         </select>
       </label>
 
-      {activeTenantId && (
+      {activeTenantId && mallsLoading && (
+        <span style={{ fontSize: 12, color: '#6b7280' }}>AVM bilgileri yükleniyor…</span>
+      )}
+
+      {activeTenantId && !mallsLoading && malls.length === 0 && (
+        <span style={{ fontSize: 12, color: '#b45309' }}>
+          Bu tenant için tanımlı AVM/lokasyon bulunamadı.
+        </span>
+      )}
+
+      {activeTenantId && !mallsLoading && malls.length > 0 && (
         <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 13, color: '#6b7280' }}>Mall</span>
-          <select
-            value={activeMallId ?? ''}
-            onChange={(e) => selectMall(e.target.value || null)}
-            style={{ fontSize: 13, padding: '2px 6px' }}
-          >
-            <option value="">— tümü —</option>
-            {malls.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
+          {singleMall ? (
+            <span style={{ fontSize: 13, color: '#111827', fontWeight: 600 }}>
+              {malls[0]!.name}
+            </span>
+          ) : (
+            <select
+              value={activeMallId ?? ''}
+              onChange={(e) => selectMall(e.target.value || null)}
+              style={{ fontSize: 13, padding: '2px 6px' }}
+            >
+              <option value="">— seç —</option>
+              {malls.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          )}
         </label>
       )}
     </div>

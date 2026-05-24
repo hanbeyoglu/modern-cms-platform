@@ -11,6 +11,7 @@ export {
 } from './auth';
 export type {
   LoginResponse,
+  MeMallSummary,
   MeMembership,
   MeResponse,
   Tenant,

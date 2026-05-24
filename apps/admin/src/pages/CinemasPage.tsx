@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
+import { useMallRequired } from '../hooks/useMallRequired';
+import { MallRequiredStates } from '../components/MallRequiredStates';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -97,7 +99,8 @@ function toPayload(f: FormState): CreateCinemaPayload {
 }
 
 export function CinemasPage() {
-  const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { accessToken } = useAuth();
+  const mallCtx = useMallRequired();
   const [rows, setRows] = useState<CmsCinema[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -111,8 +114,8 @@ export function CinemasPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const tenantId = activeTenantId;
-  const mallId = activeMallId ?? undefined;
+  const tenantId = mallCtx.status === 'ready' ? mallCtx.tenantId : '';
+  const mallId = mallCtx.status === 'ready' ? mallCtx.mallId : '';
 
   const load = useCallback(async () => {
     if (!accessToken || !tenantId || !mallId) return;
@@ -160,24 +163,12 @@ export function CinemasPage() {
     boxSizing: 'border-box',
   };
 
-  if (!tenantId) {
-    return (
-      <PageContainer>
-        <PageHeader title="Sinemalar" />
-        <EmptyState title="Tenant seçilmedi" description="Üstten tenant seçin." />
-      </PageContainer>
-    );
-  }
-  if (!mallId) {
-    return (
-      <PageContainer>
-        <PageHeader title="Sinemalar" />
-        <EmptyState title="AVM seçilmedi" description="Sinemalar AVM kapsamlıdır; üstten bir AVM seçin." />
-      </PageContainer>
-    );
-  }
-
   return (
+    <MallRequiredStates
+      title="Sinemalar"
+      status={mallCtx}
+      noSelectionDescription="Sinemalar AVM kapsamlıdır; üstten bir AVM seçin."
+    >
     <PageContainer>
       <PageHeader
         title="Sinemalar"
@@ -394,5 +385,6 @@ export function CinemasPage() {
         </div>
       )}
     </PageContainer>
+    </MallRequiredStates>
   );
 }

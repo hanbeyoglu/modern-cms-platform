@@ -1,14 +1,7 @@
-import {
-  IsEnum,
-  IsInt,
-  IsOptional,
-  IsString,
-  IsUrl,
-  Min,
-  ValidateIf,
-} from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUrl, Min, ValidateIf, IsIn } from 'class-validator';
+import { SLIDER_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
-import { SliderStatus } from '@prisma/client';
+import type { SliderStatus } from '@prisma/client';
 
 export class CreateSliderItemDto {
   @IsOptional()
@@ -68,6 +61,6 @@ export class CreateSliderItemDto {
   sortOrder?: number = 0;
 
   @IsOptional()
-  @IsEnum(SliderStatus)
-  status?: SliderStatus = SliderStatus.DRAFT;
+  @IsIn(SLIDER_STATUSES)
+  status?: SliderStatus = 'DRAFT';
 }

@@ -1,20 +1,7 @@
-import {
-  IsArray,
-  IsDateString,
-  IsEnum,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator';
+import { IsArray, IsDateString, IsInt, IsNotEmpty, IsOptional, IsString, Min, IsIn } from 'class-validator';
+import { CHANNELS, SLIDER_STATUSES, SLIDER_PLACEMENT_TYPES, SLIDER_LINKED_ENTITY_TYPES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
-import {
-  Channel,
-  SliderLinkedEntityType,
-  SliderPlacementType,
-  SliderStatus,
-} from '@prisma/client';
+import type { Channel, SliderLinkedEntityType, SliderPlacementType, SliderStatus } from '@prisma/client';
 
 export class CreateSliderDto {
   @IsString()
@@ -22,11 +9,11 @@ export class CreateSliderDto {
   title!: string;
 
   @IsOptional()
-  @IsEnum(SliderPlacementType)
-  placementType?: SliderPlacementType = SliderPlacementType.HOME;
+  @IsIn(SLIDER_PLACEMENT_TYPES)
+  placementType?: SliderPlacementType = 'HOME';
 
   @IsOptional()
-  @IsEnum(SliderLinkedEntityType)
+  @IsIn(SLIDER_LINKED_ENTITY_TYPES)
   linkedEntityType?: SliderLinkedEntityType;
 
   @IsOptional()
@@ -48,11 +35,11 @@ export class CreateSliderDto {
   sortOrder?: number = 0;
 
   @IsOptional()
-  @IsEnum(SliderStatus)
-  status?: SliderStatus = SliderStatus.DRAFT;
+  @IsIn(SLIDER_STATUSES)
+  status?: SliderStatus = 'DRAFT';
 
   @IsOptional()
   @IsArray()
-  @IsEnum(Channel, { each: true })
+  @IsIn(CHANNELS, { each: true })
   channels?: Channel[];
 }

@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
-import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { MultilingualContentFields, EVENT_I18N_FIELDS } from '../components/MultilingualContentFields';
@@ -34,6 +33,8 @@ import {
 } from '../lib/api';
 
 import { usePermission } from '../hooks/usePermission';
+import { useMallRequired } from '../hooks/useMallRequired';
+import { MallRequiredStates } from '../components/MallRequiredStates';
 
 const STATUS_STYLE: Record<ContentStatus, { bg: string; color: string; label: string }> = {
   DRAFT: { bg: '#f3f4f6', color: '#374151', label: 'Taslak' },
@@ -149,7 +150,8 @@ function formToPayload(f: FormState): CreateEventPayload {
 }
 
 export function EventsPage() {
-  const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { accessToken } = useAuth();
+  const mallCtx = useMallRequired();
   const { can } = usePermission();
   const [events, setEvents] = useState<CmsEvent[]>([]);
   const [total, setTotal] = useState(0);
@@ -168,8 +170,8 @@ export function EventsPage() {
   const [i18nDirty, setI18nDirty] = useState(false);
   const [eventFormDirty, setEventFormDirty] = useState(false);
 
-  const tenantId = activeTenantId;
-  const mallId = activeMallId ?? undefined;
+  const tenantId = mallCtx.status === 'ready' ? mallCtx.tenantId : '';
+  const mallId = mallCtx.status === 'ready' ? mallCtx.mallId : '';
 
   const loadEvents = useCallback(async () => {
     if (!accessToken || !tenantId) return;
@@ -424,16 +426,8 @@ export function EventsPage() {
     marginBottom: 3,
   };
 
-  if (!tenantId) {
-    return (
-      <PageContainer>
-        <PageHeader title="Etkinlikler" />
-        <EmptyState title="Tenant seçilmedi" description="Etkinlikler için üstten bir tenant seçin." />
-      </PageContainer>
-    );
-  }
-
   return (
+    <MallRequiredStates title="Etkinlikler" status={mallCtx}>
     <PageContainer>
       <PageHeader
         title="Etkinlikler"
@@ -762,5 +756,6 @@ export function EventsPage() {
       </table>
     </div>
     </PageContainer>
+    </MallRequiredStates>
   );
 }

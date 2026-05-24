@@ -45,13 +45,18 @@ export class PublicSearchService {
     mallId?: string | null;
     q: string | undefined;
     type?: string;
+    page?: number;
     limit: number;
     localeId?: string | null;
     localeCode?: string | null;
-  }): Promise<PublicSearchResponseDto> {
+  }): Promise<{ results: PublicSearchResponseDto['results']; total: number }> {
     if (this.queryBuilder.isEmptyQuery(opts.q)) {
-      return { results: [] };
+      return { results: [], total: 0 };
     }
+
+    const page = opts.page ?? 1;
+    const take = Math.min(Math.max(opts.limit, 1), 50);
+    const skip = (page - 1) * take;
 
     const tsQuery = this.queryBuilder.prepareTsQuery(opts.q!);
     const baseRank = this.ranking.baseRankSql(tsQuery);
@@ -74,7 +79,17 @@ export class PublicSearchService {
         ? Prisma.sql`(s."entityType" = 'MOVIE'::"SearchIndexEntityType" OR s."mallId" IS NULL OR s."mallId" = ${opts.mallId})`
         : Prisma.sql`(s."mallId" IS NULL OR s."entityType" = 'MOVIE'::"SearchIndexEntityType")`;
 
-    const take = Math.min(Math.max(opts.limit, 1), 50);
+    const countRows = await this.prisma.$queryRaw<{ count: number }[]>(
+      Prisma.sql`
+      SELECT COUNT(*)::int AS count
+      FROM "SearchIndexEntry" s
+      WHERE s."tenantId" = ${opts.tenantId}
+        AND (${typeFilter})
+        AND (${mallClause})
+        AND to_tsvector('simple', s."document") @@ ${tsQuery}
+    `,
+    );
+    const total = countRows[0]?.count ?? 0;
 
     const rows = await this.prisma.$queryRaw<IndexHitRow[]>(
       Prisma.sql`
@@ -94,6 +109,7 @@ export class PublicSearchService {
         AND (${mallClause})
         AND to_tsvector('simple', s."document") @@ ${tsQuery}
       ORDER BY "score" DESC
+      OFFSET ${skip}
       LIMIT ${take * 3}
     `,
     );
@@ -104,7 +120,10 @@ export class PublicSearchService {
     const titled = await this.applyLocaleTitles(opts.tenantId, opts.localeId ?? null, trimmed);
     const enriched = await this.enrichSearchHits(titled, opts.tenantId, opts.mallId ?? null);
     const localeCode = opts.localeCode ?? null;
-    return { results: enriched.map((r) => this.mapper.toPublicHit(r, localeCode)) };
+    return {
+      results: enriched.map((r) => this.mapper.toPublicHit(r, localeCode)),
+      total,
+    };
   }
 
   private async filterPublished(

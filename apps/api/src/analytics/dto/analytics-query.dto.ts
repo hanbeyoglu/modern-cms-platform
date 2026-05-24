@@ -1,6 +1,7 @@
-import { AnalyticsEntityType, AnalyticsEventType } from '@prisma/client';
+import type { AnalyticsEntityType, AnalyticsEventType } from '@prisma/client';
+import { ANALYTICS_ENTITY_TYPES, ANALYTICS_EVENT_TYPES } from '../../common/prisma-validation-enums.js';
 import { Type } from 'class-transformer';
-import { IsEnum, IsISO8601, IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsISO8601, IsOptional, IsInt, Min, Max, IsIn } from 'class-validator';
 
 export class AnalyticsQueryDto {
   @IsISO8601()
@@ -10,11 +11,11 @@ export class AnalyticsQueryDto {
   dateTo!: string;
 
   @IsOptional()
-  @IsEnum(AnalyticsEntityType)
+  @IsIn(ANALYTICS_ENTITY_TYPES)
   entityType?: AnalyticsEntityType;
 
   @IsOptional()
-  @IsEnum(AnalyticsEventType)
+  @IsIn(ANALYTICS_EVENT_TYPES)
   eventType?: AnalyticsEventType;
 
   @IsOptional()

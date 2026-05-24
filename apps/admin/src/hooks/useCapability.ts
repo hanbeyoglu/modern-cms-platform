@@ -14,7 +14,7 @@ export function useCapability() {
     if (!membership) return false;
 
     const caps = membership.capabilities;
-    if (!Array.isArray(caps)) return true; // legacy sessions — open until refreshed
+    if (!Array.isArray(caps)) return false;
     return caps.includes(code);
   }
 

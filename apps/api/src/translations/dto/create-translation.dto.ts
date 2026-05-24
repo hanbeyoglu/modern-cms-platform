@@ -1,5 +1,6 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { LocalizedEntityType } from '@prisma/client';
+import { IsNotEmpty, IsOptional, IsString, IsIn } from 'class-validator';
+import { LOCALIZED_ENTITY_TYPES } from '../../common/prisma-validation-enums.js';
+import type { LocalizedEntityType } from '@prisma/client';
 
 export class CreateTranslationDto {
   @IsOptional()
@@ -10,7 +11,7 @@ export class CreateTranslationDto {
   @IsString()
   localeCode?: string;
 
-  @IsEnum(LocalizedEntityType)
+  @IsIn(LOCALIZED_ENTITY_TYPES)
   entityType!: LocalizedEntityType;
 
   @IsString()

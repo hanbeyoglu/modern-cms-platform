@@ -1,6 +1,7 @@
-import { CinemaStatus } from '@prisma/client';
+import type { CinemaStatus } from '@prisma/client';
+import { CINEMA_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class ListCinemasDto {
   @IsOptional()
@@ -17,7 +18,7 @@ export class ListCinemasDto {
   limit?: number = 20;
 
   @IsOptional()
-  @IsEnum(CinemaStatus)
+  @IsIn(CINEMA_STATUSES)
   status?: CinemaStatus;
 
   @IsOptional()

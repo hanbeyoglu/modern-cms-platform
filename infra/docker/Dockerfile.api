@@ -15,6 +15,14 @@ RUN pnpm --filter @modern-cms/api deploy --prod /deploy \
   && rm -rf /deploy/src \
   && find /deploy -name "*.tsbuildinfo" -delete
 
+# pnpm deploy reinstalls @prisma/client without a generated engine; copy from the build tree.
+RUN set -eux; \
+  SRC="$(find /app/node_modules/.pnpm -path '*/node_modules/.prisma/client/index.js' -size +100k | head -1 | xargs dirname)"; \
+  DST="$(find /deploy/node_modules/.pnpm -path '*/node_modules/.prisma/client' -type d | head -1)"; \
+  test -n "${SRC}" && test -n "${DST}"; \
+  rm -rf "${DST}"; \
+  cp -a "${SRC}" "${DST}"
+
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 
