@@ -36,6 +36,7 @@ import { SettingsModule } from './settings/settings.module';
 import { VersionModule } from './version/version.module';
 import { PopupsModule } from './popups/popups.module';
 import { LocationServicesModule } from './services/services.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { LocationServicesModule } from './services/services.module';
     HealthModule,
     PopupsModule,
     LocationServicesModule,
+    DashboardModule,
   ],
 })
 export class AppModule implements NestModule {

@@ -77,6 +77,7 @@ export async function apiMediaUpload(
     mallId?: string;
     altText?: string;
     usageContext?: string;
+    storageCategory?: string;
     suggestedWidth?: number;
     suggestedHeight?: number;
     tags?: string[];
@@ -87,6 +88,7 @@ export async function apiMediaUpload(
   if (opts?.folderId) form.append('folderId', opts.folderId);
   if (opts?.altText) form.append('altText', opts.altText);
   if (opts?.usageContext) form.append('usageContext', opts.usageContext);
+  if (opts?.storageCategory) form.append('storageCategory', opts.storageCategory);
   if (opts?.suggestedWidth != null) form.append('suggestedWidth', String(opts.suggestedWidth));
   if (opts?.suggestedHeight != null) form.append('suggestedHeight', String(opts.suggestedHeight));
   if (opts?.tags?.length) form.append('tags', JSON.stringify(opts.tags));

@@ -60,12 +60,15 @@ async function bootstrap() {
     }),
   );
 
-  // Serve uploaded files from storage root at /uploads prefix
-  const storageRoot = config.get<string>('STORAGE_ROOT') ?? join(process.cwd(), 'storage');
-  if (!existsSync(storageRoot)) {
-    mkdirSync(storageRoot, { recursive: true });
+  // Local fallback only — R2 serves media via R2_PUBLIC_URL when configured
+  const r2Configured = Boolean(config.get<string>('R2_ACCOUNT_ID')?.trim());
+  if (!r2Configured) {
+    const storageRoot = config.get<string>('STORAGE_ROOT') ?? join(process.cwd(), 'storage');
+    if (!existsSync(storageRoot)) {
+      mkdirSync(storageRoot, { recursive: true });
+    }
+    app.useStaticAssets(storageRoot, { prefix: '/uploads' });
   }
-  app.useStaticAssets(storageRoot, { prefix: '/uploads' });
 
   const corsOrigins = config.get<string>('CORS_ORIGINS', '');
   if (corsOrigins.trim().length > 0) {

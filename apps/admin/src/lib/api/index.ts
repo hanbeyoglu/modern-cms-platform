@@ -1,6 +1,14 @@
 export { request, onUnauthorized } from './client';
 export type { RequestOptions } from './client';
 
+export { apiDashboardSummary } from './dashboard';
+export type {
+  DashboardSummary,
+  DashboardTimelineItem,
+  DashboardTimelineType,
+  UpcomingContentItem,
+} from './dashboard';
+
 export { API_MAX_PAGE_SIZE, clampApiLimit, appendLimitParam } from './constants';
 
 export {

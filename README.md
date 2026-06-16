@@ -17,6 +17,14 @@ CMS yönetim platformu için monorepo iskeleti: API (NestJS), Admin (React + Vit
 - pnpm 9 (`corepack enable` önerilir)
 - Docker (isteğe bağlı, compose ile)
 
+## Frontend / Public API
+
+Bağımsız web, mobil veya kiosk arayüzü geliştiren ekipler için:
+
+- [docs/PUBLIC_API_GUIDE.md](docs/PUBLIC_API_GUIDE.md) — Public API rehberi (uçlar, envelope, slider, medya, örnekler)
+- [docs/FRONTEND_HANDOFF.md](docs/FRONTEND_HANDOFF.md) — Kısa teslim checklist’i
+- [`@modern-cms/public-sdk`](packages/public-sdk/) — TypeScript istemci
+
 ## Sprint 1 (kimlik ve tenant temeli)
 
 Ayrıntılar için: [docs/SPRINT1.md](docs/SPRINT1.md)

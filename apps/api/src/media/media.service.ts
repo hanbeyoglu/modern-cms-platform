@@ -9,12 +9,13 @@ import type { MediaAsset, MediaAssetStatus, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import { StorageProvider } from './storage/storage.provider';
+import { ImageProcessorService } from './image-processor.service';
 import {
   ALLOWED_EXTENSIONS,
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE_BYTES,
-  MIME_TO_EXTENSION,
 } from './constants/media.constants';
+import { resolveMediaStorageFolder } from './constants/media-storage-folders';
 import type { ListMediaDto } from './dto/list-media.dto';
 import type { UpdateMediaDto } from './dto/update-media.dto';
 import type { MoveMediaDto } from './dto/move-media.dto';
@@ -24,6 +25,7 @@ export interface UploadOptions {
   mallId?: string;
   altText?: string;
   usageContext?: string;
+  storageCategory?: string;
   suggestedWidth?: number;
   suggestedHeight?: number;
   tags?: string[];
@@ -74,6 +76,7 @@ export class MediaService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageProvider,
+    private readonly imageProcessor: ImageProcessorService,
     private readonly audit: AuditLogService,
   ) {}
 
@@ -85,18 +88,25 @@ export class MediaService {
   ): Promise<MediaAssetResponse> {
     this.validateFile(file);
 
-    const ext = this.resolveExtension(file);
-    const fileName = `${randomUUID()}.${ext}`;
-    const key = this.buildStorageKey(tenantId, fileName);
-
     if (options.folderId) {
       await this.assertFolderBelongsToTenant(options.folderId, tenantId);
     }
 
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { slug: true },
+    });
+    if (!tenant) throw new NotFoundException('Tenant not found');
+
+    const processed = await this.imageProcessor.processForUpload(file.buffer, file.mimetype);
+    const fileName = `${randomUUID()}.${processed.extension}`;
+    const storageFolder = resolveMediaStorageFolder(options.usageContext, options.storageCategory);
+    const key = this.buildStorageKey(tenant.slug, storageFolder, fileName);
+
     const { publicUrl } = await this.storage.upload({
       key,
-      buffer: file.buffer,
-      mimeType: file.mimetype,
+      buffer: processed.buffer,
+      mimeType: processed.mimeType,
       originalName: file.originalname,
     });
 
@@ -108,9 +118,11 @@ export class MediaService {
         uploadedBy: user.id,
         originalName: file.originalname.slice(0, 255),
         fileName,
-        mimeType: file.mimetype,
-        extension: ext,
-        size: file.size,
+        mimeType: processed.mimeType,
+        extension: processed.extension,
+        size: processed.size,
+        width: processed.width,
+        height: processed.height,
         storageKey: key,
         publicUrl,
         altText: options.altText ?? null,
@@ -128,7 +140,15 @@ export class MediaService {
       action: 'media:upload',
       entityType: 'media_asset',
       entityId: asset.id,
-      after: { fileName, mimeType: file.mimetype, size: file.size },
+      after: {
+        fileName,
+        mimeType: processed.mimeType,
+        size: processed.size,
+        width: processed.width,
+        height: processed.height,
+        storageKey: key,
+        publicUrl,
+      },
     });
 
     return this.toResponse(asset);
@@ -455,15 +475,8 @@ export class MediaService {
     }
   }
 
-  private resolveExtension(file: Express.Multer.File): string {
-    return MIME_TO_EXTENSION[file.mimetype] ?? path.extname(file.originalname).toLowerCase().slice(1);
-  }
-
-  private buildStorageKey(tenantId: string, fileName: string): string {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    return `tenants/${tenantId}/media/${yyyy}/${mm}/${fileName}`;
+  private buildStorageKey(tenantSlug: string, category: string, fileName: string): string {
+    return `tenants/${tenantSlug}/${category}/${fileName}`;
   }
 
   private async assertFolderBelongsToTenant(folderId: string, tenantId: string): Promise<void> {
