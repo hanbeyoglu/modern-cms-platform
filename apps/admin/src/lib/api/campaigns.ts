@@ -11,6 +11,16 @@ export type MallStoreSummary = {
   globalStore: { name: string; slug: string };
 };
 
+export type CampaignTranslation = {
+  localeId: string;
+  title?: string | null;
+  description?: string | null;
+  buttonText?: string | null;
+  coverImageId?: string | null;
+  locale?: { id: string; code: string };
+  coverImage?: EventMediaPreview | null;
+};
+
 export type CmsCampaign = {
   id: string;
   tenantId: string;
@@ -20,11 +30,14 @@ export type CmsCampaign = {
   slug: string;
   shortDescription: string | null;
   description: string | null;
-  coverMediaId: string | null;
+  sameImageForAllLocales: boolean;
+  sharedCoverImageId: string | null;
   coverMediaWidthOverride: number | null;
   coverMediaHeightOverride: number | null;
-  startAt: string | null;
-  endAt: string | null;
+  publishStartAt: string | null;
+  publishEndAt: string | null;
+  campaignStartAt: string | null;
+  campaignEndAt: string | null;
   terms: string | null;
   couponCode: string | null;
   buttonText: string | null;
@@ -38,7 +51,8 @@ export type CmsCampaign = {
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  coverMedia: EventMediaPreview | null;
+  sharedCoverImage: EventMediaPreview | null;
+  translations: CampaignTranslation[];
   store: MallStoreSummary | null;
 };
 
@@ -54,11 +68,14 @@ export type CreateCampaignPayload = {
   slug?: string;
   shortDescription?: string;
   description?: string;
-  coverMediaId?: string;
+  sameImageForAllLocales?: boolean;
+  sharedCoverImageId?: string;
   coverMediaWidthOverride?: number | null;
   coverMediaHeightOverride?: number | null;
-  startAt?: string;
-  endAt?: string;
+  publishStartAt?: string;
+  publishEndAt?: string;
+  campaignStartAt?: string;
+  campaignEndAt?: string;
   terms?: string;
   couponCode?: string;
   buttonText?: string;
@@ -67,6 +84,7 @@ export type CreateCampaignPayload = {
   sortOrder?: number;
   status?: ContentStatus;
   channels?: ContentChannel[];
+  translations?: CampaignTranslation[];
   dynamicFieldsJson?: Record<string, unknown>;
 };
 
@@ -78,7 +96,7 @@ export async function apiCampaignsList(
     status?: ContentStatus;
     search?: string;
     storeId?: string;
-    sortBy?: 'sortOrder' | 'startAt' | 'createdAt';
+    sortBy?: 'sortOrder' | 'campaignStartAt' | 'startAt' | 'createdAt';
     sortDir?: 'asc' | 'desc';
     startFrom?: string;
     startTo?: string;

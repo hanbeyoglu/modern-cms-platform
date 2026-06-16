@@ -96,14 +96,20 @@ export function apiLocationsList(
   if (params?.city) qs.set('city', params.city);
   if (params?.tenantId) qs.set('tenantId', params.tenantId);
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
-  return request(`/locations${suffix}`, { token });
+  return request(`/locations${suffix}`, {
+    token,
+    ...(params?.tenantId ? { tenantId: params.tenantId } : {}),
+  });
 }
 
 export function apiLocationGet(token: string, id: string): Promise<CmsLocation> {
   return request(`/locations/${id}`, { token });
 }
 
-export function apiLocationCreate(token: string, data: CreateLocationPayload): Promise<CmsLocation> {
+export function apiLocationCreate(
+  token: string,
+  data: CreateLocationPayload,
+): Promise<CmsLocation> {
   return request('/locations', { method: 'POST', body: JSON.stringify(data), token });
 }
 
@@ -120,7 +126,11 @@ export function apiLocationUpdateStatus(
   id: string,
   status: LocationStatus,
 ): Promise<{ success: boolean; status: string }> {
-  return request(`/locations/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }), token });
+  return request(`/locations/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+    token,
+  });
 }
 
 export function apiLocationDelete(token: string, id: string): Promise<{ success: boolean }> {

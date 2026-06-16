@@ -219,6 +219,7 @@ export class PublicController {
       localeId: context.locale?.id,
       localeCode: context.locale?.code,
       defaultLocaleCode: context.defaultLocale?.code,
+      defaultLocaleId: context.defaultLocale?.id ?? null,
     });
     const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.home);
@@ -254,6 +255,7 @@ export class PublicController {
       channel,
       targetDevice,
       localeId: context.locale?.id,
+      defaultLocaleId: context.defaultLocale?.id ?? null,
     });
     const result = envelop(data, context);
     await this.cache.set(cacheKey, result, TTL.list);
@@ -289,6 +291,7 @@ export class PublicController {
       page,
       limit,
       localeId: context.locale?.id,
+      defaultLocaleId: context.defaultLocale?.id ?? null,
     });
     const result = paginatedEnvelop(items, total, page, limit, context);
     await this.cache.set(cacheKey, result, TTL.list);
@@ -315,6 +318,7 @@ export class PublicController {
       mallId: context.mallId,
       slug,
       localeId: context.locale?.id,
+      defaultLocaleId: context.defaultLocale?.id ?? null,
     });
     if (!data) throw new NotFoundException('Event not found');
 
@@ -352,6 +356,7 @@ export class PublicController {
       page,
       limit,
       localeId: context.locale?.id,
+      defaultLocaleId: context.defaultLocale?.id ?? null,
     });
     const result = paginatedEnvelop(items, total, page, limit, context);
     await this.cache.set(cacheKey, result, TTL.list);
@@ -378,6 +383,7 @@ export class PublicController {
       mallId: context.mallId,
       slug,
       localeId: context.locale?.id,
+      defaultLocaleId: context.defaultLocale?.id ?? null,
     });
     if (!data) throw new NotFoundException('Campaign not found');
 

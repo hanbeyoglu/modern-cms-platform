@@ -51,6 +51,8 @@ JWT / API key **gerekmez**.
 
 - [ ] Yanıtlar `{ success, locale, tenant, data }` veya sayfalı `{ pagination, data: [] }`
 - [ ] Medya: `url`, `alt`, `width`/`height`, isteğe bağlı `widthOverride`/`heightOverride`
+- [ ] Kampanya / etkinlik: `publishStartAt`–`publishEndAt` (görünürlük) ayrı; `campaignStartAt` / `eventStartAt` (iş tarihi) ayrı
+- [ ] Kampanya / etkinlik kapak: `image` (locale çözümlü); `coverMedia` deprecated
 - [ ] Slider içeriği: **`items[]`** (kök `desktopMedia` deprecated)
 - [ ] Sayfa: `renderMode` → `HTML` | `SINGLE_PDF` | `DOCUMENT_LIST`
 - [ ] SEO: `entity.seo` + frontend’de canonical URL üretimi

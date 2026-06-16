@@ -27,7 +27,11 @@ export class DashboardService {
     const now = new Date();
     const mallFilter = mallId !== undefined ? { mallId } : {};
     const tenantMallFilter = { tenantId, ...mallFilter, deletedAt: null };
-    const activeContentWindow = {
+    const publishContentWindow = {
+      OR: [{ publishStartAt: null }, { publishStartAt: { lte: now } }],
+      AND: [{ OR: [{ publishEndAt: null }, { publishEndAt: { gte: now } }] }],
+    };
+    const sliderPopupWindow = {
       OR: [{ startAt: null }, { startAt: { lte: now } }],
       AND: [{ OR: [{ endAt: null }, { endAt: { gte: now } }] }],
     };
@@ -47,16 +51,16 @@ export class DashboardService {
         where: { tenantId, ...mallFilter, status: 'ACTIVE', deletedAt: null },
       }),
       this.prisma.campaign.count({
-        where: { ...tenantMallFilter, status: 'PUBLISHED', ...activeContentWindow },
+        where: { ...tenantMallFilter, status: 'PUBLISHED', ...publishContentWindow },
       }),
       this.prisma.event.count({
-        where: { ...tenantMallFilter, status: { in: ['PUBLISHED', 'SCHEDULED'] }, startAt: { gt: now } },
+        where: { ...tenantMallFilter, status: { in: ['PUBLISHED', 'SCHEDULED'] }, eventStartAt: { gt: now } },
       }),
       this.prisma.slider.count({
-        where: { ...tenantMallFilter, status: 'PUBLISHED', ...activeContentWindow },
+        where: { ...tenantMallFilter, status: 'PUBLISHED', ...sliderPopupWindow },
       }),
       this.prisma.popup.count({
-        where: { ...tenantMallFilter, status: 'PUBLISHED', ...activeContentWindow },
+        where: { ...tenantMallFilter, status: 'PUBLISHED', ...sliderPopupWindow },
       }),
       this.prisma.mediaAsset.count({
         where: { tenantId, ...mallFilter, status: 'ACTIVE', deletedAt: null },
@@ -169,20 +173,20 @@ export class DashboardService {
         where: {
           ...tenantMallFilter,
           status: { in: ['PUBLISHED', 'SCHEDULED'] },
-          startAt: { gt: now },
+          campaignStartAt: { gt: now },
         },
-        select: { id: true, title: true, status: true, startAt: true },
-        orderBy: { startAt: 'asc' },
+        select: { id: true, title: true, status: true, campaignStartAt: true },
+        orderBy: { campaignStartAt: 'asc' },
         take: 5,
       }),
       this.prisma.event.findMany({
         where: {
           ...tenantMallFilter,
           status: { in: ['PUBLISHED', 'SCHEDULED'] },
-          startAt: { gt: now },
+          eventStartAt: { gt: now },
         },
-        select: { id: true, title: true, status: true, startAt: true },
-        orderBy: { startAt: 'asc' },
+        select: { id: true, title: true, status: true, eventStartAt: true },
+        orderBy: { eventStartAt: 'asc' },
         take: 5,
       }),
       this.prisma.slider.findMany({
@@ -218,8 +222,8 @@ export class DashboardService {
     ]);
 
     return [
-      ...campaigns.map((item) => this.upcomingItem('campaign', item.id, item.title, item.status, item.startAt, '/campaigns')),
-      ...events.map((item) => this.upcomingItem('event', item.id, item.title, item.status, item.startAt, '/events')),
+      ...campaigns.map((item) => this.upcomingItem('campaign', item.id, item.title, item.status, item.campaignStartAt, '/campaigns')),
+      ...events.map((item) => this.upcomingItem('event', item.id, item.title, item.status, item.eventStartAt, '/events')),
       ...sliders.map((item) => this.upcomingItem('slider', item.id, item.title, item.status, item.startAt, '/sliders')),
       ...popups.map((item) => this.upcomingItem('popup', item.id, item.title, item.status, item.startAt, '/popups')),
       ...pages.map((item) => this.upcomingItem('page', item.id, item.title, item.status, item.publishAt, '/pages')),

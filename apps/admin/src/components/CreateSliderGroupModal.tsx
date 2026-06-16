@@ -5,21 +5,13 @@ import { useAuth } from '../auth/useAuth';
 import { Button } from './ui/Button';
 import { FormActionHint } from './ui/FormActionHint';
 import { ContentChannelFields } from './ContentChannelFields';
+import { SliderEntitySelector } from './SliderEntitySelector';
 import {
-  apiCampaignsList,
-  apiEventsList,
-  apiLocationsList,
-  apiMallStoresList,
   apiSliderCreate,
-  type CmsCampaign,
-  type CmsEvent,
-  type CmsLocation,
   type CreateSliderPayload,
-  type MallStore,
   type Slider,
-  type SliderLinkedEntityType,
   type SliderPlacementType,
-  API_MAX_PAGE_SIZE,
+  type SliderLinkedEntityType,
 } from '../lib/api';
 import { DEFAULT_CONTENT_CHANNELS, type ContentChannel } from '../lib/content-channels';
 import { ENTITY_SLIDER_PLACEMENTS, getSliderCreateBlocker } from '../lib/slider-form-validation';
@@ -27,6 +19,7 @@ import {
   LINKED_SLIDER_ENTITY_CONFIG,
   type LinkedSliderEntityKind,
 } from '../lib/linked-slider-entities';
+import { useSliderEntityOptions } from '../hooks/useSliderEntityOptions';
 
 const PLACEMENT_OPTIONS: { value: SliderPlacementType; label: string }[] = [
   { value: 'HOME', label: 'Ana Sayfa' },
@@ -58,136 +51,21 @@ type Props = {
   preset?: CreateSliderGroupPreset;
 };
 
-function storeLabel(s: MallStore): string {
-  const name = s.localName || s.globalStore.name;
-  return s.floor ? `${name} (${s.floor})` : name;
-}
-
-function EntitySelector({
-  placementType,
-  linkedEntityId,
-  onLinkedEntityIdChange,
-  optionsLoading,
-  campaigns,
-  events,
-  stores,
-  locations,
-  activeMallId,
-  labelStyle,
-  inputStyle,
-}: {
-  placementType: SliderPlacementType;
-  linkedEntityId: string;
-  onLinkedEntityIdChange: (id: string) => void;
-  optionsLoading: boolean;
-  campaigns: CmsCampaign[];
-  events: CmsEvent[];
-  stores: MallStore[];
-  locations: CmsLocation[];
-  activeMallId: string | null;
-  labelStyle: React.CSSProperties;
-  inputStyle: React.CSSProperties;
-}) {
-  if (placementType === 'STORE' && !activeMallId) {
-    return <FormActionHint message="Önce lokasyon seçmelisiniz" />;
-  }
-
-  if (optionsLoading) {
-    return <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Seçenekler yükleniyor…</p>;
-  }
-
-  if (placementType === 'CAMPAIGN') {
-    return (
-      <div>
-        <label style={labelStyle}>Kampanya *</label>
-        <select
-          style={inputStyle}
-          value={linkedEntityId}
-          onChange={(e) => onLinkedEntityIdChange(e.target.value)}
-        >
-          <option value="">Kampanya seçin</option>
-          {campaigns.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.title}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  }
-
-  if (placementType === 'EVENT') {
-    return (
-      <div>
-        <label style={labelStyle}>Etkinlik *</label>
-        <select
-          style={inputStyle}
-          value={linkedEntityId}
-          onChange={(e) => onLinkedEntityIdChange(e.target.value)}
-        >
-          <option value="">Etkinlik seçin</option>
-          {events.map((ev) => (
-            <option key={ev.id} value={ev.id}>
-              {ev.title}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  }
-
-  if (placementType === 'STORE') {
-    return (
-      <div>
-        <label style={labelStyle}>Mağaza *</label>
-        <select
-          style={inputStyle}
-          value={linkedEntityId}
-          onChange={(e) => onLinkedEntityIdChange(e.target.value)}
-        >
-          <option value="">Mağaza seçin</option>
-          {stores.map((s) => (
-            <option key={s.id} value={s.id}>
-              {storeLabel(s)}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  }
-
-  if (placementType === 'LOCATION') {
-    return (
-      <div>
-        <label style={labelStyle}>Lokasyon *</label>
-        <select
-          style={inputStyle}
-          value={linkedEntityId}
-          onChange={(e) => onLinkedEntityIdChange(e.target.value)}
-        >
-          <option value="">Lokasyon seçin</option>
-          {locations.map((loc) => (
-            <option key={loc.id} value={loc.id}>
-              {loc.displayName || loc.name}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  }
-
-  return null;
-}
-
 export function CreateSliderGroupModal({ open, canCreate, onClose, onCreated, preset }: Props) {
   const { accessToken, activeTenantId, activeMallId } = useAuth();
   const [form, setForm] = useState(EMPTY_FORM);
   const [creating, setCreating] = useState(false);
-  const [campaigns, setCampaigns] = useState<CmsCampaign[]>([]);
-  const [events, setEvents] = useState<CmsEvent[]>([]);
-  const [stores, setStores] = useState<MallStore[]>([]);
-  const [locations, setLocations] = useState<CmsLocation[]>([]);
-  const [optionsLoading, setOptionsLoading] = useState(false);
+
+  const entityPlacementType = ENTITY_SLIDER_PLACEMENTS.includes(form.placementType)
+    ? form.placementType
+    : null;
+  const {
+    optionsLoading,
+    campaigns,
+    events,
+    stores,
+    locations,
+  } = useSliderEntityOptions(entityPlacementType, open);
 
   const resetForm = useCallback(() => {
     setForm({
@@ -212,64 +90,6 @@ export function CreateSliderGroupModal({ open, canCreate, onClose, onCreated, pr
     channels: form.channels,
     mallId: activeMallId,
   });
-
-  useEffect(() => {
-    if (!open || !accessToken || !activeTenantId) return;
-    if (!ENTITY_SLIDER_PLACEMENTS.includes(form.placementType)) return;
-
-    let cancelled = false;
-    setOptionsLoading(true);
-
-    const load = async () => {
-      try {
-        if (form.placementType === 'CAMPAIGN') {
-          const res = await apiCampaignsList(accessToken, activeTenantId, {
-            mallId: activeMallId ?? undefined,
-            limit: API_MAX_PAGE_SIZE,
-            status: 'PUBLISHED',
-          });
-          if (!cancelled) setCampaigns(res.campaigns);
-        } else if (form.placementType === 'EVENT') {
-          const res = await apiEventsList(accessToken, activeTenantId, {
-            mallId: activeMallId ?? undefined,
-            limit: API_MAX_PAGE_SIZE,
-            status: 'PUBLISHED',
-          });
-          if (!cancelled) setEvents(res.events);
-        } else if (form.placementType === 'STORE') {
-          if (!activeMallId) {
-            if (!cancelled) setStores([]);
-            return;
-          }
-          const res = await apiMallStoresList(accessToken, activeTenantId, activeMallId, {
-            limit: API_MAX_PAGE_SIZE,
-            status: 'ACTIVE',
-          });
-          if (!cancelled) setStores(res.items);
-        } else if (form.placementType === 'LOCATION') {
-          const res = await apiLocationsList(accessToken, {
-            tenantId: activeTenantId,
-            status: 'LIVE',
-          });
-          if (!cancelled) setLocations(res.locations);
-        }
-      } catch {
-        if (!cancelled) {
-          setCampaigns([]);
-          setEvents([]);
-          setStores([]);
-          setLocations([]);
-        }
-      } finally {
-        if (!cancelled) setOptionsLoading(false);
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, accessToken, activeTenantId, activeMallId, form.placementType]);
 
   const handleSubmit = async () => {
     if (createBlocker || !accessToken || !activeTenantId) return;
@@ -393,7 +213,7 @@ export function CreateSliderGroupModal({ open, canCreate, onClose, onCreated, pr
             </p>
           )}
           {ENTITY_SLIDER_PLACEMENTS.includes(form.placementType) && !preset?.lockPlacement && (
-            <EntitySelector
+            <SliderEntitySelector
               placementType={form.placementType}
               linkedEntityId={form.linkedEntityId}
               onLinkedEntityIdChange={(linkedEntityId) => setForm({ ...form, linkedEntityId })}
@@ -405,6 +225,7 @@ export function CreateSliderGroupModal({ open, canCreate, onClose, onCreated, pr
               activeMallId={activeMallId}
               labelStyle={labelStyle}
               inputStyle={inputStyle}
+              required
             />
           )}
           <ContentChannelFields

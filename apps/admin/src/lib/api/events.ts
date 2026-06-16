@@ -8,6 +8,16 @@ export type ContentStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED';
 
 export type EventMediaPreview = Pick<MediaAsset, 'id' | 'publicUrl' | 'originalName' | 'mimeType'>;
 
+export type EventTranslation = {
+  localeId: string;
+  title?: string | null;
+  description?: string | null;
+  shortDescription?: string | null;
+  coverImageId?: string | null;
+  locale?: { id: string; code: string };
+  coverImage?: EventMediaPreview | null;
+};
+
 export type CmsEvent = {
   id: string;
   tenantId: string;
@@ -16,11 +26,14 @@ export type CmsEvent = {
   slug: string;
   shortDescription: string | null;
   description: string | null;
-  coverMediaId: string | null;
+  sameImageForAllLocales: boolean;
+  sharedCoverImageId: string | null;
   coverMediaWidthOverride: number | null;
   coverMediaHeightOverride: number | null;
-  startAt: string | null;
-  endAt: string | null;
+  publishStartAt: string | null;
+  publishEndAt: string | null;
+  eventStartAt: string | null;
+  eventEndAt: string | null;
   location: string | null;
   category: string | null;
   buttonText: string | null;
@@ -34,7 +47,8 @@ export type CmsEvent = {
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  coverMedia: EventMediaPreview | null;
+  sharedCoverImage: EventMediaPreview | null;
+  translations: EventTranslation[];
 };
 
 export type EventListResponse = { events: CmsEvent[]; total: number; page: number; limit: number };
@@ -44,11 +58,14 @@ export type CreateEventPayload = {
   slug?: string;
   shortDescription?: string;
   description?: string;
-  coverMediaId?: string;
+  sameImageForAllLocales?: boolean;
+  sharedCoverImageId?: string;
   coverMediaWidthOverride?: number | null;
   coverMediaHeightOverride?: number | null;
-  startAt?: string;
-  endAt?: string;
+  publishStartAt?: string;
+  publishEndAt?: string;
+  eventStartAt?: string;
+  eventEndAt?: string;
   location?: string;
   category?: string;
   buttonText?: string;
@@ -56,6 +73,7 @@ export type CreateEventPayload = {
   sortOrder?: number;
   status?: ContentStatus;
   channels?: ContentChannel[];
+  translations?: EventTranslation[];
   dynamicFieldsJson?: Record<string, unknown>;
 };
 
@@ -67,7 +85,7 @@ export async function apiEventsList(
     status?: ContentStatus;
     search?: string;
     category?: string;
-    sortBy?: 'sortOrder' | 'startAt' | 'createdAt';
+    sortBy?: 'sortOrder' | 'eventStartAt' | 'startAt' | 'createdAt';
     sortDir?: 'asc' | 'desc';
     startFrom?: string;
     startTo?: string;

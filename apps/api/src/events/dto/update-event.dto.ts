@@ -1,7 +1,20 @@
 import type { Channel, ContentStatus } from '@prisma/client';
 import { CHANNELS, CONTENT_STATUSES } from '../../common/prisma-validation-enums.js';
-import { Transform } from 'class-transformer';
-import { IsArray, IsDateString, IsInt, IsObject, IsOptional, IsString, Min, ValidateIf, IsIn } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateIf,
+  IsIn,
+  ValidateNested,
+} from 'class-validator';
+import { EventTranslationDto } from './event-translation.dto.js';
 
 export class UpdateEventDto {
   @IsOptional()
@@ -21,8 +34,12 @@ export class UpdateEventDto {
   description?: string;
 
   @IsOptional()
+  @IsBoolean()
+  sameImageForAllLocales?: boolean;
+
+  @IsOptional()
   @IsString()
-  coverMediaId?: string;
+  sharedCoverImageId?: string | null;
 
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))
@@ -38,11 +55,19 @@ export class UpdateEventDto {
 
   @IsOptional()
   @IsDateString()
-  startAt?: string;
+  publishStartAt?: string | null;
 
   @IsOptional()
   @IsDateString()
-  endAt?: string;
+  publishEndAt?: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  eventStartAt?: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  eventEndAt?: string | null;
 
   @IsOptional()
   @IsString()
@@ -92,7 +117,12 @@ export class UpdateEventDto {
   @IsIn(CHANNELS, { each: true })
   channels?: Channel[];
 
-  /** null = tenant geneli */
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EventTranslationDto)
+  translations?: EventTranslationDto[];
+
   @IsOptional()
   @IsString()
   mallId?: string | null;

@@ -24,17 +24,27 @@ import type { ReorderSlidersDto } from './dto/reorder-sliders.dto';
 import type { CreateSliderItemDto } from './dto/create-slider-item.dto';
 import type { UpdateSliderItemDto } from './dto/update-slider-item.dto';
 import type { ReorderSliderItemsDto } from './dto/reorder-slider-items.dto';
+import type { SliderItemTranslationDto } from './dto/slider-item-translation.dto.js';
 
 const MEDIA_SELECT = {
   id: true,
   publicUrl: true,
   originalName: true,
   mimeType: true,
+  width: true,
+  height: true,
 } as const;
 
 const ITEM_INCLUDE = {
-  desktopMedia: { select: MEDIA_SELECT },
-  mobileMedia: { select: MEDIA_SELECT },
+  sharedImage: { select: MEDIA_SELECT },
+  sharedMobileImage: { select: MEDIA_SELECT },
+  translations: {
+    include: {
+      locale: { select: { id: true, code: true } },
+      image: { select: MEDIA_SELECT },
+      mobileImage: { select: MEDIA_SELECT },
+    },
+  },
 } satisfies Prisma.SliderItemInclude;
 
 const PUBLIC_SLIDER_INCLUDE = {
@@ -380,6 +390,20 @@ export class SlidersService {
     await this.assertExists(sliderId, tenantId);
     if (dto.linkUrl) this.assertValidUrl(dto.linkUrl);
 
+    const sameImageForAllLocales = dto.sameImageForAllLocales ?? true;
+    const sharedImageId = dto.sharedImageId ?? dto.desktopMediaId ?? null;
+    const sharedMobileImageId = dto.sharedMobileImageId ?? dto.mobileMediaId ?? null;
+    const status = dto.status ?? 'DRAFT';
+
+    if (status === 'PUBLISHED') {
+      await this.assertItemMediaValid({
+        tenantId,
+        sameImageForAllLocales,
+        sharedImageId,
+        translations: dto.translations,
+      });
+    }
+
     const item = await this.prisma.sliderItem.create({
       data: {
         sliderId,
@@ -387,17 +411,22 @@ export class SlidersService {
         description: dto.description ?? null,
         buttonText: dto.buttonText ?? null,
         linkUrl: dto.linkUrl ?? null,
-        desktopMediaId: dto.desktopMediaId ?? null,
-        mobileMediaId: dto.mobileMediaId ?? null,
+        sameImageForAllLocales,
+        sharedImageId,
+        sharedMobileImageId,
         desktopMediaWidthOverride: dto.desktopMediaWidthOverride ?? null,
         desktopMediaHeightOverride: dto.desktopMediaHeightOverride ?? null,
         mobileMediaWidthOverride: dto.mobileMediaWidthOverride ?? null,
         mobileMediaHeightOverride: dto.mobileMediaHeightOverride ?? null,
         sortOrder: dto.sortOrder ?? 0,
-        status: dto.status ?? 'DRAFT',
+        status,
       },
       include: ITEM_INCLUDE,
     });
+
+    if (dto.translations?.length) {
+      await this.upsertItemTranslations(item.id, dto.translations);
+    }
 
     await this.audit.logAction({
       userId: user.id,
@@ -410,7 +439,7 @@ export class SlidersService {
 
     this.scheduleSliderIndex(sliderId);
     this.scheduleSliderItemIndex(item.id);
-    return item;
+    return this.findItemById(item.id, sliderId);
   }
 
   async updateItem(
@@ -424,22 +453,51 @@ export class SlidersService {
     const existing = await this.assertItemExists(itemId, sliderId);
 
     if (dto.linkUrl) this.assertValidUrl(dto.linkUrl);
-    if (dto.status === 'PUBLISHED') {
-      this.assertItemHasMedia(
-        dto.desktopMediaId !== undefined ? dto.desktopMediaId : existing.desktopMediaId,
-        dto.mobileMediaId !== undefined ? dto.mobileMediaId : existing.mobileMediaId,
-      );
+
+    const nextSameImage =
+      dto.sameImageForAllLocales !== undefined
+        ? dto.sameImageForAllLocales
+        : existing.sameImageForAllLocales;
+    const nextSharedImageId =
+      dto.sharedImageId !== undefined
+        ? dto.sharedImageId
+        : dto.desktopMediaId !== undefined
+          ? dto.desktopMediaId
+          : existing.sharedImageId;
+    const nextSharedMobileImageId =
+      dto.sharedMobileImageId !== undefined
+        ? dto.sharedMobileImageId
+        : dto.mobileMediaId !== undefined
+          ? dto.mobileMediaId
+          : existing.sharedMobileImageId;
+    const nextStatus = dto.status ?? existing.status;
+
+    if (nextStatus === 'PUBLISHED') {
+      await this.assertItemMediaValid({
+        tenantId,
+        sameImageForAllLocales: nextSameImage,
+        sharedImageId: nextSharedImageId,
+        translations: dto.translations,
+        itemId,
+      });
     }
 
-    const item = await this.prisma.sliderItem.update({
+    await this.prisma.sliderItem.update({
       where: { id: itemId },
       data: {
         ...(dto.title !== undefined && { title: dto.title || null }),
         ...(dto.description !== undefined && { description: dto.description || null }),
         ...(dto.buttonText !== undefined && { buttonText: dto.buttonText || null }),
         ...(dto.linkUrl !== undefined && { linkUrl: dto.linkUrl || null }),
-        ...(dto.desktopMediaId !== undefined && { desktopMediaId: dto.desktopMediaId || null }),
-        ...(dto.mobileMediaId !== undefined && { mobileMediaId: dto.mobileMediaId || null }),
+        ...(dto.sameImageForAllLocales !== undefined && {
+          sameImageForAllLocales: dto.sameImageForAllLocales,
+        }),
+        ...(dto.sharedImageId !== undefined || dto.desktopMediaId !== undefined
+          ? { sharedImageId: nextSharedImageId || null }
+          : {}),
+        ...(dto.sharedMobileImageId !== undefined || dto.mobileMediaId !== undefined
+          ? { sharedMobileImageId: nextSharedMobileImageId || null }
+          : {}),
         ...(dto.desktopMediaWidthOverride !== undefined && {
           desktopMediaWidthOverride: dto.desktopMediaWidthOverride,
         }),
@@ -455,8 +513,13 @@ export class SlidersService {
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
         ...(dto.status !== undefined && { status: dto.status }),
       },
-      include: ITEM_INCLUDE,
     });
+
+    if (dto.translations !== undefined) {
+      await this.upsertItemTranslations(itemId, dto.translations);
+    }
+
+    const item = await this.findItemById(itemId, sliderId);
 
     await this.audit.logAction({
       userId: user.id,
@@ -592,14 +655,21 @@ export class SlidersService {
   }
 
   private async assertGroupPublishable(sliderId: string): Promise<void> {
-    const publishableItem = await this.prisma.sliderItem.findFirst({
-      where: {
-        sliderId,
-        deletedAt: null,
-        OR: [{ desktopMediaId: { not: null } }, { mobileMediaId: { not: null } }],
+    const items = await this.prisma.sliderItem.findMany({
+      where: { sliderId, deletedAt: null },
+      include: {
+        translations: { select: { imageId: true, mobileImageId: true } },
       },
     });
-    if (!publishableItem) {
+
+    const hasMedia = items.some(
+      (item) =>
+        item.sharedImageId ||
+        item.sharedMobileImageId ||
+        item.translations.some((t) => t.imageId || t.mobileImageId),
+    );
+
+    if (!hasMedia) {
       throw new UnprocessableEntityException(
         'At least one slider item with desktop or mobile media is required to publish',
       );
@@ -631,12 +701,94 @@ export class SlidersService {
     }
   }
 
-  private assertItemHasMedia(desktopMediaId?: string | null, mobileMediaId?: string | null): void {
-    if (!desktopMediaId && !mobileMediaId) {
-      throw new UnprocessableEntityException(
-        'At least one media asset (desktop or mobile) is required to publish a slider item',
-      );
+  private async findItemById(itemId: string, sliderId: string): Promise<SliderItemResponse> {
+    const item = await this.prisma.sliderItem.findFirst({
+      where: { id: itemId, sliderId, deletedAt: null },
+      include: ITEM_INCLUDE,
+    });
+    if (!item) throw new NotFoundException('Slider item not found');
+    return item;
+  }
+
+  private async upsertItemTranslations(
+    itemId: string,
+    translations: SliderItemTranslationDto[],
+  ): Promise<void> {
+    for (const tr of translations) {
+      await this.prisma.sliderItemTranslation.upsert({
+        where: {
+          sliderItemId_localeId: { sliderItemId: itemId, localeId: tr.localeId },
+        },
+        create: {
+          sliderItemId: itemId,
+          localeId: tr.localeId,
+          title: tr.title ?? null,
+          description: tr.description ?? null,
+          buttonText: tr.buttonText ?? null,
+          imageId: tr.imageId ?? null,
+          mobileImageId: tr.mobileImageId ?? null,
+        },
+        update: {
+          title: tr.title ?? null,
+          description: tr.description ?? null,
+          buttonText: tr.buttonText ?? null,
+          imageId: tr.imageId ?? null,
+          mobileImageId: tr.mobileImageId ?? null,
+        },
+      });
     }
+  }
+
+  private async getDefaultLocaleId(tenantId: string): Promise<string | null> {
+    const locale = await this.prisma.locale.findFirst({
+      where: { tenantId, isDefault: true, isActive: true },
+      select: { id: true },
+    });
+    return locale?.id ?? null;
+  }
+
+  private async assertItemMediaValid(opts: {
+    tenantId: string;
+    sameImageForAllLocales: boolean;
+    sharedImageId?: string | null;
+    translations?: SliderItemTranslationDto[];
+    itemId?: string;
+  }): Promise<void> {
+    if (opts.sameImageForAllLocales) {
+      if (!opts.sharedImageId) {
+        throw new UnprocessableEntityException(
+          'Shared desktop image is required when using the same image for all locales',
+        );
+      }
+      return;
+    }
+
+    const defaultLocaleId = await this.getDefaultLocaleId(opts.tenantId);
+    if (!defaultLocaleId) {
+      throw new UnprocessableEntityException('Tenant default locale is not configured');
+    }
+
+    const fromPayload = opts.translations?.find((t) => t.localeId === defaultLocaleId);
+    if (fromPayload?.imageId) return;
+
+    if (opts.itemId) {
+      const existing = await this.prisma.sliderItemTranslation.findUnique({
+        where: {
+          sliderItemId_localeId: {
+            sliderItemId: opts.itemId,
+            localeId: defaultLocaleId,
+          },
+        },
+        select: { imageId: true },
+      });
+      if (existing?.imageId) return;
+    }
+
+    if (opts.sharedImageId) return;
+
+    throw new UnprocessableEntityException(
+      'Default locale desktop image is required when using locale-specific images',
+    );
   }
 
   private assertValidUrl(linkValue: string): void {

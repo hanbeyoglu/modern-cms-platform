@@ -26,8 +26,8 @@ export class ListEventsDto {
   search?: string;
 
   @IsOptional()
-  @IsIn(['sortOrder', 'startAt', 'createdAt'])
-  sortBy?: 'sortOrder' | 'startAt' | 'createdAt' = 'sortOrder';
+  @IsIn(['sortOrder', 'eventStartAt', 'createdAt', 'startAt'])
+  sortBy?: 'sortOrder' | 'eventStartAt' | 'createdAt' | 'startAt' = 'sortOrder';
 
   @IsOptional()
   @IsIn(['asc', 'desc'])

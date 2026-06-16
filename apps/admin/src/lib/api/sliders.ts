@@ -17,6 +17,18 @@ export type SliderLinkedEntityType = 'CAMPAIGN' | 'EVENT' | 'STORE' | 'LOCATION'
 
 export type SliderMediaPreview = Pick<MediaAsset, 'id' | 'publicUrl' | 'originalName' | 'mimeType'>;
 
+export type SliderItemTranslation = {
+  localeId: string;
+  title: string | null;
+  description: string | null;
+  buttonText: string | null;
+  imageId: string | null;
+  mobileImageId: string | null;
+  image: SliderMediaPreview | null;
+  mobileImage: SliderMediaPreview | null;
+  locale?: { id: string; code: string };
+};
+
 export type SliderItem = {
   id: string;
   sliderId: string;
@@ -24,8 +36,9 @@ export type SliderItem = {
   description: string | null;
   buttonText: string | null;
   linkUrl: string | null;
-  desktopMediaId: string | null;
-  mobileMediaId: string | null;
+  sameImageForAllLocales: boolean;
+  sharedImageId: string | null;
+  sharedMobileImageId: string | null;
   desktopMediaWidthOverride: number | null;
   desktopMediaHeightOverride: number | null;
   mobileMediaWidthOverride: number | null;
@@ -34,8 +47,9 @@ export type SliderItem = {
   status: SliderStatus;
   createdAt: string;
   updatedAt: string;
-  desktopMedia: SliderMediaPreview | null;
-  mobileMedia: SliderMediaPreview | null;
+  sharedImage: SliderMediaPreview | null;
+  sharedMobileImage: SliderMediaPreview | null;
+  translations: SliderItemTranslation[];
 };
 
 export type Slider = {
@@ -80,13 +94,24 @@ export type UpdateSliderPayload = Partial<
   linkedEntityId?: string | null;
 };
 
+export type SliderItemTranslationPayload = {
+  localeId: string;
+  title?: string | null;
+  description?: string | null;
+  buttonText?: string | null;
+  imageId?: string | null;
+  mobileImageId?: string | null;
+};
+
 export type CreateSliderItemPayload = {
   title?: string;
   description?: string;
   buttonText?: string;
   linkUrl?: string;
-  desktopMediaId?: string;
-  mobileMediaId?: string;
+  sameImageForAllLocales?: boolean;
+  sharedImageId?: string;
+  sharedMobileImageId?: string;
+  translations?: SliderItemTranslationPayload[];
   desktopMediaWidthOverride?: number | null;
   desktopMediaHeightOverride?: number | null;
   mobileMediaWidthOverride?: number | null;

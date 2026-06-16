@@ -10,7 +10,10 @@ import { MultilingualContentFields, EVENT_I18N_FIELDS } from '../components/Mult
 import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
 import { ContentChannelFields } from '../components/ContentChannelFields';
 import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
-import { validateRangeSchedule } from '../lib/publishing-workflow';
+import {
+  buildEventTranslationsPayload,
+  getEventSaveBlocker,
+} from '../lib/campaign-event-form-validation';
 import { DEFAULT_CONTENT_CHANNELS, formatChannels } from '../lib/content-channels';
 import { Button } from '../components/ui/Button';
 import { LinkedSliderGroupsSection } from '../components/LinkedSliderGroupsSection';
@@ -66,11 +69,14 @@ type FormState = {
   slug: string;
   shortDescription: string;
   description: string;
-  coverMediaId: string;
+  sameImageForAllLocales: boolean;
+  sharedCoverImageId: string;
   coverMediaWidthOverride: string;
   coverMediaHeightOverride: string;
-  startAt: string;
-  endAt: string;
+  publishStartAt: string;
+  publishEndAt: string;
+  eventStartAt: string;
+  eventEndAt: string;
   location: string;
   category: string;
   buttonText: string;
@@ -86,11 +92,14 @@ const EMPTY: FormState = {
   slug: '',
   shortDescription: '',
   description: '',
-  coverMediaId: '',
+  sameImageForAllLocales: true,
+  sharedCoverImageId: '',
   coverMediaWidthOverride: '',
   coverMediaHeightOverride: '',
-  startAt: '',
-  endAt: '',
+  publishStartAt: '',
+  publishEndAt: '',
+  eventStartAt: '',
+  eventEndAt: '',
   location: '',
   category: '',
   buttonText: '',
@@ -107,11 +116,14 @@ function evToForm(e: CmsEvent): FormState {
     slug: e.slug,
     shortDescription: e.shortDescription ?? '',
     description: e.description ?? '',
-    coverMediaId: e.coverMediaId ?? '',
+    sameImageForAllLocales: e.sameImageForAllLocales ?? true,
+    sharedCoverImageId: e.sharedCoverImageId ?? '',
     coverMediaWidthOverride: e.coverMediaWidthOverride ? String(e.coverMediaWidthOverride) : '',
     coverMediaHeightOverride: e.coverMediaHeightOverride ? String(e.coverMediaHeightOverride) : '',
-    startAt: e.startAt ? e.startAt.slice(0, 16) : '',
-    endAt: e.endAt ? e.endAt.slice(0, 16) : '',
+    publishStartAt: e.publishStartAt ? e.publishStartAt.slice(0, 16) : '',
+    publishEndAt: e.publishEndAt ? e.publishEndAt.slice(0, 16) : '',
+    eventStartAt: e.eventStartAt ? e.eventStartAt.slice(0, 16) : '',
+    eventEndAt: e.eventEndAt ? e.eventEndAt.slice(0, 16) : '',
     location: e.location ?? '',
     category: e.category ?? '',
     buttonText: e.buttonText ?? '',
@@ -128,17 +140,24 @@ function parseOptionalDimension(value: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function formToPayload(f: FormState): CreateEventPayload {
+function formToPayload(
+  f: FormState,
+  localeDrafts: Record<string, Record<string, string>>,
+  tenantLocales: CmsLocale[],
+): CreateEventPayload {
   return {
     title: f.title,
     slug: f.slug.trim() || undefined,
     shortDescription: f.shortDescription || undefined,
     description: f.description || undefined,
-    coverMediaId: f.coverMediaId || undefined,
+    sameImageForAllLocales: f.sameImageForAllLocales,
+    sharedCoverImageId: f.sharedCoverImageId || undefined,
     coverMediaWidthOverride: parseOptionalDimension(f.coverMediaWidthOverride),
     coverMediaHeightOverride: parseOptionalDimension(f.coverMediaHeightOverride),
-    startAt: f.startAt ? new Date(f.startAt).toISOString() : undefined,
-    endAt: f.endAt ? new Date(f.endAt).toISOString() : undefined,
+    publishStartAt: f.publishStartAt ? new Date(f.publishStartAt).toISOString() : undefined,
+    publishEndAt: f.publishEndAt ? new Date(f.publishEndAt).toISOString() : undefined,
+    eventStartAt: f.eventStartAt ? new Date(f.eventStartAt).toISOString() : undefined,
+    eventEndAt: f.eventEndAt ? new Date(f.eventEndAt).toISOString() : undefined,
     location: f.location || undefined,
     category: f.category || undefined,
     buttonText: f.buttonText || undefined,
@@ -146,6 +165,7 @@ function formToPayload(f: FormState): CreateEventPayload {
     sortOrder: parseInt(f.sortOrder, 10) || 0,
     status: f.status,
     channels: f.channels.length ? f.channels : undefined,
+    translations: buildEventTranslationsPayload(tenantLocales, localeDrafts),
   };
 }
 
@@ -222,10 +242,21 @@ export function EventsPage() {
           const drafts: Record<string, Record<string, string>> = {};
           for (const loc of act) {
             if (loc.id === def?.id) continue;
-            drafts[loc.id] = { title: '', shortDescription: '', description: '', buttonText: '' };
+            const tableTr = editing.translations?.find((t) => t.localeId === loc.id);
+            drafts[loc.id] = {
+              title: tableTr?.title ?? '',
+              shortDescription: tableTr?.shortDescription ?? '',
+              description: tableTr?.description ?? '',
+              buttonText: '',
+              coverImageId: tableTr?.coverImageId ?? '',
+            };
             for (const f of EVENT_I18N_FIELDS) {
-              drafts[loc.id][f] =
-                tr.find((row) => row.localeId === loc.id && row.field === f)?.value ?? '';
+              if (f === 'title' || f === 'description' || f === 'shortDescription' || f === 'buttonText') {
+                if (!drafts[loc.id][f]) {
+                  drafts[loc.id][f] =
+                    tr.find((row) => row.localeId === loc.id && row.field === f)?.value ?? '';
+                }
+              }
             }
           }
           setLocaleDrafts(drafts);
@@ -314,15 +345,20 @@ export function EventsPage() {
   );
 
   async function handleSubmit() {
-    if (!accessToken || !tenantId || !form.title.trim()) {
-      setFormError('Başlık zorunludur.');
+    const blocker = getEventSaveBlocker({
+      title: form.title,
+      status: form.status,
+      publishStartAt: form.publishStartAt,
+      eventStartAt: form.eventStartAt,
+      sameImageForAllLocales: form.sameImageForAllLocales,
+      sharedCoverImageId: form.sharedCoverImageId,
+      defaultLocaleCoverImageId: form.sharedCoverImageId,
+    });
+    if (blocker) {
+      setFormError(blocker);
       return;
     }
-    const scheduleError = validateRangeSchedule(form.status, form.startAt);
-    if (scheduleError) {
-      setFormError(scheduleError);
-      return;
-    }
+    if (!accessToken || !tenantId) return;
     let dynamicFieldsJson: Record<string, unknown> | undefined;
     const raw = form.dynamicJson.trim();
     if (raw) {
@@ -341,7 +377,10 @@ export function EventsPage() {
     setSaving(true);
     setFormError(null);
     try {
-      const payload: CreateEventPayload = { ...formToPayload(form), dynamicFieldsJson };
+      const payload: CreateEventPayload = {
+        ...formToPayload(form, localeDrafts, tenantLocales),
+        dynamicFieldsJson,
+      };
       let eventId: string;
       if (editing) {
         const updated = await apiEventUpdate(accessToken, tenantId, editing.id, payload, mallId);
@@ -488,25 +527,90 @@ export function EventsPage() {
               />
             </div>
             <div>
-              <ContextualMediaPicker
-                context="EVENT_COVER"
-                value={form.coverMediaId}
-                mallId={mallId}
-                onChange={(id) => { setForm({ ...form, coverMediaId: id }); setEventFormDirty(true); }}
-                dimensionOverride={{
-                  width: parseOptionalDimension(form.coverMediaWidthOverride),
-                  height: parseOptionalDimension(form.coverMediaHeightOverride),
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: 13,
+                  cursor: saving ? 'not-allowed' : 'pointer',
                 }}
-                onDimensionOverrideChange={(dimensions) => {
-                  setForm({
-                    ...form,
-                    coverMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
-                    coverMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
-                  });
-                  setEventFormDirty(true);
-                }}
-              />
+              >
+                <input
+                  type="checkbox"
+                  checked={form.sameImageForAllLocales}
+                  disabled={saving}
+                  onChange={(e) => {
+                    setForm({ ...form, sameImageForAllLocales: e.target.checked });
+                    setEventFormDirty(true);
+                  }}
+                />
+                Tüm diller için aynı kapak görseli
+              </label>
             </div>
+            {form.sameImageForAllLocales ? (
+              <div>
+                <ContextualMediaPicker
+                  context="EVENT_COVER"
+                  value={form.sharedCoverImageId}
+                  mallId={mallId}
+                  onChange={(id) => {
+                    setForm({ ...form, sharedCoverImageId: id });
+                    setEventFormDirty(true);
+                  }}
+                  dimensionOverride={{
+                    width: parseOptionalDimension(form.coverMediaWidthOverride),
+                    height: parseOptionalDimension(form.coverMediaHeightOverride),
+                  }}
+                  onDimensionOverrideChange={(dimensions) => {
+                    setForm({
+                      ...form,
+                      coverMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                      coverMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                    });
+                    setEventFormDirty(true);
+                  }}
+                />
+              </div>
+            ) : (
+              tenantLocales.filter((l) => l.isActive).length > 0 &&
+              contentLocaleTab && (
+                <ContextualMediaPicker
+                  context="EVENT_COVER"
+                  value={
+                    contentLocaleTab === tenantLocales.find((l) => l.isDefault)?.id
+                      ? form.sharedCoverImageId
+                      : localeDrafts[contentLocaleTab]?.coverImageId ?? ''
+                  }
+                  mallId={mallId}
+                  onChange={(mediaId) => {
+                    const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                    if (contentLocaleTab === defaultLocaleId) {
+                      setForm({ ...form, sharedCoverImageId: mediaId });
+                      setEventFormDirty(true);
+                      return;
+                    }
+                    setLocaleDrafts((d) => ({
+                      ...d,
+                      [contentLocaleTab]: { ...d[contentLocaleTab], coverImageId: mediaId },
+                    }));
+                    setI18nDirty(true);
+                  }}
+                  dimensionOverride={{
+                    width: parseOptionalDimension(form.coverMediaWidthOverride),
+                    height: parseOptionalDimension(form.coverMediaHeightOverride),
+                  }}
+                  onDimensionOverrideChange={(dimensions) => {
+                    setForm({
+                      ...form,
+                      coverMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                      coverMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                    });
+                    setEventFormDirty(true);
+                  }}
+                />
+              )
+            )}
             <div style={{ gridColumn: '1 / -1' }}>
               <ContentChannelFields
                 channels={form.channels}
@@ -520,25 +624,51 @@ export function EventsPage() {
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
               <PublishingWorkflowFields
-                mode="range"
+                mode="page"
                 status={form.status}
-                startAt={form.startAt}
-                endAt={form.endAt}
+                publishAt={form.publishStartAt}
+                unpublishAt={form.publishEndAt}
                 onStatusChange={(status) => {
                   setForm({ ...form, status });
                   setEventFormDirty(true);
                 }}
-                onStartAtChange={(startAt) => {
-                  setForm({ ...form, startAt });
+                onPublishAtChange={(publishStartAt) => {
+                  setForm({ ...form, publishStartAt });
                   setEventFormDirty(true);
                 }}
-                onEndAtChange={(endAt) => {
-                  setForm({ ...form, endAt });
+                onUnpublishAtChange={(publishEndAt) => {
+                  setForm({ ...form, publishEndAt });
                   setEventFormDirty(true);
                 }}
                 labelStyle={labelStyle}
                 inputStyle={inputStyle}
               />
+            </div>
+            <div style={{ gridColumn: '1 / -1', display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
+              <div>
+                <label style={labelStyle}>Etkinlik başlangıcı</label>
+                <input
+                  type="datetime-local"
+                  style={inputStyle}
+                  value={form.eventStartAt}
+                  onChange={(e) => {
+                    setForm({ ...form, eventStartAt: e.target.value });
+                    setEventFormDirty(true);
+                  }}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Etkinlik bitişi</label>
+                <input
+                  type="datetime-local"
+                  style={inputStyle}
+                  value={form.eventEndAt}
+                  onChange={(e) => {
+                    setForm({ ...form, eventEndAt: e.target.value });
+                    setEventFormDirty(true);
+                  }}
+                />
+              </div>
             </div>
             <div>
               <label style={labelStyle}>Konum</label>
@@ -723,14 +853,14 @@ export function EventsPage() {
               <td style={{ padding: 8, color: '#6b7280', fontSize: 12 }}>{formatChannels(e.channels)}</td>
               <td style={{ padding: 8 }}>
                 <StatusBadge status={e.status} />
-                {e.status === 'SCHEDULED' && e.startAt && (
+                {e.status === 'SCHEDULED' && e.publishStartAt && (
                   <div style={{ fontSize: 10, color: '#92400e', marginTop: 4 }}>
-                    Yayın: {new Date(e.startAt).toLocaleString('tr-TR')}
+                    Yayın: {new Date(e.publishStartAt).toLocaleString('tr-TR')}
                   </div>
                 )}
               </td>
               <td style={{ padding: 8, color: '#6b7280' }}>
-                {e.startAt ? e.startAt.slice(0, 10) : '—'} → {e.endAt ? e.endAt.slice(0, 10) : '—'}
+                {e.eventStartAt ? e.eventStartAt.slice(0, 10) : '—'} → {e.eventEndAt ? e.eventEndAt.slice(0, 10) : '—'}
               </td>
               <td style={{ padding: 8 }}>
                 <button type="button" onClick={() => openEdit(e)} style={{ marginRight: 6 }}>

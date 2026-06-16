@@ -170,8 +170,8 @@ export class PublicSearchService {
               status: 'PUBLISHED',
               ...mallScope,
               AND: [
-                { OR: [{ startAt: null }, { startAt: { lte: now } }] },
-                { OR: [{ endAt: null }, { endAt: { gte: now } }] },
+                { OR: [{ publishStartAt: null }, { publishStartAt: { lte: now } }] },
+                { OR: [{ publishEndAt: null }, { publishEndAt: { gte: now } }] },
               ],
             },
             select: { id: true },
@@ -186,8 +186,8 @@ export class PublicSearchService {
               status: 'PUBLISHED',
               ...mallScope,
               AND: [
-                { OR: [{ startAt: null }, { startAt: { lte: now } }] },
-                { OR: [{ endAt: null }, { endAt: { gte: now } }] },
+                { OR: [{ publishStartAt: null }, { publishStartAt: { lte: now } }] },
+                { OR: [{ publishEndAt: null }, { publishEndAt: { gte: now } }] },
               ],
             },
             select: { id: true },
@@ -318,14 +318,14 @@ export class PublicSearchService {
               select: {
                 id: true,
                 shortDescription: true,
-                coverMedia: { select: { publicUrl: true } },
+                sharedCoverImage: { select: { publicUrl: true } },
               },
             })
             .then((rows) =>
               rows.forEach((r) =>
                 detail.set(r.id, {
                   description: r.shortDescription,
-                  imageUrl: r.coverMedia?.publicUrl ?? null,
+                  imageUrl: r.sharedCoverImage?.publicUrl ?? null,
                 }),
               ),
             )
@@ -339,14 +339,14 @@ export class PublicSearchService {
               select: {
                 id: true,
                 shortDescription: true,
-                coverMedia: { select: { publicUrl: true } },
+                sharedCoverImage: { select: { publicUrl: true } },
               },
             })
             .then((rows) =>
               rows.forEach((r) =>
                 detail.set(r.id, {
                   description: r.shortDescription,
-                  imageUrl: r.coverMedia?.publicUrl ?? null,
+                  imageUrl: r.sharedCoverImage?.publicUrl ?? null,
                 }),
               ),
             )

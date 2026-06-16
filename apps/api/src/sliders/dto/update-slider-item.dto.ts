@@ -1,7 +1,8 @@
-import { IsInt, IsOptional, IsString, IsUrl, Min, ValidateIf, IsIn } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUrl, Min, ValidateIf, IsIn, IsBoolean, IsArray, ValidateNested } from 'class-validator';
 import { SLIDER_STATUSES } from '../../common/prisma-validation-enums.js';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import type { SliderStatus } from '@prisma/client';
+import { SliderItemTranslationDto } from './slider-item-translation.dto.js';
 
 export class UpdateSliderItemDto {
   @IsOptional()
@@ -23,12 +24,32 @@ export class UpdateSliderItemDto {
   linkUrl?: string | null;
 
   @IsOptional()
-  @IsString()
-  desktopMediaId?: string | null;
+  @IsBoolean()
+  sameImageForAllLocales?: boolean;
 
   @IsOptional()
   @IsString()
+  sharedImageId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  sharedMobileImageId?: string | null;
+
+  /** @deprecated Use sharedImageId */
+  @IsOptional()
+  @IsString()
+  desktopMediaId?: string | null;
+
+  /** @deprecated Use sharedMobileImageId */
+  @IsOptional()
+  @IsString()
   mobileMediaId?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SliderItemTranslationDto)
+  translations?: SliderItemTranslationDto[];
 
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))

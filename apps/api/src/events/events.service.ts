@@ -11,21 +11,33 @@ import { SearchIndexerService } from '../search/search-indexer.service';
 import { TranslationResolverService } from '../translation-resolver/translation-resolver.service';
 import { slugify } from '../common/utils/slugify';
 import { assertOptionalHttpUrl, validateStartBeforeEnd } from '../common/utils/content-validation';
-import { resolveRangeSchedule } from '../common/utils/publish-workflow';
+import {
+  resolveContentPublishSchedule,
+  toScheduleDate,
+} from '../common/utils/publish-workflow';
 import { uniqueEventSlug } from '../common/utils/unique-content-slug';
 import type { CreateEventDto } from './dto/create-event.dto';
 import type { UpdateEventDto } from './dto/update-event.dto';
 import type { ListEventsDto } from './dto/list-events.dto';
+import type { EventTranslationDto } from './dto/event-translation.dto.js';
 
 const MEDIA_SELECT = {
   id: true,
   publicUrl: true,
   originalName: true,
   mimeType: true,
+  width: true,
+  height: true,
 } as const;
 
 const EVENT_INCLUDE = {
-  coverMedia: { select: MEDIA_SELECT },
+  sharedCoverImage: { select: MEDIA_SELECT },
+  translations: {
+    include: {
+      locale: { select: { id: true, code: true } },
+      coverImage: { select: MEDIA_SELECT },
+    },
+  },
 } satisfies Prisma.EventInclude;
 
 export type EventResponse = Prisma.EventGetPayload<{ include: typeof EVENT_INCLUDE }>;
@@ -58,7 +70,6 @@ export class EventsService {
     const skip = (page - 1) * limit;
 
     const where = this.buildListWhere(tenantId, mallId, query);
-
     const orderBy = this.buildOrderBy(query);
 
     const [events, total] = await Promise.all([
@@ -94,28 +105,39 @@ export class EventsService {
     assertOptionalHttpUrl(dto.linkUrl);
 
     const status = dto.status ?? 'DRAFT';
-    const schedule = resolveRangeSchedule({
+    const publishSchedule = resolveContentPublishSchedule({
       status,
-      startAt: dto.startAt,
-      endAt: dto.endAt,
+      publishStartAt: dto.publishStartAt,
+      publishEndAt: dto.publishEndAt,
     });
-    if (dto.coverMediaId) {
-      await this.assertCoverMediaInScope(tenantId, mallId ?? null, dto.coverMediaId);
-    }
+    const eventStartAt = toScheduleDate(dto.eventStartAt);
+    const eventEndAt = toScheduleDate(dto.eventEndAt);
+    validateStartBeforeEnd(eventStartAt, eventEndAt);
+
+    const sameImageForAllLocales = dto.sameImageForAllLocales ?? true;
+
+    await this.assertCoverMediaValid({
+      tenantId,
+      mallId: mallId ?? null,
+      sameImageForAllLocales,
+      sharedCoverImageId: dto.sharedCoverImageId,
+      translations: dto.translations,
+    });
+
     if (status === 'PUBLISHED') {
-      await this.assertPublishable(
-        dto.title,
-        dto.coverMediaId,
+      await this.assertPublishable({
+        title: dto.title,
+        eventStartAt,
         tenantId,
-        mallId ?? null,
-        schedule.startAt?.toISOString(),
-        schedule.endAt?.toISOString(),
-      );
+        mallId: mallId ?? null,
+        sameImageForAllLocales,
+        sharedCoverImageId: dto.sharedCoverImageId,
+        translations: dto.translations,
+      });
     }
 
     const baseSlug = dto.slug?.trim() ? slugify(dto.slug) : slugify(dto.title);
     const slug = await uniqueEventSlug(this.prisma, tenantId, baseSlug);
-
     const dynamicFieldsJson = this.toPrismaJson(dto.dynamicFieldsJson);
 
     const event = await this.prisma.event.create({
@@ -126,11 +148,14 @@ export class EventsService {
         slug,
         shortDescription: dto.shortDescription ?? null,
         description: dto.description ?? null,
-        coverMediaId: dto.coverMediaId ?? null,
+        sameImageForAllLocales,
+        sharedCoverImageId: dto.sharedCoverImageId ?? null,
         coverMediaWidthOverride: dto.coverMediaWidthOverride ?? null,
         coverMediaHeightOverride: dto.coverMediaHeightOverride ?? null,
-        startAt: schedule.startAt,
-        endAt: schedule.endAt,
+        publishStartAt: publishSchedule.publishStartAt,
+        publishEndAt: publishSchedule.publishEndAt,
+        eventStartAt,
+        eventEndAt,
         location: dto.location ?? null,
         category: dto.category ?? null,
         buttonText: dto.buttonText ?? null,
@@ -145,6 +170,12 @@ export class EventsService {
       include: EVENT_INCLUDE,
     });
 
+    if (dto.translations?.length) {
+      await this.upsertTranslations(event.id, dto.translations);
+    }
+
+    const result = await this.findOne(event.id, tenantId, mallId);
+
     await this.audit.logAction({
       userId: user.id,
       tenantId,
@@ -156,7 +187,7 @@ export class EventsService {
     });
 
     this.scheduleEventIndex(event.id);
-    return event;
+    return result;
   }
 
   async update(
@@ -173,32 +204,50 @@ export class EventsService {
     assertOptionalHttpUrl(nextLink);
 
     const nextTitle = dto.title ?? existing.title;
-    const nextCover = dto.coverMediaId !== undefined ? dto.coverMediaId : existing.coverMediaId;
     const nextStatus = dto.status ?? existing.status;
-    const schedule = resolveRangeSchedule({
+    const sameImageForAllLocales = dto.sameImageForAllLocales ?? existing.sameImageForAllLocales;
+    const nextSharedCover =
+      dto.sharedCoverImageId !== undefined ? dto.sharedCoverImageId : existing.sharedCoverImageId;
+
+    const publishSchedule = resolveContentPublishSchedule({
       status: nextStatus,
-      startAt:
-        dto.startAt !== undefined ? (dto.startAt ? dto.startAt : null) : existing.startAt,
-      endAt: dto.endAt !== undefined ? (dto.endAt ? dto.endAt : null) : existing.endAt,
+      publishStartAt:
+        dto.publishStartAt !== undefined ? dto.publishStartAt : existing.publishStartAt,
+      publishEndAt:
+        dto.publishEndAt !== undefined ? dto.publishEndAt : existing.publishEndAt,
     });
-    const nextStart = schedule.startAt?.toISOString();
-    const nextEnd = schedule.endAt?.toISOString();
+    const eventStartAt =
+      dto.eventStartAt !== undefined ? toScheduleDate(dto.eventStartAt) : existing.eventStartAt;
+    const eventEndAt =
+      dto.eventEndAt !== undefined ? toScheduleDate(dto.eventEndAt) : existing.eventEndAt;
+    validateStartBeforeEnd(eventStartAt, eventEndAt);
 
     const nextMallId = dto.mallId !== undefined ? dto.mallId : existing.mallId;
 
-    if (dto.coverMediaId) {
-      await this.assertCoverMediaInScope(tenantId, nextMallId, dto.coverMediaId);
+    if (dto.sharedCoverImageId) {
+      await this.assertCoverMediaInScope(tenantId, nextMallId, dto.sharedCoverImageId);
     }
 
+    await this.assertCoverMediaValid({
+      tenantId,
+      mallId: nextMallId,
+      sameImageForAllLocales,
+      sharedCoverImageId: nextSharedCover,
+      translations: dto.translations,
+      skipWhenDraft: nextStatus !== 'PUBLISHED',
+    });
+
     if (nextStatus === 'PUBLISHED') {
-      await this.assertPublishable(
-        nextTitle,
-        nextCover ?? undefined,
+      await this.assertPublishable({
+        title: nextTitle,
+        eventStartAt,
         tenantId,
-        nextMallId,
-        nextStart ?? undefined,
-        nextEnd ?? undefined,
-      );
+        mallId: nextMallId,
+        sameImageForAllLocales,
+        sharedCoverImageId: nextSharedCover ?? undefined,
+        translations: dto.translations,
+        eventId: id,
+      });
     }
 
     let slug = existing.slug;
@@ -221,22 +270,25 @@ export class EventsService {
       publishedPatch.publishedAt = null;
     }
 
-    const event = await this.prisma.event.update({
+    await this.prisma.event.update({
       where: { id },
       data: {
         ...(dto.title !== undefined && { title: dto.title }),
         slug,
         ...(dto.shortDescription !== undefined && { shortDescription: dto.shortDescription || null }),
         ...(dto.description !== undefined && { description: dto.description || null }),
-        ...(dto.coverMediaId !== undefined && { coverMediaId: dto.coverMediaId || null }),
+        ...(dto.sameImageForAllLocales !== undefined && { sameImageForAllLocales }),
+        ...(dto.sharedCoverImageId !== undefined && { sharedCoverImageId: dto.sharedCoverImageId || null }),
         ...(dto.coverMediaWidthOverride !== undefined && {
           coverMediaWidthOverride: dto.coverMediaWidthOverride,
         }),
         ...(dto.coverMediaHeightOverride !== undefined && {
           coverMediaHeightOverride: dto.coverMediaHeightOverride,
         }),
-        startAt: schedule.startAt,
-        endAt: schedule.endAt,
+        publishStartAt: publishSchedule.publishStartAt,
+        publishEndAt: publishSchedule.publishEndAt,
+        eventStartAt,
+        eventEndAt,
         ...(dto.location !== undefined && { location: dto.location || null }),
         ...(dto.category !== undefined && { category: dto.category || null }),
         ...(dto.buttonText !== undefined && { buttonText: dto.buttonText || null }),
@@ -256,8 +308,13 @@ export class EventsService {
         updatedBy: user.id,
         ...publishedPatch,
       },
-      include: EVENT_INCLUDE,
     });
+
+    if (dto.translations !== undefined) {
+      await this.upsertTranslations(id, dto.translations);
+    }
+
+    const event = await this.findOne(id, tenantId, mallId);
 
     await this.audit.logAction({
       userId: user.id,
@@ -300,14 +357,15 @@ export class EventsService {
     const existing = await this.assertExists(id, tenantId);
     this.assertMallVisibility(existing, mallId);
 
-    await this.assertPublishable(
-      existing.title,
-      existing.coverMediaId ?? undefined,
+    await this.assertPublishable({
+      title: existing.title,
+      eventStartAt: existing.eventStartAt,
       tenantId,
-      existing.mallId,
-      existing.startAt?.toISOString(),
-      existing.endAt?.toISOString(),
-    );
+      mallId: existing.mallId,
+      sameImageForAllLocales: existing.sameImageForAllLocales,
+      sharedCoverImageId: existing.sharedCoverImageId ?? undefined,
+      eventId: id,
+    });
 
     const localizationWarnings = await this.i18n.getI18nGapWarnings(
       tenantId,
@@ -328,7 +386,7 @@ export class EventsService {
       data: {
         status: 'PUBLISHED',
         publishedAt: now,
-        startAt: existing.startAt ?? now,
+        publishStartAt: existing.publishStartAt ?? now,
         updatedBy: user.id,
       },
       include: EVENT_INCLUDE,
@@ -358,7 +416,7 @@ export class EventsService {
       where: { id },
       data: {
         status: 'ARCHIVED',
-        endAt: existing.endAt ?? now,
+        publishEndAt: existing.publishEndAt ?? now,
         updatedBy: user.id,
       },
       include: EVENT_INCLUDE,
@@ -392,8 +450,8 @@ export class EventsService {
       deletedAt: null,
       status: 'PUBLISHED' as ContentStatus,
       AND: [
-        { OR: [{ startAt: null }, { startAt: { lte: now } }] },
-        { OR: [{ endAt: null }, { endAt: { gte: now } }] },
+        { OR: [{ publishStartAt: null }, { publishStartAt: { lte: now } }] },
+        { OR: [{ publishEndAt: null }, { publishEndAt: { gte: now } }] },
       ],
       ...(opts.mallId !== undefined
         ? {
@@ -411,7 +469,7 @@ export class EventsService {
     return this.prisma.event.findMany({
       where,
       include: EVENT_INCLUDE,
-      orderBy: [{ sortOrder: 'asc' }, { startAt: 'asc' }],
+      orderBy: [{ sortOrder: 'asc' }, { eventStartAt: 'asc' }],
     });
   }
 
@@ -436,7 +494,7 @@ export class EventsService {
       ...(query.category ? { category: query.category } : {}),
       ...(query.startFrom || query.startTo
         ? {
-            startAt: {
+            eventStartAt: {
               ...(query.startFrom ? { gte: new Date(query.startFrom) } : {}),
               ...(query.startTo ? { lte: new Date(query.startTo) } : {}),
             },
@@ -444,7 +502,7 @@ export class EventsService {
         : {}),
       ...(query.endFrom || query.endTo
         ? {
-            endAt: {
+            eventEndAt: {
               ...(query.endFrom ? { gte: new Date(query.endFrom) } : {}),
               ...(query.endTo ? { lte: new Date(query.endTo) } : {}),
             },
@@ -456,8 +514,8 @@ export class EventsService {
   private buildOrderBy(query: ListEventsDto): Prisma.EventOrderByWithRelationInput[] {
     const dir = query.sortDir === 'desc' ? 'desc' : 'asc';
     const sortBy = query.sortBy ?? 'sortOrder';
-    if (sortBy === 'startAt') {
-      return [{ startAt: dir }, { sortOrder: 'asc' }];
+    if (sortBy === 'eventStartAt' || sortBy === 'startAt') {
+      return [{ eventStartAt: dir }, { sortOrder: 'asc' }];
     }
     if (sortBy === 'createdAt') {
       return [{ createdAt: dir }];
@@ -501,22 +559,126 @@ export class EventsService {
     }
   }
 
-  private async assertPublishable(
-    title: string,
-    coverMediaId: string | undefined,
-    tenantId: string,
-    mallId: string | null | undefined,
-    startAt?: string,
-    endAt?: string,
+  private async getDefaultLocaleId(tenantId: string): Promise<string | null> {
+    const locale = await this.prisma.locale.findFirst({
+      where: { tenantId, isDefault: true, isActive: true },
+      select: { id: true },
+    });
+    return locale?.id ?? null;
+  }
+
+  private async upsertTranslations(
+    eventId: string,
+    translations: EventTranslationDto[],
   ): Promise<void> {
-    if (!title?.trim()) {
+    for (const tr of translations) {
+      if (tr.coverImageId) {
+        const event = await this.prisma.event.findUnique({
+          where: { id: eventId },
+          select: { tenantId: true, mallId: true },
+        });
+        if (event) {
+          await this.assertCoverMediaInScope(event.tenantId, event.mallId, tr.coverImageId);
+        }
+      }
+      await this.prisma.eventTranslation.upsert({
+        where: {
+          eventId_localeId: { eventId, localeId: tr.localeId },
+        },
+        create: {
+          eventId,
+          localeId: tr.localeId,
+          title: tr.title ?? null,
+          description: tr.description ?? null,
+          shortDescription: tr.shortDescription ?? null,
+          coverImageId: tr.coverImageId ?? null,
+        },
+        update: {
+          title: tr.title ?? null,
+          description: tr.description ?? null,
+          shortDescription: tr.shortDescription ?? null,
+          coverImageId: tr.coverImageId ?? null,
+        },
+      });
+    }
+  }
+
+  private async assertCoverMediaValid(opts: {
+    tenantId: string;
+    mallId: string | null | undefined;
+    sameImageForAllLocales: boolean;
+    sharedCoverImageId?: string | null;
+    translations?: EventTranslationDto[];
+    skipWhenDraft?: boolean;
+  }): Promise<void> {
+    if (opts.skipWhenDraft) return;
+
+    if (opts.sameImageForAllLocales) {
+      if (opts.sharedCoverImageId) {
+        await this.assertCoverMediaInScope(opts.tenantId, opts.mallId ?? null, opts.sharedCoverImageId);
+      }
+      return;
+    }
+
+    if (opts.translations?.some((t) => t.coverImageId)) {
+      for (const tr of opts.translations) {
+        if (tr.coverImageId) {
+          await this.assertCoverMediaInScope(opts.tenantId, opts.mallId ?? null, tr.coverImageId);
+        }
+      }
+    }
+  }
+
+  private async assertPublishable(opts: {
+    title: string;
+    eventStartAt: Date | null;
+    tenantId: string;
+    mallId: string | null | undefined;
+    sameImageForAllLocales: boolean;
+    sharedCoverImageId?: string;
+    translations?: EventTranslationDto[];
+    eventId?: string;
+  }): Promise<void> {
+    if (!opts.title?.trim()) {
       throw new UnprocessableEntityException('Title is required to publish');
     }
-    if (!coverMediaId) {
-      throw new UnprocessableEntityException('coverMediaId is required to publish an event');
+    if (!opts.eventStartAt) {
+      throw new UnprocessableEntityException('eventStartAt is required to publish an event');
     }
-    validateStartBeforeEnd(startAt, endAt);
-    await this.assertCoverMediaInScope(tenantId, mallId ?? null, coverMediaId);
+
+    if (opts.sameImageForAllLocales) {
+      if (!opts.sharedCoverImageId) {
+        throw new UnprocessableEntityException(
+          'sharedCoverImageId is required to publish an event when using shared images',
+        );
+      }
+      await this.assertCoverMediaInScope(opts.tenantId, opts.mallId ?? null, opts.sharedCoverImageId);
+    } else {
+      const defaultLocaleId = await this.getDefaultLocaleId(opts.tenantId);
+      if (!defaultLocaleId) {
+        throw new UnprocessableEntityException('Tenant default locale is not configured');
+      }
+
+      const fromPayload = opts.translations?.find((t) => t.localeId === defaultLocaleId);
+      let defaultCoverId = fromPayload?.coverImageId ?? opts.sharedCoverImageId ?? null;
+
+      if (!defaultCoverId && opts.eventId) {
+        const existingTr = await this.prisma.eventTranslation.findUnique({
+          where: {
+            eventId_localeId: { eventId: opts.eventId, localeId: defaultLocaleId },
+          },
+          select: { coverImageId: true },
+        });
+        defaultCoverId = existingTr?.coverImageId ?? opts.sharedCoverImageId ?? null;
+      }
+
+      if (!defaultCoverId) {
+        throw new UnprocessableEntityException(
+          'Default locale cover image is required to publish an event',
+        );
+      }
+      await this.assertCoverMediaInScope(opts.tenantId, opts.mallId ?? null, defaultCoverId);
+    }
   }
 
   private toPrismaJson(

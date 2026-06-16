@@ -291,12 +291,16 @@ export class MediaService {
     const usages: MediaUsage[] = [];
 
     const [
-      slidersDesktop,
-      slidersMobile,
+      slidersSharedDesktop,
+      slidersSharedMobile,
+      sliderTranslationImages,
+      sliderTranslationMobileImages,
       globalStoreLogos,
       mallStoreLogos,
       eventCovers,
       campaignCovers,
+      eventTranslationCovers,
+      campaignTranslationCovers,
       cinemaLogos,
       moviePosters,
       mallLogos,
@@ -305,7 +309,7 @@ export class MediaService {
     ] = await Promise.all([
       this.prisma.sliderItem.findMany({
         where: {
-          desktopMediaId: id,
+          sharedImageId: id,
           deletedAt: null,
           slider: { tenantId, deletedAt: null },
         },
@@ -318,7 +322,7 @@ export class MediaService {
       }),
       this.prisma.sliderItem.findMany({
         where: {
-          mobileMediaId: id,
+          sharedMobileImageId: id,
           deletedAt: null,
           slider: { tenantId, deletedAt: null },
         },
@@ -327,6 +331,38 @@ export class MediaService {
           title: true,
           sliderId: true,
           slider: { select: { title: true, mallId: true } },
+        },
+      }),
+      this.prisma.sliderItemTranslation.findMany({
+        where: {
+          imageId: id,
+          sliderItem: { deletedAt: null, slider: { tenantId, deletedAt: null } },
+        },
+        select: {
+          sliderItemId: true,
+          sliderItem: {
+            select: {
+              title: true,
+              sliderId: true,
+              slider: { select: { title: true, mallId: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.sliderItemTranslation.findMany({
+        where: {
+          mobileImageId: id,
+          sliderItem: { deletedAt: null, slider: { tenantId, deletedAt: null } },
+        },
+        select: {
+          sliderItemId: true,
+          sliderItem: {
+            select: {
+              title: true,
+              sliderId: true,
+              slider: { select: { title: true, mallId: true } },
+            },
+          },
         },
       }),
       this.prisma.globalStore.findMany({
@@ -338,12 +374,32 @@ export class MediaService {
         select: { id: true, globalStoreId: true, globalStore: { select: { name: true } } },
       }),
       this.prisma.event.findMany({
-        where: { coverMediaId: id, tenantId, deletedAt: null },
+        where: { sharedCoverImageId: id, tenantId, deletedAt: null },
         select: { id: true, title: true, slug: true },
       }),
       this.prisma.campaign.findMany({
-        where: { coverMediaId: id, tenantId, deletedAt: null },
+        where: { sharedCoverImageId: id, tenantId, deletedAt: null },
         select: { id: true, title: true, slug: true },
+      }),
+      this.prisma.eventTranslation.findMany({
+        where: {
+          coverImageId: id,
+          event: { tenantId, deletedAt: null },
+        },
+        select: {
+          eventId: true,
+          event: { select: { title: true, slug: true } },
+        },
+      }),
+      this.prisma.campaignTranslation.findMany({
+        where: {
+          coverImageId: id,
+          campaign: { tenantId, deletedAt: null },
+        },
+        select: {
+          campaignId: true,
+          campaign: { select: { title: true, slug: true } },
+        },
       }),
       this.prisma.cinema.findMany({
         where: { logoMediaId: id, tenantId, deletedAt: null },
@@ -367,24 +423,44 @@ export class MediaService {
       }),
     ]);
 
-    for (const s of slidersDesktop) {
+    for (const s of slidersSharedDesktop) {
       const name = s.title || s.slider.title;
       usages.push({
         entityType: 'slider',
         entityId: s.sliderId,
         entityName: name,
-        field: 'desktopMedia',
+        field: 'sharedImage',
         route: `/sliders/${s.sliderId}`,
       });
     }
-    for (const s of slidersMobile) {
+    for (const s of slidersSharedMobile) {
       const name = s.title || s.slider.title;
       usages.push({
         entityType: 'slider',
         entityId: s.sliderId,
         entityName: name,
-        field: 'mobileMedia',
+        field: 'sharedMobileImage',
         route: `/sliders/${s.sliderId}`,
+      });
+    }
+    for (const t of sliderTranslationImages) {
+      const name = t.sliderItem.title || t.sliderItem.slider.title;
+      usages.push({
+        entityType: 'slider',
+        entityId: t.sliderItem.sliderId,
+        entityName: name,
+        field: 'translationImage',
+        route: `/sliders/${t.sliderItem.sliderId}`,
+      });
+    }
+    for (const t of sliderTranslationMobileImages) {
+      const name = t.sliderItem.title || t.sliderItem.slider.title;
+      usages.push({
+        entityType: 'slider',
+        entityId: t.sliderItem.sliderId,
+        entityName: name,
+        field: 'translationMobileImage',
+        route: `/sliders/${t.sliderItem.sliderId}`,
       });
     }
     for (const s of globalStoreLogos) {
@@ -395,10 +471,28 @@ export class MediaService {
       usages.push({ entityType: 'mall_store', entityId: s.id, entityName: name, field: 'localLogo', route: `/stores/${s.id}` });
     }
     for (const e of eventCovers) {
-      usages.push({ entityType: 'event', entityId: e.id, entityName: e.title, field: 'coverMedia', route: `/events/${e.slug}` });
+      usages.push({ entityType: 'event', entityId: e.id, entityName: e.title, field: 'sharedCoverImage', route: `/events/${e.slug}` });
     }
     for (const c of campaignCovers) {
-      usages.push({ entityType: 'campaign', entityId: c.id, entityName: c.title, field: 'coverMedia', route: `/campaigns/${c.slug}` });
+      usages.push({ entityType: 'campaign', entityId: c.id, entityName: c.title, field: 'sharedCoverImage', route: `/campaigns/${c.slug}` });
+    }
+    for (const t of eventTranslationCovers) {
+      usages.push({
+        entityType: 'event',
+        entityId: t.eventId,
+        entityName: t.event.title,
+        field: 'translationCoverImage',
+        route: `/events/${t.event.slug}`,
+      });
+    }
+    for (const t of campaignTranslationCovers) {
+      usages.push({
+        entityType: 'campaign',
+        entityId: t.campaignId,
+        entityName: t.campaign.title,
+        field: 'translationCoverImage',
+        route: `/campaigns/${t.campaign.slug}`,
+      });
     }
     for (const c of cinemaLogos) {
       usages.push({ entityType: 'cinema', entityId: c.id, entityName: c.name, field: 'logo', route: `/cinemas/${c.id}` });

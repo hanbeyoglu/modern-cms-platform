@@ -17,7 +17,6 @@ import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import { validateRangeSchedule } from '../lib/publishing-workflow';
 import { DEFAULT_CONTENT_CHANNELS } from '../lib/content-channels';
 import {
-  apiCampaignsList,
   apiLocalesList,
   apiSliderArchive,
   apiSliderGet,
@@ -30,18 +29,19 @@ import {
   apiTranslationDelete,
   apiTranslationsList,
   apiTranslationUpsert,
-  type CmsCampaign,
   type CmsLocale,
   type ContentChannel,
   type CreateSliderItemPayload,
   type CreateSliderPayload,
   type Slider,
   type SliderItem,
+  type SliderItemTranslationPayload,
   type SliderLinkedEntityType,
   type SliderPlacementType,
   type SliderStatus,
-  API_MAX_PAGE_SIZE,
 } from '../lib/api';
+import { SliderEntitySelector } from '../components/SliderEntitySelector';
+import { useSliderEntityOptions } from '../hooks/useSliderEntityOptions';
 import { usePermission } from '../hooks/usePermission';
 import { FormActionHint } from '../components/ui/FormActionHint';
 import { getSliderGroupSaveBlocker, getSliderItemSaveBlocker } from '../lib/slider-form-validation';
@@ -74,8 +74,9 @@ type ItemForm = {
   description: string;
   buttonText: string;
   linkUrl: string;
-  desktopMediaId: string;
-  mobileMediaId: string;
+  sameImageForAllLocales: boolean;
+  sharedImageId: string;
+  sharedMobileImageId: string;
   desktopMediaWidthOverride: string;
   desktopMediaHeightOverride: string;
   mobileMediaWidthOverride: string;
@@ -89,8 +90,9 @@ const EMPTY_ITEM: ItemForm = {
   description: '',
   buttonText: '',
   linkUrl: '',
-  desktopMediaId: '',
-  mobileMediaId: '',
+  sameImageForAllLocales: true,
+  sharedImageId: '',
+  sharedMobileImageId: '',
   desktopMediaWidthOverride: '',
   desktopMediaHeightOverride: '',
   mobileMediaWidthOverride: '',
@@ -105,8 +107,9 @@ function itemToForm(item: SliderItem): ItemForm {
     description: item.description ?? '',
     buttonText: item.buttonText ?? '',
     linkUrl: item.linkUrl ?? '',
-    desktopMediaId: item.desktopMediaId ?? '',
-    mobileMediaId: item.mobileMediaId ?? '',
+    sameImageForAllLocales: item.sameImageForAllLocales ?? true,
+    sharedImageId: item.sharedImageId ?? '',
+    sharedMobileImageId: item.sharedMobileImageId ?? '',
     desktopMediaWidthOverride: item.desktopMediaWidthOverride ? String(item.desktopMediaWidthOverride) : '',
     desktopMediaHeightOverride: item.desktopMediaHeightOverride ? String(item.desktopMediaHeightOverride) : '',
     mobileMediaWidthOverride: item.mobileMediaWidthOverride ? String(item.mobileMediaWidthOverride) : '',
@@ -121,14 +124,53 @@ function parseOptionalDimension(value: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function itemFormToPayload(f: ItemForm): CreateSliderItemPayload {
+function buildItemTranslationsPayload(
+  form: ItemForm,
+  localeDrafts: Record<string, Record<string, string>>,
+  locales: CmsLocale[],
+): SliderItemTranslationPayload[] {
+  const defaultLocaleId = locales.find((l) => l.isDefault)?.id;
+  return locales
+    .filter((l) => l.isActive)
+    .map((locale) => {
+      const isDefault = locale.id === defaultLocaleId;
+      const draft = localeDrafts[locale.id] ?? {};
+      const localeImageId = isDefault
+        ? form.sameImageForAllLocales
+          ? null
+          : form.sharedImageId || null
+        : draft.imageId?.trim() || null;
+      const localeMobileImageId = isDefault
+        ? form.sameImageForAllLocales
+          ? null
+          : form.sharedMobileImageId || null
+        : draft.mobileImageId?.trim() || null;
+
+      return {
+        localeId: locale.id,
+        title: isDefault ? form.title || null : draft.title?.trim() || null,
+        description: isDefault ? form.description || null : draft.description?.trim() || null,
+        buttonText: isDefault ? form.buttonText || null : draft.buttonText?.trim() || null,
+        imageId: localeImageId,
+        mobileImageId: localeMobileImageId,
+      };
+    });
+}
+
+function itemFormToPayload(
+  f: ItemForm,
+  localeDrafts: Record<string, Record<string, string>>,
+  locales: CmsLocale[],
+): CreateSliderItemPayload {
   return {
     title: f.title || undefined,
     description: f.description || undefined,
     buttonText: f.buttonText || undefined,
     linkUrl: f.linkUrl || undefined,
-    desktopMediaId: f.desktopMediaId || undefined,
-    mobileMediaId: f.mobileMediaId || undefined,
+    sameImageForAllLocales: f.sameImageForAllLocales,
+    sharedImageId: f.sharedImageId || undefined,
+    sharedMobileImageId: f.sharedMobileImageId || undefined,
+    translations: buildItemTranslationsPayload(f, localeDrafts, locales),
     desktopMediaWidthOverride: parseOptionalDimension(f.desktopMediaWidthOverride),
     desktopMediaHeightOverride: parseOptionalDimension(f.desktopMediaHeightOverride),
     mobileMediaWidthOverride: parseOptionalDimension(f.mobileMediaWidthOverride),
@@ -180,7 +222,6 @@ export function SliderDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [groupForm, setGroupForm] = useState<GroupForm | null>(null);
-  const [campaigns, setCampaigns] = useState<CmsCampaign[]>([]);
   const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
   const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
   const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
@@ -190,7 +231,6 @@ export function SliderDetailPage() {
   const [itemForm, setItemForm] = useState<ItemForm>(EMPTY_ITEM);
   const [itemLocaleDrafts, setItemLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
   const [itemContentLocaleTab, setItemContentLocaleTab] = useState<string | null>(null);
-  const [itemI18nDirty, setItemI18nDirty] = useState(false);
   const [itemSaving, setItemSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -198,17 +238,11 @@ export function SliderDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const [s, locales, campaignRes] = await Promise.all([
+      const [s, locales] = await Promise.all([
         apiSliderGet(accessToken, activeTenantId, id),
         apiLocalesList(accessToken, activeTenantId),
-        apiCampaignsList(accessToken, activeTenantId, {
-          mallId: activeMallId ?? undefined,
-          limit: API_MAX_PAGE_SIZE,
-          status: 'PUBLISHED',
-        }),
       ]);
       setSlider(s);
-      setCampaigns(campaignRes.campaigns);
       setTenantLocales(locales);
       const defaultLocale = locales.find((l) => l.isDefault);
       setContentLocaleTab(defaultLocale?.id ?? locales[0]?.id ?? null);
@@ -228,11 +262,23 @@ export function SliderDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, activeTenantId, activeMallId, id]);
+  }, [accessToken, activeTenantId, id]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const entityPlacementType =
+    groupForm && ENTITY_PLACEMENTS.includes(groupForm.placementType)
+      ? groupForm.placementType
+      : null;
+  const {
+    optionsLoading: entityOptionsLoading,
+    campaigns,
+    events,
+    stores,
+    locations,
+  } = useSliderEntityOptions(entityPlacementType, !!groupForm);
 
   const groupSaveBlocker = groupForm
     ? getSliderGroupSaveBlocker({
@@ -245,11 +291,18 @@ export function SliderDetailPage() {
       })
     : null;
 
+  const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+  const defaultLocaleDraftImageId = defaultLocaleId
+    ? itemLocaleDrafts[defaultLocaleId]?.imageId ?? ''
+    : '';
   const itemSaveBlocker = getSliderItemSaveBlocker({
     tenantId: activeTenantId,
     canUpdate,
-    desktopMediaId: itemForm.desktopMediaId,
-    mobileMediaId: itemForm.mobileMediaId,
+    sameImageForAllLocales: itemForm.sameImageForAllLocales,
+    sharedImageId: itemForm.sharedImageId,
+    defaultLocaleImageId: itemForm.sameImageForAllLocales
+      ? undefined
+      : itemForm.sharedImageId || defaultLocaleDraftImageId,
   });
 
   const saveGroup = async () => {
@@ -303,17 +356,33 @@ export function SliderDetailPage() {
     const nextOrder = slider?.items?.length ?? 0;
     setItemForm({ ...EMPTY_ITEM, sortOrder: String(nextOrder) });
     setItemLocaleDrafts({});
-    setItemI18nDirty(false);
-    const defaultLocale = tenantLocales.find((l) => l.isDefault);
-    setItemContentLocaleTab(defaultLocale?.id ?? tenantLocales[0]?.id ?? null);
+    setItemContentLocaleTab(defaultLocaleId ?? tenantLocales[0]?.id ?? null);
     setEditingItemId('new');
   };
 
   const openEditItem = (item: SliderItem) => {
-    setItemForm(itemToForm(item));
-    setItemLocaleDrafts({});
-    setItemI18nDirty(false);
     const defaultLocale = tenantLocales.find((l) => l.isDefault);
+    const form = itemToForm(item);
+    if (!item.sameImageForAllLocales && defaultLocale) {
+      const defaultTr = item.translations?.find((t) => t.localeId === defaultLocale.id);
+      if (defaultTr) {
+        form.sharedImageId = defaultTr.imageId ?? form.sharedImageId;
+        form.sharedMobileImageId = defaultTr.mobileImageId ?? form.sharedMobileImageId;
+      }
+    }
+    setItemForm(form);
+    const drafts: Record<string, Record<string, string>> = {};
+    for (const tr of item.translations ?? []) {
+      if (tr.localeId === defaultLocale?.id) continue;
+      drafts[tr.localeId] = {
+        title: tr.title ?? '',
+        description: tr.description ?? '',
+        buttonText: tr.buttonText ?? '',
+        imageId: tr.imageId ?? '',
+        mobileImageId: tr.mobileImageId ?? '',
+      };
+    }
+    setItemLocaleDrafts(drafts);
     setItemContentLocaleTab(defaultLocale?.id ?? tenantLocales[0]?.id ?? null);
     setEditingItemId(item.id);
   };
@@ -322,35 +391,11 @@ export function SliderDetailPage() {
     if (itemSaveBlocker || !accessToken || !activeTenantId || !id) return;
     setItemSaving(true);
     try {
-      let itemId = editingItemId;
+      const payload = itemFormToPayload(itemForm, itemLocaleDrafts, tenantLocales);
       if (editingItemId === 'new') {
-        const created = await apiSliderItemCreate(
-          accessToken,
-          activeTenantId,
-          id,
-          itemFormToPayload(itemForm),
-        );
-        itemId = created.id;
+        await apiSliderItemCreate(accessToken, activeTenantId, id, payload);
       } else if (editingItemId) {
-        await apiSliderItemUpdate(
-          accessToken,
-          activeTenantId,
-          id,
-          editingItemId,
-          itemFormToPayload(itemForm),
-        );
-      }
-      if (itemId && itemId !== 'new' && itemI18nDirty) {
-        const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
-        await flushSliderTranslations(
-          accessToken,
-          activeTenantId,
-          itemId,
-          'SLIDER_ITEM',
-          SLIDER_ITEM_I18N_FIELDS,
-          itemLocaleDrafts,
-          defaultLocaleId,
-        );
+        await apiSliderItemUpdate(accessToken, activeTenantId, id, editingItemId, payload);
       }
       toast.success('Slayt kaydedildi');
       setEditingItemId(null);
@@ -515,40 +560,26 @@ export function SliderDetailPage() {
             </select>
           </div>
 
-          {groupForm.placementType === 'CAMPAIGN' && (
-            <div>
-              <label style={labelStyle}>Kampanya</label>
-              <select
-                style={inputStyle}
-                value={groupForm.linkedEntityId}
-                onChange={(e) =>
-                  setGroupForm({
-                    ...groupForm,
-                    linkedEntityId: e.target.value,
-                    linkedEntityType: 'CAMPAIGN',
-                  })
-                }
-              >
-                <option value="">Kampanya seçin</option>
-                {campaigns.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {groupForm.placementType !== 'CAMPAIGN' && ENTITY_PLACEMENTS.includes(groupForm.placementType) && (
-            <div>
-              <label style={labelStyle}>Bağlı kayıt ID</label>
-              <input
-                style={inputStyle}
-                value={groupForm.linkedEntityId}
-                onChange={(e) => setGroupForm({ ...groupForm, linkedEntityId: e.target.value })}
-                placeholder="Entity ID"
-              />
-            </div>
+          {ENTITY_PLACEMENTS.includes(groupForm.placementType) && (
+            <SliderEntitySelector
+              placementType={groupForm.placementType}
+              linkedEntityId={groupForm.linkedEntityId}
+              onLinkedEntityIdChange={(linkedEntityId) =>
+                setGroupForm({
+                  ...groupForm,
+                  linkedEntityId,
+                  linkedEntityType: groupForm.placementType as SliderLinkedEntityType,
+                })
+              }
+              optionsLoading={entityOptionsLoading}
+              campaigns={campaigns}
+              events={events}
+              stores={stores}
+              locations={locations}
+              activeMallId={activeMallId}
+              labelStyle={labelStyle}
+              inputStyle={inputStyle}
+            />
           )}
 
           <div>
@@ -657,9 +688,9 @@ export function SliderDetailPage() {
                   background: '#fff',
                 }}
               >
-                {item.desktopMedia?.publicUrl && (
+                {item.sharedImage?.publicUrl && (
                   <img
-                    src={item.desktopMedia.publicUrl}
+                    src={item.sharedImage.publicUrl}
                     alt=""
                     style={{
                       width: 120,
@@ -746,7 +777,6 @@ export function SliderDetailPage() {
                     ...d,
                     [localeId]: { ...d[localeId], [field]: value },
                   }));
-                  setItemI18nDirty(true);
                 }}
                 onCopyFromDefault={(targetId) => {
                   setItemLocaleDrafts((d) => ({
@@ -757,7 +787,6 @@ export function SliderDetailPage() {
                       buttonText: itemForm.buttonText,
                     },
                   }));
-                  setItemI18nDirty(true);
                 }}
                 disabled={itemSaving}
               />
@@ -782,48 +811,133 @@ export function SliderDetailPage() {
               </>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12 }}>
-              <ContextualMediaPicker
-                context="SLIDER_DESKTOP"
-                value={itemForm.desktopMediaId}
-                mallId={activeMallId ?? undefined}
-                onChange={(mediaId) => setItemForm({ ...itemForm, desktopMediaId: mediaId })}
-                dimensionOverride={{
-                  width: parseOptionalDimension(itemForm.desktopMediaWidthOverride),
-                  height: parseOptionalDimension(itemForm.desktopMediaHeightOverride),
-                }}
-                onDimensionOverrideChange={(dimensions) => setItemForm({
-                  ...itemForm,
-                  desktopMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
-                  desktopMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
-                })}
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginTop: 12,
+                fontSize: 13,
+                cursor: itemSaving ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={itemForm.sameImageForAllLocales}
+                disabled={itemSaving}
+                onChange={(e) =>
+                  setItemForm({ ...itemForm, sameImageForAllLocales: e.target.checked })
+                }
               />
-              <ContextualMediaPicker
-                context="SLIDER_MOBILE"
-                value={itemForm.mobileMediaId}
-                mallId={activeMallId ?? undefined}
-                onChange={(mediaId) => setItemForm({ ...itemForm, mobileMediaId: mediaId })}
-                dimensionOverride={{
-                  width: parseOptionalDimension(itemForm.mobileMediaWidthOverride),
-                  height: parseOptionalDimension(itemForm.mobileMediaHeightOverride),
-                }}
-                onDimensionOverrideChange={(dimensions) => setItemForm({
-                  ...itemForm,
-                  mobileMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
-                  mobileMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
-                })}
-              />
-            </div>
+              Tüm diller için aynı görselleri kullan
+            </label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12 }}>
-              <div>
-                <label style={labelStyle}>Buton metni</label>
-                <input
-                  style={inputStyle}
-                  value={itemForm.buttonText}
-                  onChange={(e) => setItemForm({ ...itemForm, buttonText: e.target.value })}
+            {itemForm.sameImageForAllLocales ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12 }}>
+                <ContextualMediaPicker
+                  context="SLIDER_DESKTOP"
+                  value={itemForm.sharedImageId}
+                  mallId={activeMallId ?? undefined}
+                  onChange={(mediaId) => setItemForm({ ...itemForm, sharedImageId: mediaId })}
+                  dimensionOverride={{
+                    width: parseOptionalDimension(itemForm.desktopMediaWidthOverride),
+                    height: parseOptionalDimension(itemForm.desktopMediaHeightOverride),
+                  }}
+                  onDimensionOverrideChange={(dimensions) =>
+                    setItemForm({
+                      ...itemForm,
+                      desktopMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                      desktopMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                    })
+                  }
+                />
+                <ContextualMediaPicker
+                  context="SLIDER_MOBILE"
+                  value={itemForm.sharedMobileImageId}
+                  mallId={activeMallId ?? undefined}
+                  onChange={(mediaId) => setItemForm({ ...itemForm, sharedMobileImageId: mediaId })}
+                  dimensionOverride={{
+                    width: parseOptionalDimension(itemForm.mobileMediaWidthOverride),
+                    height: parseOptionalDimension(itemForm.mobileMediaHeightOverride),
+                  }}
+                  onDimensionOverrideChange={(dimensions) =>
+                    setItemForm({
+                      ...itemForm,
+                      mobileMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                      mobileMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                    })
+                  }
                 />
               </div>
+            ) : (
+              tenantLocales.filter((l) => l.isActive).length > 0 &&
+              itemContentLocaleTab && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12 }}>
+                  <ContextualMediaPicker
+                    context="SLIDER_DESKTOP"
+                    value={
+                      itemContentLocaleTab === defaultLocaleId
+                        ? itemForm.sharedImageId
+                        : itemLocaleDrafts[itemContentLocaleTab]?.imageId ?? ''
+                    }
+                    mallId={activeMallId ?? undefined}
+                    onChange={(mediaId) => {
+                      if (itemContentLocaleTab === defaultLocaleId) {
+                        setItemForm({ ...itemForm, sharedImageId: mediaId });
+                        return;
+                      }
+                      setItemLocaleDrafts((d) => ({
+                        ...d,
+                        [itemContentLocaleTab]: { ...d[itemContentLocaleTab], imageId: mediaId },
+                      }));
+                    }}
+                    dimensionOverride={{
+                      width: parseOptionalDimension(itemForm.desktopMediaWidthOverride),
+                      height: parseOptionalDimension(itemForm.desktopMediaHeightOverride),
+                    }}
+                    onDimensionOverrideChange={(dimensions) =>
+                      setItemForm({
+                        ...itemForm,
+                        desktopMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                        desktopMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                      })
+                    }
+                  />
+                  <ContextualMediaPicker
+                    context="SLIDER_MOBILE"
+                    value={
+                      itemContentLocaleTab === defaultLocaleId
+                        ? itemForm.sharedMobileImageId
+                        : itemLocaleDrafts[itemContentLocaleTab]?.mobileImageId ?? ''
+                    }
+                    mallId={activeMallId ?? undefined}
+                    onChange={(mediaId) => {
+                      if (itemContentLocaleTab === defaultLocaleId) {
+                        setItemForm({ ...itemForm, sharedMobileImageId: mediaId });
+                        return;
+                      }
+                      setItemLocaleDrafts((d) => ({
+                        ...d,
+                        [itemContentLocaleTab]: { ...d[itemContentLocaleTab], mobileImageId: mediaId },
+                      }));
+                    }}
+                    dimensionOverride={{
+                      width: parseOptionalDimension(itemForm.mobileMediaWidthOverride),
+                      height: parseOptionalDimension(itemForm.mobileMediaHeightOverride),
+                    }}
+                    onDimensionOverrideChange={(dimensions) =>
+                      setItemForm({
+                        ...itemForm,
+                        mobileMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                        mobileMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                      })
+                    }
+                  />
+                </div>
+              )
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12 }}>
               <div>
                 <label style={labelStyle}>Bağlantı URL</label>
                 <input

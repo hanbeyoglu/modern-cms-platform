@@ -1,7 +1,20 @@
 import type { Channel, ContentStatus } from '@prisma/client';
 import { CHANNELS, CONTENT_STATUSES } from '../../common/prisma-validation-enums.js';
-import { Transform } from 'class-transformer';
-import { IsArray, IsDateString, IsInt, IsObject, IsOptional, IsString, Min, ValidateIf, IsIn } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateIf,
+  IsIn,
+  ValidateNested,
+} from 'class-validator';
+import { CampaignTranslationDto } from './campaign-translation.dto.js';
 
 export class UpdateCampaignDto {
   @IsOptional()
@@ -21,8 +34,12 @@ export class UpdateCampaignDto {
   description?: string;
 
   @IsOptional()
+  @IsBoolean()
+  sameImageForAllLocales?: boolean;
+
+  @IsOptional()
   @IsString()
-  coverMediaId?: string;
+  sharedCoverImageId?: string | null;
 
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))
@@ -38,11 +55,19 @@ export class UpdateCampaignDto {
 
   @IsOptional()
   @IsDateString()
-  startAt?: string;
+  publishStartAt?: string | null;
 
   @IsOptional()
   @IsDateString()
-  endAt?: string;
+  publishEndAt?: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  campaignStartAt?: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  campaignEndAt?: string | null;
 
   @IsOptional()
   @IsString()
@@ -95,6 +120,12 @@ export class UpdateCampaignDto {
   @IsArray()
   @IsIn(CHANNELS, { each: true })
   channels?: Channel[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CampaignTranslationDto)
+  translations?: CampaignTranslationDto[];
 
   @IsOptional()
   @IsString()

@@ -56,13 +56,18 @@ export function getSliderGroupSaveBlocker(opts: {
 export function getSliderItemSaveBlocker(opts: {
   tenantId: string | null;
   canUpdate: boolean;
-  desktopMediaId: string;
-  mobileMediaId: string;
+  sameImageForAllLocales: boolean;
+  sharedImageId: string;
+  defaultLocaleImageId?: string;
 }): string | null {
   if (!opts.tenantId) return 'Önce tenant seçmelisiniz';
   if (!opts.canUpdate) return 'Slider düzenleme yetkiniz yok';
-  if (!opts.desktopMediaId && !opts.mobileMediaId) {
-    return 'Zorunlu alanları doldurun';
+  if (opts.sameImageForAllLocales) {
+    if (!opts.sharedImageId) return 'Paylaşılan masaüstü görseli zorunludur';
+    return null;
+  }
+  if (!opts.defaultLocaleImageId && !opts.sharedImageId) {
+    return 'Varsayılan dil için masaüstü görseli zorunludur';
   }
   return null;
 }

@@ -111,6 +111,10 @@ export interface PublicSliderItem {
   linkUrl: string | null;
   desktopMedia: PublicMediaAsset | null;
   mobileMedia: PublicMediaAsset | null;
+  /** Locale-resolved desktop image (alias for desktopMedia) */
+  image: PublicMediaAsset | null;
+  /** Locale-resolved mobile image (alias for mobileMedia) */
+  mobileImage: PublicMediaAsset | null;
   sortOrder: number;
   status: string;
 }
@@ -151,8 +155,17 @@ export interface PublicEvent {
   title: string;
   shortDescription: string | null;
   description: string | null;
+  /** Locale-resolved cover image */
+  image: PublicMediaAsset | null;
+  /** @deprecated Use image */
   coverMedia: PublicMediaAsset | null;
+  publishStartAt: string | null;
+  publishEndAt: string | null;
+  eventStartAt: string | null;
+  eventEndAt: string | null;
+  /** @deprecated Use eventStartAt */
   startAt: string | null;
+  /** @deprecated Use eventEndAt */
   endAt: string | null;
   location: string | null;
   category: string | null;
@@ -169,8 +182,17 @@ export interface PublicCampaign {
   title: string;
   shortDescription: string | null;
   description: string | null;
+  /** Locale-resolved cover image */
+  image: PublicMediaAsset | null;
+  /** @deprecated Use image */
   coverMedia: PublicMediaAsset | null;
+  publishStartAt: string | null;
+  publishEndAt: string | null;
+  campaignStartAt: string | null;
+  campaignEndAt: string | null;
+  /** @deprecated Use campaignStartAt */
   startAt: string | null;
+  /** @deprecated Use campaignEndAt */
   endAt: string | null;
   terms: string | null;
   couponCode: string | null;

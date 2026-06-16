@@ -13,7 +13,7 @@ export function toScheduleDate(value: string | Date | null | undefined): Date | 
 export function assertScheduledAtInFuture(
   status: string,
   scheduleAt: string | Date | null | undefined,
-  fieldName: 'publishAt' | 'startAt',
+  fieldName: 'publishAt' | 'publishStartAt' | 'startAt',
   now: Date = new Date(),
 ): void {
   if (status !== 'SCHEDULED') return;
@@ -31,7 +31,7 @@ export function assertScheduledAtInFuture(
 export function assertPublishedHasScheduleAt(
   status: string,
   scheduleAt: Date | null,
-  fieldName: 'publishAt' | 'startAt',
+  fieldName: 'publishAt' | 'publishStartAt' | 'startAt',
 ): void {
   if (status !== 'PUBLISHED') return;
   if (!scheduleAt) {
@@ -70,6 +70,40 @@ export function resolvePageSchedule(
   validateStartBeforeEnd(publishAt, unpublishAt);
 
   return { publishAt, unpublishAt };
+}
+
+export type ContentPublishScheduleInput = {
+  status: string;
+  publishStartAt?: string | Date | null;
+  publishEndAt?: string | Date | null;
+};
+
+export type ResolvedContentPublishSchedule = {
+  publishStartAt: Date | null;
+  publishEndAt: Date | null;
+};
+
+/** Campaign / Event — publish window controls CMS & public visibility. */
+export function resolveContentPublishSchedule(
+  input: ContentPublishScheduleInput,
+  now: Date = new Date(),
+): ResolvedContentPublishSchedule {
+  const { status } = input;
+  let publishStartAt = toScheduleDate(input.publishStartAt);
+  let publishEndAt = toScheduleDate(input.publishEndAt);
+
+  if (status === 'SCHEDULED') {
+    assertScheduledAtInFuture(status, publishStartAt, 'publishStartAt', now);
+  } else if (status === 'PUBLISHED') {
+    if (!publishStartAt) publishStartAt = now;
+  } else if (status === 'ARCHIVED') {
+    if (!publishEndAt) publishEndAt = now;
+  }
+
+  assertPublishedHasScheduleAt(status, publishStartAt, 'publishStartAt');
+  validateStartBeforeEnd(publishStartAt, publishEndAt);
+
+  return { publishStartAt, publishEndAt };
 }
 
 export type RangeScheduleInput = {

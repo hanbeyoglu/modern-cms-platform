@@ -538,13 +538,36 @@ const { data: sliders } = await res.json();
 
 ### Kampanya listesi
 
+Yanıt alanları (özet):
+
+| Alan | Açıklama |
+|------|----------|
+| `publishStartAt` / `publishEndAt` | CMS yayın penceresi — kayıt yalnızca bu aralıkta public listede görünür |
+| `campaignStartAt` / `campaignEndAt` | Kampanya geçerlilik tarihleri — kullanıcıya gösterilir |
+| `image` | İstek `locale`’ine göre çözümlenmiş kapak görseli |
+| `startAt` / `endAt` | **Deprecated** — `campaignStartAt` / `campaignEndAt` ile aynı |
+
 ```javascript
 const res = await fetch(
   `${CMS_API_URL}/public/campaigns?locale=tr&page=1&limit=20`,
   { headers: { 'x-tenant-id': CMS_TENANT_ID, 'x-mall-id': CMS_MALL_ID } },
 );
 const { data, pagination } = await res.json();
+// data[0].image.url — locale-resolved cover
+// data[0].campaignStartAt — validity messaging for end users
 ```
+
+### Etkinlikler — tarih ve görsel
+
+| Alan | Açıklama |
+|------|----------|
+| `publishStartAt` / `publishEndAt` | CMS yayın penceresi |
+| `eventStartAt` / `eventEndAt` | Gerçek etkinlik zamanı (liste/detay) |
+| `image` | Locale çözümlü kapak |
+
+**Görsel fallback sırası:** istenen locale → varsayılan locale (TR) → paylaşılan görsel. Kırık referans dönülmez.
+
+**Metin fallback:** istenen locale → varsayılan locale → boş string.
 
 ### Kampanya detay + bağlı slider’lar
 

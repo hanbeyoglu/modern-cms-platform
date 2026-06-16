@@ -21,6 +21,16 @@ import type {
   PublicStore,
 } from './public-response.types';
 import type { PaginatedItems } from './public-pagination.util';
+import {
+  resolveSliderItemMedia,
+  resolveSliderItemText,
+  type SliderItemTranslationRow,
+} from '../sliders/slider-media.util.js';
+import {
+  resolveContentCoverImage,
+  pickLocalizedField,
+  type ContentTranslationRow,
+} from '../common/utils/content-cover-media.util.js';
 
 // ── Shared Prisma select shapes ──────────────────────────────────────────────
 
@@ -34,6 +44,38 @@ const MEDIA_SELECT = {
   height: true,
   dominantColor: true,
 } as const;
+
+const PUBLISH_WINDOW_FILTER = (now: Date) => ({
+  AND: [
+    { OR: [{ publishStartAt: null }, { publishStartAt: { lte: now } }] },
+    { OR: [{ publishEndAt: null }, { publishEndAt: { gte: now } }] },
+  ],
+});
+
+const EVENT_PUBLIC_INCLUDE = {
+  sharedCoverImage: { select: MEDIA_SELECT },
+  translations: {
+    include: {
+      coverImage: { select: MEDIA_SELECT },
+    },
+  },
+} satisfies Prisma.EventInclude;
+
+const CAMPAIGN_PUBLIC_INCLUDE = {
+  sharedCoverImage: { select: MEDIA_SELECT },
+  translations: {
+    include: {
+      coverImage: { select: MEDIA_SELECT },
+    },
+  },
+  store: {
+    select: {
+      id: true,
+      localName: true,
+      globalStore: { select: { name: true, slug: true } },
+    },
+  },
+} satisfies Prisma.CampaignInclude;
 
 // ── Service ──────────────────────────────────────────────────────────────────
 
@@ -54,6 +96,7 @@ export class PublicContentService {
     channel?: string;
     limit?: number;
     localeId?: string;
+    defaultLocaleId?: string | null;
     /** @deprecated No longer filtered; kept for query compat */
     targetDevice?: string;
   }): Promise<PublicSlider[]> {
@@ -82,8 +125,14 @@ export class PublicContentService {
         items: {
           where: { deletedAt: null, status: 'PUBLISHED' },
           include: {
-            desktopMedia: { select: MEDIA_SELECT },
-            mobileMedia: { select: MEDIA_SELECT },
+            sharedImage: { select: MEDIA_SELECT },
+            sharedMobileImage: { select: MEDIA_SELECT },
+            translations: {
+              include: {
+                image: { select: MEDIA_SELECT },
+                mobileImage: { select: MEDIA_SELECT },
+              },
+            },
           },
           orderBy: { sortOrder: 'asc' },
         },
@@ -92,31 +141,23 @@ export class PublicContentService {
       take: opts.limit ?? 10,
     });
 
-    let sliders = rows.map(mapSliderGroup);
-    if (!opts.localeId || sliders.length === 0) return sliders;
+    const localeId = opts.localeId ?? null;
+    const defaultLocaleId = opts.defaultLocaleId ?? null;
+
+    let sliders = rows.map((s) => mapSliderGroup(s, localeId, defaultLocaleId));
+    if (!localeId || sliders.length === 0) return sliders;
 
     const groupIds = sliders.map((s) => s.id);
-    const itemIds = sliders.flatMap((s) => s.items.map((i) => i.id));
+    const groupTMap = await this.resolver.getTranslationsForEntities(
+      opts.tenantId,
+      localeId,
+      'SLIDER',
+      groupIds,
+    );
 
-    const [groupTMap, itemTMap] = await Promise.all([
-      this.resolver.getTranslationsForEntities(opts.tenantId, opts.localeId, 'SLIDER', groupIds),
-      itemIds.length > 0
-        ? this.resolver.getTranslationsForEntities(
-            opts.tenantId,
-            opts.localeId,
-            'SLIDER_ITEM',
-            itemIds,
-          )
-        : Promise.resolve({}),
-    ]);
-
-    sliders = sliders.map((s) => {
-      const withGroup = this.applyFromMap(s, groupTMap, s.id, ['title']);
-      const items = withGroup.items.map((item) =>
-        this.applyFromMap(item, itemTMap, item.id, ['title', 'description', 'buttonText']),
-      );
-      return applySliderLegacyFields({ ...withGroup, items });
-    });
+    sliders = sliders.map((s) =>
+      applySliderLegacyFields(this.applyFromMap(s, groupTMap, s.id, ['title'])),
+    );
 
     return sliders;
   }
@@ -131,6 +172,7 @@ export class PublicContentService {
     page?: number;
     limit?: number;
     localeId?: string;
+    defaultLocaleId?: string | null;
   }): Promise<PaginatedItems<PublicEvent>> {
     const now = new Date();
     const page = opts.page ?? 1;
@@ -146,10 +188,7 @@ export class PublicContentService {
       deletedAt: null,
       status: 'PUBLISHED',
       ...mallScope,
-      AND: [
-        { OR: [{ startAt: null }, { startAt: { lte: now } }] },
-        { OR: [{ endAt: null }, { endAt: { gte: now } }] },
-      ],
+      ...PUBLISH_WINDOW_FILTER(now),
       ...(opts.category ? { category: opts.category } : {}),
       ...(opts.search
         ? { title: { contains: opts.search, mode: 'insensitive' as const } }
@@ -160,19 +199,21 @@ export class PublicContentService {
       this.prisma.event.count({ where }),
       this.prisma.event.findMany({
         where,
-        include: { coverMedia: { select: MEDIA_SELECT } },
-        orderBy: [{ sortOrder: 'asc' }, { startAt: 'asc' }],
+        include: EVENT_PUBLIC_INCLUDE,
+        orderBy: [{ sortOrder: 'asc' }, { eventStartAt: 'asc' }],
         skip,
         take: limit,
       }),
     ]);
 
-    const events = rows.map(mapEvent);
-    if (!opts.localeId || events.length === 0) return { items: events, total };
+    const localeId = opts.localeId ?? null;
+    const defaultLocaleId = opts.defaultLocaleId ?? null;
+    const events = rows.map((row) => mapEvent(row, localeId, defaultLocaleId));
+    if (!localeId || events.length === 0) return { items: events, total };
 
     const tMap = await this.resolver.getTranslationsForEntities(
       opts.tenantId,
-      opts.localeId,
+      localeId,
       'EVENT',
       events.map((e) => e.id),
     );
@@ -194,6 +235,7 @@ export class PublicContentService {
     mallId?: string;
     slug: string;
     localeId?: string;
+    defaultLocaleId?: string | null;
   }): Promise<PublicEvent | null> {
     const now = new Date();
     const mallScope: Prisma.EventWhereInput =
@@ -208,16 +250,13 @@ export class PublicContentService {
         deletedAt: null,
         status: 'PUBLISHED',
         ...mallScope,
-        AND: [
-          { OR: [{ startAt: null }, { startAt: { lte: now } }] },
-          { OR: [{ endAt: null }, { endAt: { gte: now } }] },
-        ],
+        ...PUBLISH_WINDOW_FILTER(now),
       },
-      include: { coverMedia: { select: MEDIA_SELECT } },
+      include: EVENT_PUBLIC_INCLUDE,
     });
     if (!row) return null;
 
-    const event = mapEvent(row);
+    const event = mapEvent(row, opts.localeId ?? null, opts.defaultLocaleId ?? null);
     if (!opts.localeId) return event;
 
     const tMap = await this.resolver.getTranslationsForEntities(
@@ -244,6 +283,7 @@ export class PublicContentService {
     page?: number;
     limit?: number;
     localeId?: string;
+    defaultLocaleId?: string | null;
   }): Promise<PaginatedItems<PublicCampaign>> {
     const now = new Date();
     const page = opts.page ?? 1;
@@ -259,10 +299,7 @@ export class PublicContentService {
       deletedAt: null,
       status: 'PUBLISHED',
       ...mallScope,
-      AND: [
-        { OR: [{ startAt: null }, { startAt: { lte: now } }] },
-        { OR: [{ endAt: null }, { endAt: { gte: now } }] },
-      ],
+      ...PUBLISH_WINDOW_FILTER(now),
       ...(opts.storeId ? { storeId: opts.storeId } : {}),
       ...(opts.search
         ? { title: { contains: opts.search, mode: 'insensitive' as const } }
@@ -273,28 +310,21 @@ export class PublicContentService {
       this.prisma.campaign.count({ where }),
       this.prisma.campaign.findMany({
         where,
-        include: {
-          coverMedia: { select: MEDIA_SELECT },
-          store: {
-            select: {
-              id: true,
-              localName: true,
-              globalStore: { select: { name: true, slug: true } },
-            },
-          },
-        },
-        orderBy: [{ sortOrder: 'asc' }, { startAt: 'asc' }],
+        include: CAMPAIGN_PUBLIC_INCLUDE,
+        orderBy: [{ sortOrder: 'asc' }, { campaignStartAt: 'asc' }],
         skip,
         take: limit,
       }),
     ]);
 
-    const campaigns = rows.map(mapCampaign);
-    if (!opts.localeId || campaigns.length === 0) return { items: campaigns, total };
+    const localeId = opts.localeId ?? null;
+    const defaultLocaleId = opts.defaultLocaleId ?? null;
+    const campaigns = rows.map((row) => mapCampaign(row, localeId, defaultLocaleId));
+    if (!localeId || campaigns.length === 0) return { items: campaigns, total };
 
     const tMap = await this.resolver.getTranslationsForEntities(
       opts.tenantId,
-      opts.localeId,
+      localeId,
       'CAMPAIGN',
       campaigns.map((c) => c.id),
     );
@@ -317,6 +347,7 @@ export class PublicContentService {
     mallId?: string;
     slug: string;
     localeId?: string;
+    defaultLocaleId?: string | null;
   }): Promise<PublicCampaign | null> {
     const now = new Date();
     const mallScope: Prisma.CampaignWhereInput =
@@ -331,25 +362,13 @@ export class PublicContentService {
         deletedAt: null,
         status: 'PUBLISHED',
         ...mallScope,
-        AND: [
-          { OR: [{ startAt: null }, { startAt: { lte: now } }] },
-          { OR: [{ endAt: null }, { endAt: { gte: now } }] },
-        ],
+        ...PUBLISH_WINDOW_FILTER(now),
       },
-      include: {
-        coverMedia: { select: MEDIA_SELECT },
-        store: {
-          select: {
-            id: true,
-            localName: true,
-            globalStore: { select: { name: true, slug: true } },
-          },
-        },
-      },
+      include: CAMPAIGN_PUBLIC_INCLUDE,
     });
     if (!row) return null;
 
-    const campaign = mapCampaign(row);
+    const campaign = mapCampaign(row, opts.localeId ?? null, opts.defaultLocaleId ?? null);
     if (!opts.localeId) return campaign;
 
     const tMap = await this.resolver.getTranslationsForEntities(
@@ -657,6 +676,7 @@ export class PublicContentService {
     localeId?: string;
     localeCode?: string;
     defaultLocaleCode?: string;
+    defaultLocaleId?: string | null;
   }): Promise<PublicHomeResponse> {
     const todayStr = new Date().toISOString().split('T')[0];
 
@@ -668,18 +688,21 @@ export class PublicContentService {
           placement: 'HOME',
           limit: 10,
           localeId: opts.localeId,
+          defaultLocaleId: opts.defaultLocaleId ?? null,
         }),
         this.getEvents({
           tenantId: opts.tenantId,
           mallId: opts.mallId,
           limit: 6,
           localeId: opts.localeId,
+          defaultLocaleId: opts.defaultLocaleId ?? null,
         }),
         this.getCampaigns({
           tenantId: opts.tenantId,
           mallId: opts.mallId,
           limit: 6,
           localeId: opts.localeId,
+          defaultLocaleId: opts.defaultLocaleId ?? null,
         }),
         opts.mallId
           ? this.getStores({
@@ -945,50 +968,40 @@ function buildSeo(opts: {
   };
 }
 
-function mapSliderItem(item: {
-  id: string;
-  title: string | null;
-  description: string | null;
-  buttonText: string | null;
-  linkUrl: string | null;
-  sortOrder: number;
-  status: string;
-  desktopMedia: RichMediaRow;
-  mobileMedia: RichMediaRow;
-  desktopMediaWidthOverride?: number | null;
-  desktopMediaHeightOverride?: number | null;
-  mobileMediaWidthOverride?: number | null;
-  mobileMediaHeightOverride?: number | null;
-}): PublicSlider['items'][number] {
-  return {
-    id: item.id,
-    title: item.title,
-    description: item.description,
-    buttonText: item.buttonText,
-    linkUrl: item.linkUrl,
-    desktopMedia: toMediaAsset(item.desktopMedia, {
-      width: item.desktopMediaWidthOverride,
-      height: item.desktopMediaHeightOverride,
-    }),
-    mobileMedia: toMediaAsset(item.mobileMedia, {
-      width: item.mobileMediaWidthOverride,
-      height: item.mobileMediaHeightOverride,
-    }),
-    sortOrder: item.sortOrder,
-    status: item.status,
-  };
+function toSliderTranslationRows(
+  translations: Array<{
+    localeId: string;
+    title: string | null;
+    description: string | null;
+    buttonText: string | null;
+    image: RichMediaRow;
+    mobileImage: RichMediaRow;
+  }>,
+): SliderItemTranslationRow[] {
+  const mapMedia = (m: RichMediaRow) =>
+    m
+      ? {
+          id: m.id,
+          publicUrl: m.publicUrl,
+          originalName: m.altText ?? '',
+          mimeType: m.mimeType ?? '',
+          width: m.width,
+          height: m.height,
+        }
+      : null;
+
+  return translations.map((t) => ({
+    localeId: t.localeId,
+    title: t.title,
+    description: t.description,
+    buttonText: t.buttonText,
+    image: mapMedia(t.image),
+    mobileImage: mapMedia(t.mobileImage),
+  }));
 }
 
-function mapSliderGroup(s: {
-  id: string;
-  title: string;
-  placementType: string;
-  linkedEntityType: string | null;
-  linkedEntityId: string | null;
-  sortOrder: number;
-  startAt: Date | null;
-  endAt: Date | null;
-  items: Array<{
+function mapSliderItem(
+  item: {
     id: string;
     title: string | null;
     description: string | null;
@@ -996,15 +1009,159 @@ function mapSliderGroup(s: {
     linkUrl: string | null;
     sortOrder: number;
     status: string;
-    desktopMedia: RichMediaRow;
-    mobileMedia: RichMediaRow;
+    sameImageForAllLocales: boolean;
+    sharedImage: RichMediaRow;
+    sharedMobileImage: RichMediaRow;
+    translations: Array<{
+      localeId: string;
+      title: string | null;
+      description: string | null;
+      buttonText: string | null;
+      image: RichMediaRow;
+      mobileImage: RichMediaRow;
+    }>;
     desktopMediaWidthOverride?: number | null;
     desktopMediaHeightOverride?: number | null;
     mobileMediaWidthOverride?: number | null;
     mobileMediaHeightOverride?: number | null;
-  }>;
-}): PublicSlider {
-  const items = s.items.map(mapSliderItem);
+  },
+  localeId: string | null,
+  defaultLocaleId: string | null,
+): PublicSlider['items'][number] {
+  const translationRows = toSliderTranslationRows(item.translations);
+  const sharedImageRow = item.sharedImage
+    ? {
+        id: item.sharedImage.id,
+        publicUrl: item.sharedImage.publicUrl,
+        originalName: item.sharedImage.altText ?? '',
+        mimeType: item.sharedImage.mimeType ?? '',
+        width: item.sharedImage.width,
+        height: item.sharedImage.height,
+      }
+    : null;
+  const sharedMobileRow = item.sharedMobileImage
+    ? {
+        id: item.sharedMobileImage.id,
+        publicUrl: item.sharedMobileImage.publicUrl,
+        originalName: item.sharedMobileImage.altText ?? '',
+        mimeType: item.sharedMobileImage.mimeType ?? '',
+        width: item.sharedMobileImage.width,
+        height: item.sharedMobileImage.height,
+      }
+    : null;
+
+  const resolvedText =
+    localeId != null
+      ? resolveSliderItemText({
+          baseTitle: item.title,
+          baseDescription: item.description,
+          baseButtonText: item.buttonText,
+          localeId,
+          defaultLocaleId,
+          translations: translationRows,
+        })
+      : {
+          title: item.title,
+          description: item.description,
+          buttonText: item.buttonText,
+        };
+
+  const { desktop, mobile } = resolveSliderItemMedia({
+    sameImageForAllLocales: item.sameImageForAllLocales,
+    sharedImage: sharedImageRow,
+    sharedMobileImage: sharedMobileRow,
+    localeId: localeId ?? defaultLocaleId ?? '',
+    defaultLocaleId,
+    translations: translationRows,
+  });
+
+  const desktopMedia = toMediaAsset(
+    desktop
+      ? {
+          id: desktop.id,
+          publicUrl: desktop.publicUrl,
+          mimeType: desktop.mimeType,
+          altText: desktop.originalName,
+          width: desktop.width,
+          height: desktop.height,
+        }
+      : null,
+    {
+      width: item.desktopMediaWidthOverride,
+      height: item.desktopMediaHeightOverride,
+    },
+  );
+  const mobileMedia = toMediaAsset(
+    mobile
+      ? {
+          id: mobile.id,
+          publicUrl: mobile.publicUrl,
+          mimeType: mobile.mimeType,
+          altText: mobile.originalName,
+          width: mobile.width,
+          height: mobile.height,
+        }
+      : null,
+    {
+      width: item.mobileMediaWidthOverride,
+      height: item.mobileMediaHeightOverride,
+    },
+  );
+
+  return {
+    id: item.id,
+    title: resolvedText.title,
+    description: resolvedText.description,
+    buttonText: resolvedText.buttonText,
+    linkUrl: item.linkUrl,
+    desktopMedia,
+    mobileMedia,
+    image: desktopMedia,
+    mobileImage: mobileMedia,
+    sortOrder: item.sortOrder,
+    status: item.status,
+  };
+}
+
+function mapSliderGroup(
+  s: {
+    id: string;
+    title: string;
+    placementType: string;
+    linkedEntityType: string | null;
+    linkedEntityId: string | null;
+    sortOrder: number;
+    startAt: Date | null;
+    endAt: Date | null;
+    items: Array<{
+      id: string;
+      title: string | null;
+      description: string | null;
+      buttonText: string | null;
+      linkUrl: string | null;
+      sortOrder: number;
+      status: string;
+      sameImageForAllLocales: boolean;
+      sharedImage: RichMediaRow;
+      sharedMobileImage: RichMediaRow;
+      translations: Array<{
+        localeId: string;
+        title: string | null;
+        description: string | null;
+        buttonText: string | null;
+        image: RichMediaRow;
+        mobileImage: RichMediaRow;
+      }>;
+      desktopMediaWidthOverride?: number | null;
+      desktopMediaHeightOverride?: number | null;
+      mobileMediaWidthOverride?: number | null;
+      mobileMediaHeightOverride?: number | null;
+    }>;
+  },
+  localeId: string | null,
+  defaultLocaleId: string | null,
+): PublicSlider {
+  const items = s.items.map((item) => mapSliderItem(item, localeId, defaultLocaleId));
   return applySliderLegacyFields({
     id: s.id,
     title: s.title,
@@ -1047,89 +1204,239 @@ function applySliderLegacyFields(
   };
 }
 
-function mapEvent(e: {
-  id: string;
-  slug: string;
-  title: string;
-  shortDescription: string | null;
-  description: string | null;
-  coverMedia: RichMediaRow;
-  coverMediaWidthOverride?: number | null;
-  coverMediaHeightOverride?: number | null;
-  startAt: Date | null;
-  endAt: Date | null;
-  location: string | null;
-  category: string | null;
-  buttonText: string | null;
-  linkUrl: string | null;
-  sortOrder: number;
-  publishedAt: Date | null;
-}): PublicEvent {
+function toCoverMediaRow(media: RichMediaRow): ContentTranslationRow['coverImage'] {
+  if (!media) return null;
+  return {
+    id: media.id,
+    publicUrl: media.publicUrl,
+    originalName: media.altText ?? '',
+    mimeType: media.mimeType ?? '',
+    width: media.width,
+    height: media.height,
+  };
+}
+
+function mapEvent(
+  e: {
+    id: string;
+    slug: string;
+    title: string;
+    shortDescription: string | null;
+    description: string | null;
+    sameImageForAllLocales: boolean;
+    sharedCoverImage: RichMediaRow;
+    coverMediaWidthOverride?: number | null;
+    coverMediaHeightOverride?: number | null;
+    publishStartAt: Date | null;
+    publishEndAt: Date | null;
+    eventStartAt: Date | null;
+    eventEndAt: Date | null;
+    location: string | null;
+    category: string | null;
+    buttonText: string | null;
+    linkUrl: string | null;
+    sortOrder: number;
+    publishedAt: Date | null;
+    translations: Array<{
+      localeId: string;
+      title: string | null;
+      description: string | null;
+      shortDescription: string | null;
+      coverImage: RichMediaRow;
+    }>;
+  },
+  localeId: string | null,
+  defaultLocaleId: string | null,
+): PublicEvent {
+  const translationRows: ContentTranslationRow[] = e.translations.map((t) => ({
+    localeId: t.localeId,
+    title: t.title,
+    description: t.description,
+    shortDescription: t.shortDescription,
+    coverImage: toCoverMediaRow(t.coverImage),
+  }));
+
+  const resolvedText =
+    localeId != null
+      ? {
+          title: pickLocalizedField('title', e.title, localeId, defaultLocaleId, translationRows),
+          description: pickLocalizedField('description', e.description, localeId, defaultLocaleId, translationRows),
+          shortDescription: pickLocalizedField(
+            'shortDescription',
+            e.shortDescription,
+            localeId,
+            defaultLocaleId,
+            translationRows,
+          ),
+          buttonText: pickLocalizedField('buttonText', e.buttonText, localeId, defaultLocaleId, translationRows),
+        }
+      : {
+          title: e.title,
+          description: e.description,
+          shortDescription: e.shortDescription,
+          buttonText: e.buttonText,
+        };
+
+  const coverRow = resolveContentCoverImage({
+    sameImageForAllLocales: e.sameImageForAllLocales,
+    sharedCoverImage: toCoverMediaRow(e.sharedCoverImage),
+    localeId: localeId ?? defaultLocaleId ?? '',
+    defaultLocaleId,
+    translations: translationRows,
+  });
+
+  const image = toMediaAsset(
+    coverRow
+      ? {
+          id: coverRow.id,
+          publicUrl: coverRow.publicUrl,
+          mimeType: coverRow.mimeType,
+          altText: coverRow.originalName,
+          width: coverRow.width,
+          height: coverRow.height,
+        }
+      : null,
+    {
+      width: e.coverMediaWidthOverride,
+      height: e.coverMediaHeightOverride,
+    },
+  );
+
+  const eventStartAt = toDate(e.eventStartAt);
+  const eventEndAt = toDate(e.eventEndAt);
+
   return {
     id: e.id,
     slug: e.slug,
-    title: e.title,
-    shortDescription: e.shortDescription,
-    description: e.description,
-    coverMedia: toMediaAsset(e.coverMedia, {
-      width: e.coverMediaWidthOverride,
-      height: e.coverMediaHeightOverride,
-    }),
-    startAt: toDate(e.startAt),
-    endAt: toDate(e.endAt),
+    title: resolvedText.title ?? e.title,
+    shortDescription: resolvedText.shortDescription ?? e.shortDescription,
+    description: resolvedText.description ?? e.description,
+    image,
+    coverMedia: image,
+    publishStartAt: toDate(e.publishStartAt),
+    publishEndAt: toDate(e.publishEndAt),
+    eventStartAt,
+    eventEndAt,
+    startAt: eventStartAt,
+    endAt: eventEndAt,
     location: e.location,
     category: e.category,
-    buttonText: e.buttonText,
+    buttonText: resolvedText.buttonText ?? e.buttonText,
     linkUrl: e.linkUrl,
     sortOrder: e.sortOrder,
     publishedAt: toDate(e.publishedAt),
     seo: buildSeo({
-      title: e.title,
-      description: e.shortDescription,
+      title: resolvedText.title ?? e.title,
+      description: resolvedText.shortDescription ?? e.shortDescription,
       keywords: e.category ? [e.category] : null,
-      image: e.coverMedia?.publicUrl ?? null,
+      image: image?.url ?? null,
     }),
   };
 }
 
-function mapCampaign(c: {
-  id: string;
-  slug: string;
-  title: string;
-  shortDescription: string | null;
-  description: string | null;
-  coverMedia: RichMediaRow;
-  coverMediaWidthOverride?: number | null;
-  coverMediaHeightOverride?: number | null;
-  startAt: Date | null;
-  endAt: Date | null;
-  terms: string | null;
-  couponCode: string | null;
-  buttonText: string | null;
-  linkUrl: string | null;
-  sortOrder: number;
-  publishedAt: Date | null;
-  store: {
+function mapCampaign(
+  c: {
     id: string;
-    localName: string | null;
-    globalStore: { name: string; slug: string };
-  } | null;
-}): PublicCampaign {
+    slug: string;
+    title: string;
+    shortDescription: string | null;
+    description: string | null;
+    sameImageForAllLocales: boolean;
+    sharedCoverImage: RichMediaRow;
+    coverMediaWidthOverride?: number | null;
+    coverMediaHeightOverride?: number | null;
+    publishStartAt: Date | null;
+    publishEndAt: Date | null;
+    campaignStartAt: Date | null;
+    campaignEndAt: Date | null;
+    terms: string | null;
+    couponCode: string | null;
+    buttonText: string | null;
+    linkUrl: string | null;
+    sortOrder: number;
+    publishedAt: Date | null;
+    translations: Array<{
+      localeId: string;
+      title: string | null;
+      description: string | null;
+      buttonText: string | null;
+      coverImage: RichMediaRow;
+    }>;
+    store: {
+      id: string;
+      localName: string | null;
+      globalStore: { name: string; slug: string };
+    } | null;
+  },
+  localeId: string | null,
+  defaultLocaleId: string | null,
+): PublicCampaign {
+  const translationRows: ContentTranslationRow[] = c.translations.map((t) => ({
+    localeId: t.localeId,
+    title: t.title,
+    description: t.description,
+    buttonText: t.buttonText,
+    coverImage: toCoverMediaRow(t.coverImage),
+  }));
+
+  const resolvedText =
+    localeId != null
+      ? {
+          title: pickLocalizedField('title', c.title, localeId, defaultLocaleId, translationRows),
+          description: pickLocalizedField('description', c.description, localeId, defaultLocaleId, translationRows),
+          buttonText: pickLocalizedField('buttonText', c.buttonText, localeId, defaultLocaleId, translationRows),
+        }
+      : {
+          title: c.title,
+          description: c.description,
+          buttonText: c.buttonText,
+        };
+
+  const coverRow = resolveContentCoverImage({
+    sameImageForAllLocales: c.sameImageForAllLocales,
+    sharedCoverImage: toCoverMediaRow(c.sharedCoverImage),
+    localeId: localeId ?? defaultLocaleId ?? '',
+    defaultLocaleId,
+    translations: translationRows,
+  });
+
+  const image = toMediaAsset(
+    coverRow
+      ? {
+          id: coverRow.id,
+          publicUrl: coverRow.publicUrl,
+          mimeType: coverRow.mimeType,
+          altText: coverRow.originalName,
+          width: coverRow.width,
+          height: coverRow.height,
+        }
+      : null,
+    {
+      width: c.coverMediaWidthOverride,
+      height: c.coverMediaHeightOverride,
+    },
+  );
+
+  const campaignStartAt = toDate(c.campaignStartAt);
+  const campaignEndAt = toDate(c.campaignEndAt);
+
   return {
     id: c.id,
     slug: c.slug,
-    title: c.title,
+    title: resolvedText.title ?? c.title,
     shortDescription: c.shortDescription,
-    description: c.description,
-    coverMedia: toMediaAsset(c.coverMedia, {
-      width: c.coverMediaWidthOverride,
-      height: c.coverMediaHeightOverride,
-    }),
-    startAt: toDate(c.startAt),
-    endAt: toDate(c.endAt),
+    description: resolvedText.description ?? c.description,
+    image,
+    coverMedia: image,
+    publishStartAt: toDate(c.publishStartAt),
+    publishEndAt: toDate(c.publishEndAt),
+    campaignStartAt,
+    campaignEndAt,
+    startAt: campaignStartAt,
+    endAt: campaignEndAt,
     terms: c.terms,
     couponCode: c.couponCode,
-    buttonText: c.buttonText,
+    buttonText: resolvedText.buttonText ?? c.buttonText,
     linkUrl: c.linkUrl,
     sortOrder: c.sortOrder,
     publishedAt: toDate(c.publishedAt),
@@ -1141,9 +1448,9 @@ function mapCampaign(c: {
         }
       : null,
     seo: buildSeo({
-      title: c.title,
+      title: resolvedText.title ?? c.title,
       description: c.shortDescription,
-      image: c.coverMedia?.publicUrl ?? null,
+      image: image?.url ?? null,
     }),
   };
 }

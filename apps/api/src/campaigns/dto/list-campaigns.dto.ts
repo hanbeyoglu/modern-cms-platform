@@ -30,8 +30,8 @@ export class ListCampaignsDto {
   storeId?: string;
 
   @IsOptional()
-  @IsIn(['sortOrder', 'startAt', 'createdAt'])
-  sortBy?: 'sortOrder' | 'startAt' | 'createdAt' = 'sortOrder';
+  @IsIn(['sortOrder', 'campaignStartAt', 'createdAt', 'startAt'])
+  sortBy?: 'sortOrder' | 'campaignStartAt' | 'createdAt' | 'startAt' = 'sortOrder';
 
   @IsOptional()
   @IsIn(['asc', 'desc'])

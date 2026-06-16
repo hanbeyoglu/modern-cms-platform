@@ -11,21 +11,33 @@ import { AuditLogService } from '../audit/audit.service';
 import { SearchIndexerService } from '../search/search-indexer.service';
 import { slugify } from '../common/utils/slugify';
 import { assertOptionalHttpUrl, validateStartBeforeEnd } from '../common/utils/content-validation';
-import { resolveRangeSchedule } from '../common/utils/publish-workflow';
+import {
+  resolveContentPublishSchedule,
+  toScheduleDate,
+} from '../common/utils/publish-workflow';
 import { uniqueCampaignSlug } from '../common/utils/unique-content-slug';
 import type { CreateCampaignDto } from './dto/create-campaign.dto';
 import type { UpdateCampaignDto } from './dto/update-campaign.dto';
 import type { ListCampaignsDto } from './dto/list-campaigns.dto';
+import type { CampaignTranslationDto } from './dto/campaign-translation.dto.js';
 
 const MEDIA_SELECT = {
   id: true,
   publicUrl: true,
   originalName: true,
   mimeType: true,
+  width: true,
+  height: true,
 } as const;
 
 const CAMPAIGN_INCLUDE = {
-  coverMedia: { select: MEDIA_SELECT },
+  sharedCoverImage: { select: MEDIA_SELECT },
+  translations: {
+    include: {
+      locale: { select: { id: true, code: true } },
+      coverImage: { select: MEDIA_SELECT },
+    },
+  },
   store: {
     select: {
       id: true,
@@ -96,31 +108,41 @@ export class CampaignsService {
     assertOptionalHttpUrl(dto.linkUrl);
 
     const status = dto.status ?? 'DRAFT';
-    const schedule = resolveRangeSchedule({
+    const publishSchedule = resolveContentPublishSchedule({
       status,
-      startAt: dto.startAt,
-      endAt: dto.endAt,
+      publishStartAt: dto.publishStartAt,
+      publishEndAt: dto.publishEndAt,
     });
+    const campaignStartAt = toScheduleDate(dto.campaignStartAt);
+    const campaignEndAt = toScheduleDate(dto.campaignEndAt);
+    validateStartBeforeEnd(campaignStartAt, campaignEndAt);
+
     const effectiveMallId = mallId ?? null;
+    const sameImageForAllLocales = dto.sameImageForAllLocales ?? true;
 
     if (dto.storeId) {
       await this.assertMallStoreInScope(tenantId, effectiveMallId, dto.storeId);
     }
 
-    if (dto.coverMediaId) {
-      await this.assertCoverMediaInScope(tenantId, effectiveMallId, dto.coverMediaId);
-    }
+    await this.assertCoverMediaValid({
+      tenantId,
+      mallId: effectiveMallId,
+      sameImageForAllLocales,
+      sharedCoverImageId: dto.sharedCoverImageId,
+      translations: dto.translations,
+    });
 
     if (status === 'PUBLISHED') {
-      await this.assertPublishable(
-        dto.title,
-        dto.coverMediaId,
+      await this.assertPublishable({
+        title: dto.title,
+        campaignStartAt,
         tenantId,
-        effectiveMallId,
-        schedule.startAt?.toISOString(),
-        schedule.endAt?.toISOString(),
-        dto.storeId,
-      );
+        mallId: effectiveMallId,
+        sameImageForAllLocales,
+        sharedCoverImageId: dto.sharedCoverImageId,
+        translations: dto.translations,
+        storeId: dto.storeId,
+      });
     }
 
     const baseSlug = dto.slug?.trim() ? slugify(dto.slug) : slugify(dto.title);
@@ -136,11 +158,14 @@ export class CampaignsService {
         slug,
         shortDescription: dto.shortDescription ?? null,
         description: dto.description ?? null,
-        coverMediaId: dto.coverMediaId ?? null,
+        sameImageForAllLocales,
+        sharedCoverImageId: dto.sharedCoverImageId ?? null,
         coverMediaWidthOverride: dto.coverMediaWidthOverride ?? null,
         coverMediaHeightOverride: dto.coverMediaHeightOverride ?? null,
-        startAt: schedule.startAt,
-        endAt: schedule.endAt,
+        publishStartAt: publishSchedule.publishStartAt,
+        publishEndAt: publishSchedule.publishEndAt,
+        campaignStartAt,
+        campaignEndAt,
         terms: dto.terms ?? null,
         couponCode: dto.couponCode ?? null,
         buttonText: dto.buttonText ?? null,
@@ -155,6 +180,12 @@ export class CampaignsService {
       include: CAMPAIGN_INCLUDE,
     });
 
+    if (dto.translations?.length) {
+      await this.upsertTranslations(campaign.id, dto.translations);
+    }
+
+    const result = await this.findOne(campaign.id, tenantId, mallId);
+
     await this.audit.logAction({
       userId: user.id,
       tenantId,
@@ -166,7 +197,7 @@ export class CampaignsService {
     });
 
     this.scheduleCampaignIndex(campaign.id);
-    return campaign;
+    return result;
   }
 
   async update(
@@ -183,37 +214,61 @@ export class CampaignsService {
     assertOptionalHttpUrl(nextLink);
 
     const nextTitle = dto.title ?? existing.title;
-    const nextCover = dto.coverMediaId !== undefined ? dto.coverMediaId : existing.coverMediaId;
     const nextStatus = dto.status ?? existing.status;
-    const schedule = resolveRangeSchedule({
+    const sameImageForAllLocales = dto.sameImageForAllLocales ?? existing.sameImageForAllLocales;
+    const nextSharedCover =
+      dto.sharedCoverImageId !== undefined ? dto.sharedCoverImageId : existing.sharedCoverImageId;
+
+    const publishSchedule = resolveContentPublishSchedule({
       status: nextStatus,
-      startAt:
-        dto.startAt !== undefined ? (dto.startAt ? dto.startAt : null) : existing.startAt,
-      endAt: dto.endAt !== undefined ? (dto.endAt ? dto.endAt : null) : existing.endAt,
+      publishStartAt:
+        dto.publishStartAt !== undefined
+          ? dto.publishStartAt
+          : existing.publishStartAt,
+      publishEndAt:
+        dto.publishEndAt !== undefined ? dto.publishEndAt : existing.publishEndAt,
     });
-    const nextStart = schedule.startAt?.toISOString();
-    const nextEnd = schedule.endAt?.toISOString();
+    const campaignStartAt =
+      dto.campaignStartAt !== undefined
+        ? toScheduleDate(dto.campaignStartAt)
+        : existing.campaignStartAt;
+    const campaignEndAt =
+      dto.campaignEndAt !== undefined ? toScheduleDate(dto.campaignEndAt) : existing.campaignEndAt;
+    validateStartBeforeEnd(campaignStartAt, campaignEndAt);
+
     const nextMallId = dto.mallId !== undefined ? dto.mallId : existing.mallId;
     const nextStoreId = dto.storeId !== undefined ? dto.storeId : existing.storeId;
 
-    if (dto.coverMediaId) {
-      await this.assertCoverMediaInScope(tenantId, nextMallId, dto.coverMediaId);
+    if (dto.sharedCoverImageId) {
+      await this.assertCoverMediaInScope(tenantId, nextMallId, dto.sharedCoverImageId);
     }
 
     if (dto.storeId !== undefined && dto.storeId) {
       await this.assertMallStoreInScope(tenantId, nextMallId, dto.storeId);
     }
 
+    await this.assertCoverMediaValid({
+      tenantId,
+      mallId: nextMallId,
+      sameImageForAllLocales,
+      sharedCoverImageId: nextSharedCover,
+      translations: dto.translations,
+      campaignId: id,
+      skipWhenDraft: nextStatus !== 'PUBLISHED',
+    });
+
     if (nextStatus === 'PUBLISHED') {
-      await this.assertPublishable(
-        nextTitle,
-        nextCover ?? undefined,
+      await this.assertPublishable({
+        title: nextTitle,
+        campaignStartAt,
         tenantId,
-        nextMallId,
-        nextStart ?? undefined,
-        nextEnd ?? undefined,
-        nextStoreId ?? undefined,
-      );
+        mallId: nextMallId,
+        sameImageForAllLocales,
+        sharedCoverImageId: nextSharedCover ?? undefined,
+        translations: dto.translations,
+        campaignId: id,
+        storeId: nextStoreId ?? undefined,
+      });
     }
 
     let slug = existing.slug;
@@ -237,22 +292,25 @@ export class CampaignsService {
       publishedPatch.publishedAt = null;
     }
 
-    const campaign = await this.prisma.campaign.update({
+    await this.prisma.campaign.update({
       where: { id },
       data: {
         ...(dto.title !== undefined && { title: dto.title }),
         slug,
         ...(dto.shortDescription !== undefined && { shortDescription: dto.shortDescription || null }),
         ...(dto.description !== undefined && { description: dto.description || null }),
-        ...(dto.coverMediaId !== undefined && { coverMediaId: dto.coverMediaId || null }),
+        ...(dto.sameImageForAllLocales !== undefined && { sameImageForAllLocales }),
+        ...(dto.sharedCoverImageId !== undefined && { sharedCoverImageId: dto.sharedCoverImageId || null }),
         ...(dto.coverMediaWidthOverride !== undefined && {
           coverMediaWidthOverride: dto.coverMediaWidthOverride,
         }),
         ...(dto.coverMediaHeightOverride !== undefined && {
           coverMediaHeightOverride: dto.coverMediaHeightOverride,
         }),
-        startAt: schedule.startAt,
-        endAt: schedule.endAt,
+        publishStartAt: publishSchedule.publishStartAt,
+        publishEndAt: publishSchedule.publishEndAt,
+        campaignStartAt,
+        campaignEndAt,
         ...(dto.terms !== undefined && { terms: dto.terms || null }),
         ...(dto.couponCode !== undefined && { couponCode: dto.couponCode || null }),
         ...(dto.buttonText !== undefined && { buttonText: dto.buttonText || null }),
@@ -273,8 +331,13 @@ export class CampaignsService {
         updatedBy: user.id,
         ...publishedPatch,
       },
-      include: CAMPAIGN_INCLUDE,
     });
+
+    if (dto.translations !== undefined) {
+      await this.upsertTranslations(id, dto.translations);
+    }
+
+    const campaign = await this.findOne(id, tenantId, mallId);
 
     await this.audit.logAction({
       userId: user.id,
@@ -317,15 +380,16 @@ export class CampaignsService {
     const existing = await this.assertExists(id, tenantId);
     this.assertMallVisibility(existing, mallId);
 
-    await this.assertPublishable(
-      existing.title,
-      existing.coverMediaId ?? undefined,
+    await this.assertPublishable({
+      title: existing.title,
+      campaignStartAt: existing.campaignStartAt,
       tenantId,
-      existing.mallId,
-      existing.startAt?.toISOString(),
-      existing.endAt?.toISOString(),
-      existing.storeId ?? undefined,
-    );
+      mallId: existing.mallId,
+      sameImageForAllLocales: existing.sameImageForAllLocales,
+      sharedCoverImageId: existing.sharedCoverImageId ?? undefined,
+      campaignId: id,
+      storeId: existing.storeId ?? undefined,
+    });
 
     const now = new Date();
     const campaign = await this.prisma.campaign.update({
@@ -333,7 +397,7 @@ export class CampaignsService {
       data: {
         status: 'PUBLISHED',
         publishedAt: now,
-        startAt: existing.startAt ?? now,
+        publishStartAt: existing.publishStartAt ?? now,
         updatedBy: user.id,
       },
       include: CAMPAIGN_INCLUDE,
@@ -363,7 +427,7 @@ export class CampaignsService {
       where: { id },
       data: {
         status: 'ARCHIVED',
-        endAt: existing.endAt ?? now,
+        publishEndAt: existing.publishEndAt ?? now,
         updatedBy: user.id,
       },
       include: CAMPAIGN_INCLUDE,
@@ -397,8 +461,8 @@ export class CampaignsService {
       deletedAt: null,
       status: 'PUBLISHED' as ContentStatus,
       AND: [
-        { OR: [{ startAt: null }, { startAt: { lte: now } }] },
-        { OR: [{ endAt: null }, { endAt: { gte: now } }] },
+        { OR: [{ publishStartAt: null }, { publishStartAt: { lte: now } }] },
+        { OR: [{ publishEndAt: null }, { publishEndAt: { gte: now } }] },
       ],
       ...(opts.mallId !== undefined
         ? {
@@ -416,7 +480,7 @@ export class CampaignsService {
     return this.prisma.campaign.findMany({
       where,
       include: CAMPAIGN_INCLUDE,
-      orderBy: [{ sortOrder: 'asc' }, { startAt: 'asc' }],
+      orderBy: [{ sortOrder: 'asc' }, { campaignStartAt: 'asc' }],
     });
   }
 
@@ -441,7 +505,7 @@ export class CampaignsService {
       ...(query.search ? { title: { contains: query.search, mode: 'insensitive' as const } } : {}),
       ...(query.startFrom || query.startTo
         ? {
-            startAt: {
+            campaignStartAt: {
               ...(query.startFrom ? { gte: new Date(query.startFrom) } : {}),
               ...(query.startTo ? { lte: new Date(query.startTo) } : {}),
             },
@@ -449,7 +513,7 @@ export class CampaignsService {
         : {}),
       ...(query.endFrom || query.endTo
         ? {
-            endAt: {
+            campaignEndAt: {
               ...(query.endFrom ? { gte: new Date(query.endFrom) } : {}),
               ...(query.endTo ? { lte: new Date(query.endTo) } : {}),
             },
@@ -461,8 +525,8 @@ export class CampaignsService {
   private buildOrderBy(query: ListCampaignsDto): Prisma.CampaignOrderByWithRelationInput[] {
     const dir = query.sortDir === 'desc' ? 'desc' : 'asc';
     const sortBy = query.sortBy ?? 'sortOrder';
-    if (sortBy === 'startAt') {
-      return [{ startAt: dir }, { sortOrder: 'asc' }];
+    if (sortBy === 'campaignStartAt' || sortBy === 'startAt') {
+      return [{ campaignStartAt: dir }, { sortOrder: 'asc' }];
     }
     if (sortBy === 'createdAt') {
       return [{ createdAt: dir }];
@@ -522,25 +586,131 @@ export class CampaignsService {
     }
   }
 
-  private async assertPublishable(
-    title: string,
-    coverMediaId: string | undefined,
-    tenantId: string,
-    mallId: string | null | undefined,
-    startAt?: string,
-    endAt?: string,
-    storeId?: string,
+  private async getDefaultLocaleId(tenantId: string): Promise<string | null> {
+    const locale = await this.prisma.locale.findFirst({
+      where: { tenantId, isDefault: true, isActive: true },
+      select: { id: true },
+    });
+    return locale?.id ?? null;
+  }
+
+  private async upsertTranslations(
+    campaignId: string,
+    translations: CampaignTranslationDto[],
   ): Promise<void> {
-    if (!title?.trim()) {
+    for (const tr of translations) {
+      if (tr.coverImageId) {
+        const campaign = await this.prisma.campaign.findUnique({
+          where: { id: campaignId },
+          select: { tenantId: true, mallId: true },
+        });
+        if (campaign) {
+          await this.assertCoverMediaInScope(campaign.tenantId, campaign.mallId, tr.coverImageId);
+        }
+      }
+      await this.prisma.campaignTranslation.upsert({
+        where: {
+          campaignId_localeId: { campaignId, localeId: tr.localeId },
+        },
+        create: {
+          campaignId,
+          localeId: tr.localeId,
+          title: tr.title ?? null,
+          description: tr.description ?? null,
+          buttonText: tr.buttonText ?? null,
+          coverImageId: tr.coverImageId ?? null,
+        },
+        update: {
+          title: tr.title ?? null,
+          description: tr.description ?? null,
+          buttonText: tr.buttonText ?? null,
+          coverImageId: tr.coverImageId ?? null,
+        },
+      });
+    }
+  }
+
+  private async assertCoverMediaValid(opts: {
+    tenantId: string;
+    mallId: string | null | undefined;
+    sameImageForAllLocales: boolean;
+    sharedCoverImageId?: string | null;
+    translations?: CampaignTranslationDto[];
+    campaignId?: string;
+    skipWhenDraft?: boolean;
+  }): Promise<void> {
+    if (opts.skipWhenDraft) return;
+
+    if (opts.sameImageForAllLocales) {
+      if (opts.sharedCoverImageId) {
+        await this.assertCoverMediaInScope(opts.tenantId, opts.mallId ?? null, opts.sharedCoverImageId);
+      }
+      return;
+    }
+
+    if (opts.translations?.some((t) => t.coverImageId)) {
+      for (const tr of opts.translations) {
+        if (tr.coverImageId) {
+          await this.assertCoverMediaInScope(opts.tenantId, opts.mallId ?? null, tr.coverImageId);
+        }
+      }
+    }
+  }
+
+  private async assertPublishable(opts: {
+    title: string;
+    campaignStartAt: Date | null;
+    tenantId: string;
+    mallId: string | null | undefined;
+    sameImageForAllLocales: boolean;
+    sharedCoverImageId?: string;
+    translations?: CampaignTranslationDto[];
+    campaignId?: string;
+    storeId?: string;
+  }): Promise<void> {
+    if (!opts.title?.trim()) {
       throw new UnprocessableEntityException('Title is required to publish');
     }
-    if (!coverMediaId) {
-      throw new UnprocessableEntityException('coverMediaId is required to publish a campaign');
+    if (!opts.campaignStartAt) {
+      throw new UnprocessableEntityException('campaignStartAt is required to publish a campaign');
     }
-    validateStartBeforeEnd(startAt, endAt);
-    await this.assertCoverMediaInScope(tenantId, mallId ?? null, coverMediaId);
-    if (storeId) {
-      await this.assertMallStoreInScope(tenantId, mallId ?? null, storeId);
+
+    if (opts.sameImageForAllLocales) {
+      if (!opts.sharedCoverImageId) {
+        throw new UnprocessableEntityException(
+          'sharedCoverImageId is required to publish a campaign when using shared images',
+        );
+      }
+      await this.assertCoverMediaInScope(opts.tenantId, opts.mallId ?? null, opts.sharedCoverImageId);
+    } else {
+      const defaultLocaleId = await this.getDefaultLocaleId(opts.tenantId);
+      if (!defaultLocaleId) {
+        throw new UnprocessableEntityException('Tenant default locale is not configured');
+      }
+
+      const fromPayload = opts.translations?.find((t) => t.localeId === defaultLocaleId);
+      let defaultCoverId = fromPayload?.coverImageId ?? opts.sharedCoverImageId ?? null;
+
+      if (!defaultCoverId && opts.campaignId) {
+        const existingTr = await this.prisma.campaignTranslation.findUnique({
+          where: {
+            campaignId_localeId: { campaignId: opts.campaignId, localeId: defaultLocaleId },
+          },
+          select: { coverImageId: true },
+        });
+        defaultCoverId = existingTr?.coverImageId ?? opts.sharedCoverImageId ?? null;
+      }
+
+      if (!defaultCoverId) {
+        throw new UnprocessableEntityException(
+          'Default locale cover image is required to publish a campaign',
+        );
+      }
+      await this.assertCoverMediaInScope(opts.tenantId, opts.mallId ?? null, defaultCoverId);
+    }
+
+    if (opts.storeId) {
+      await this.assertMallStoreInScope(opts.tenantId, opts.mallId ?? null, opts.storeId);
     }
   }
 

@@ -79,6 +79,8 @@ export type {
   SliderMediaPreview,
   Slider,
   SliderItem,
+  SliderItemTranslation,
+  SliderItemTranslationPayload,
   SliderListResponse,
   CreateSliderPayload,
   UpdateSliderPayload,

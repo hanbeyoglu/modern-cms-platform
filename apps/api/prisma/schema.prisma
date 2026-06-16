@@ -321,9 +321,11 @@ model MediaAsset {
   suggestedHeight     Int?
   suggestedWidth      Int?
   usageContext        String?
-  campaignCovers      Campaign[]       @relation("CampaignCoverMedia")
+  campaignSharedCovers Campaign[]              @relation("CampaignSharedCoverImage")
+  campaignTranslationCovers CampaignTranslation[] @relation("CampaignTranslationCoverImage")
+  eventSharedCovers   Event[]                   @relation("EventSharedCoverImage")
+  eventTranslationCovers EventTranslation[]     @relation("EventTranslationCoverImage")
   cinemaLogos         Cinema[]         @relation("CinemaLogoMedia")
-  eventCovers         Event[]          @relation("EventCoverMedia")
   globalStoreLogos    GlobalStore[]    @relation("GlobalStoreLogo")
   mallCovers          Mall[]           @relation("MallCoverMedia")
   mallLogos           Mall[]           @relation("MallLogoMedia")
@@ -338,8 +340,10 @@ model MediaAsset {
   popupImages         Popup[]          @relation("PopupImageMedia")
   serviceCovers       Service[]        @relation("ServiceCoverMedia")
   serviceIcons        Service[]        @relation("ServiceIconMedia")
-  sliderItemDesktop   SliderItem[]     @relation("SliderItemDesktopMedia")
-  sliderItemMobile    SliderItem[]     @relation("SliderItemMobileMedia")
+  sliderItemDesktop   SliderItem[]             @relation("SliderItemSharedImage")
+  sliderItemMobile    SliderItem[]             @relation("SliderItemSharedMobileImage")
+  sliderItemTranslationImages       SliderItemTranslation[] @relation("SliderItemTranslationImage")
+  sliderItemTranslationMobileImages SliderItemTranslation[] @relation("SliderItemTranslationMobileImage")
 
   @@index([tenantId, createdAt])
   @@index([tenantId, folderId])
@@ -417,8 +421,9 @@ model Slider {
 model SliderItem {
   id                         String       @id @default(cuid())
   sliderId                   String
-  desktopMediaId             String?
-  mobileMediaId              String?
+  sameImageForAllLocales     Boolean      @default(true)
+  sharedImageId              String?
+  sharedMobileImageId        String?
   desktopMediaWidthOverride  Int?
   desktopMediaHeightOverride Int?
   mobileMediaWidthOverride   Int?
@@ -432,12 +437,33 @@ model SliderItem {
   createdAt                  DateTime     @default(now())
   updatedAt                  DateTime     @updatedAt
   deletedAt                  DateTime?
-  desktopMedia               MediaAsset?  @relation("SliderItemDesktopMedia", fields: [desktopMediaId], references: [id])
-  mobileMedia                MediaAsset?  @relation("SliderItemMobileMedia", fields: [mobileMediaId], references: [id])
+  sharedImage                MediaAsset?  @relation("SliderItemSharedImage", fields: [sharedImageId], references: [id])
+  sharedMobileImage          MediaAsset?  @relation("SliderItemSharedMobileImage", fields: [sharedMobileImageId], references: [id])
   slider                     Slider       @relation(fields: [sliderId], references: [id], onDelete: Cascade)
+  translations               SliderItemTranslation[]
 
   @@index([sliderId, sortOrder])
   @@index([sliderId, status])
+}
+
+model SliderItemTranslation {
+  id            String     @id @default(cuid())
+  sliderItemId  String
+  localeId      String
+  title         String?
+  description   String?
+  buttonText    String?
+  imageId       String?
+  mobileImageId String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  image         MediaAsset? @relation("SliderItemTranslationImage", fields: [imageId], references: [id])
+  mobileImage   MediaAsset? @relation("SliderItemTranslationMobileImage", fields: [mobileImageId], references: [id])
+  locale        Locale     @relation(fields: [localeId], references: [id], onDelete: Cascade)
+  sliderItem    SliderItem @relation(fields: [sliderItemId], references: [id], onDelete: Cascade)
+
+  @@unique([sliderItemId, localeId])
+  @@index([sliderItemId])
 }
 
 model StoreCategory {
@@ -542,11 +568,14 @@ model Event {
   slug                     String
   shortDescription         String?
   description              String?
-  coverMediaId             String?
+  sameImageForAllLocales   Boolean       @default(true)
+  sharedCoverImageId       String?
   coverMediaWidthOverride  Int?
   coverMediaHeightOverride Int?
-  startAt                  DateTime?
-  endAt                    DateTime?
+  publishStartAt           DateTime?
+  publishEndAt             DateTime?
+  eventStartAt             DateTime?
+  eventEndAt               DateTime?
   location                 String?
   category                 String?
   buttonText               String?
@@ -561,7 +590,8 @@ model Event {
   updatedAt                DateTime      @updatedAt
   deletedAt                DateTime?
   channels                 Channel[]
-  coverMedia               MediaAsset?   @relation("EventCoverMedia", fields: [coverMediaId], references: [id])
+  sharedCoverImage         MediaAsset?   @relation("EventSharedCoverImage", fields: [sharedCoverImageId], references: [id])
+  translations             EventTranslation[]
   createdByUser            User          @relation("EventCreator", fields: [createdBy], references: [id])
   mall                     Mall?         @relation(fields: [mallId], references: [id])
   tenant                   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -571,9 +601,27 @@ model Event {
   @@index([tenantId, status])
   @@index([tenantId, mallId])
   @@index([tenantId, sortOrder])
-  @@index([tenantId, startAt])
-  @@index([status, startAt])
-  @@index([status, endAt])
+  @@index([tenantId, eventStartAt])
+  @@index([status, publishStartAt])
+  @@index([status, publishEndAt])
+}
+
+model EventTranslation {
+  id               String     @id @default(cuid())
+  eventId          String
+  localeId         String
+  title            String?
+  description      String?
+  shortDescription String?
+  coverImageId     String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  coverImage       MediaAsset? @relation("EventTranslationCoverImage", fields: [coverImageId], references: [id])
+  locale           Locale     @relation(fields: [localeId], references: [id], onDelete: Cascade)
+  event            Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, localeId])
+  @@index([eventId])
 }
 
 model Campaign {
@@ -585,11 +633,14 @@ model Campaign {
   slug                     String
   shortDescription         String?
   description              String?
-  coverMediaId             String?
+  sameImageForAllLocales   Boolean       @default(true)
+  sharedCoverImageId       String?
   coverMediaWidthOverride  Int?
   coverMediaHeightOverride Int?
-  startAt                  DateTime?
-  endAt                    DateTime?
+  publishStartAt           DateTime?
+  publishEndAt             DateTime?
+  campaignStartAt          DateTime?
+  campaignEndAt            DateTime?
   terms                    String?
   couponCode               String?
   buttonText               String?
@@ -604,7 +655,8 @@ model Campaign {
   updatedAt                DateTime      @updatedAt
   deletedAt                DateTime?
   channels                 Channel[]
-  coverMedia               MediaAsset?   @relation("CampaignCoverMedia", fields: [coverMediaId], references: [id])
+  sharedCoverImage         MediaAsset?   @relation("CampaignSharedCoverImage", fields: [sharedCoverImageId], references: [id])
+  translations             CampaignTranslation[]
   createdByUser            User          @relation("CampaignCreator", fields: [createdBy], references: [id])
   mall                     Mall?         @relation(fields: [mallId], references: [id])
   store                    MallStore?    @relation(fields: [storeId], references: [id])
@@ -616,8 +668,27 @@ model Campaign {
   @@index([tenantId, mallId])
   @@index([tenantId, storeId])
   @@index([tenantId, sortOrder])
-  @@index([status, startAt])
-  @@index([status, endAt])
+  @@index([tenantId, campaignStartAt])
+  @@index([status, publishStartAt])
+  @@index([status, publishEndAt])
+}
+
+model CampaignTranslation {
+  id           String     @id @default(cuid())
+  campaignId   String
+  localeId     String
+  title        String?
+  description  String?
+  buttonText   String?
+  coverImageId String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  coverImage   MediaAsset? @relation("CampaignTranslationCoverImage", fields: [coverImageId], references: [id])
+  locale       Locale     @relation(fields: [localeId], references: [id], onDelete: Cascade)
+  campaign     Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, localeId])
+  @@index([campaignId])
 }
 
 model Cinema {
@@ -814,6 +885,9 @@ model Locale {
   rtl          Boolean            @default(false)
   tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   translations LocalizedContent[]
+  sliderItemTranslations SliderItemTranslation[]
+  campaignTranslations   CampaignTranslation[]
+  eventTranslations      EventTranslation[]
 
   @@unique([tenantId, code])
   @@index([tenantId])

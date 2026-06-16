@@ -85,6 +85,10 @@ export interface CmsSliderItem {
   linkUrl: string | null;
   desktopMedia: CmsMediaAsset | null;
   mobileMedia: CmsMediaAsset | null;
+  /** Locale-resolved desktop image (alias for desktopMedia) */
+  image: CmsMediaAsset | null;
+  /** Locale-resolved mobile image (alias for mobileMedia) */
+  mobileImage: CmsMediaAsset | null;
   sortOrder: number;
   status: string;
 }
@@ -125,8 +129,17 @@ export interface CmsEvent {
   title: string;
   shortDescription: string | null;
   description: string | null;
+  /** Locale-resolved cover image */
+  image: CmsMediaAsset | null;
+  /** @deprecated Use image */
   coverMedia: CmsMediaAsset | null;
+  publishStartAt: string | null;
+  publishEndAt: string | null;
+  eventStartAt: string | null;
+  eventEndAt: string | null;
+  /** @deprecated Use eventStartAt */
   startAt: string | null;
+  /** @deprecated Use eventEndAt */
   endAt: string | null;
   location: string | null;
   category: string | null;
@@ -143,8 +156,17 @@ export interface CmsCampaign {
   title: string;
   shortDescription: string | null;
   description: string | null;
+  /** Locale-resolved cover image */
+  image: CmsMediaAsset | null;
+  /** @deprecated Use image */
   coverMedia: CmsMediaAsset | null;
+  publishStartAt: string | null;
+  publishEndAt: string | null;
+  campaignStartAt: string | null;
+  campaignEndAt: string | null;
+  /** @deprecated Use campaignStartAt */
   startAt: string | null;
+  /** @deprecated Use campaignEndAt */
   endAt: string | null;
   terms: string | null;
   couponCode: string | null;
