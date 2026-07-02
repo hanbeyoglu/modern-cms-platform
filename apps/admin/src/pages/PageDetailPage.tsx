@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MultilingualContentFields, PAGE_I18N_FIELDS } from '../components/MultilingualContentFields';
+import { ContentSlugFields } from '../components/ContentSlugFields';
 import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
+import { contentSlugForPayload, resolveUseCustomSlug, slugify } from '../lib/slugify';
 import { validatePageSchedule } from '../lib/publishing-workflow';
 import { AuditTimeline } from '../components/AuditTimeline';
 import { useAuth } from '../auth/useAuth';
 import {
-  apiLocalesList,
+  apiContentLocales,
   apiTranslationDelete,
   apiTranslationsList,
   apiTranslationUpsert,
@@ -113,6 +115,7 @@ const DEFAULT_DATA: Record<string, Record<string, unknown>> = {
 type PageFormState = {
   title: string;
   slug: string;
+  useCustomSlug: boolean;
   type: PageType;
   customTypeLabel: string;
   contentHtml: string;
@@ -217,6 +220,7 @@ export function PageDetailPage() {
       setPageForm({
         title: p.title,
         slug: p.slug,
+        useCustomSlug: resolveUseCustomSlug(p.slug, p.title),
         type: p.type,
         customTypeLabel: p.customTypeLabel ?? '',
         contentHtml: p.contentHtml ?? '',
@@ -248,7 +252,7 @@ export function PageDetailPage() {
     }
     void (async () => {
       try {
-        const locs = await apiLocalesList(accessToken, activeTenantId);
+        const locs = await apiContentLocales(accessToken, activeTenantId, activeMallId);
         setTenantLocales(locs);
         const activeLocales = locs.filter((l) => l.isActive);
         const defaultLocale = locs.find((l) => l.isDefault);
@@ -345,7 +349,10 @@ export function PageDetailPage() {
     try {
       const updated = await apiPageUpdate(accessToken, activeTenantId, id, {
         title: pageForm.title,
-        slug: pageForm.slug || undefined,
+        slug: contentSlugForPayload({
+          useCustomSlug: pageForm.useCustomSlug,
+          slug: pageForm.slug,
+        }),
         type: pageForm.type,
         customTypeLabel: pageForm.type === 'CUSTOM' ? pageForm.customTypeLabel : undefined,
         contentHtml: pageForm.contentHtml,
@@ -685,17 +692,31 @@ export function PageDetailPage() {
               </div>
             )}
           </div>
-          <div>
-            <label style={labelStyle}>Slug</label>
-            <input
-              value={pageForm.slug}
-              onChange={(e) => {
-                setPageForm((f) => f && { ...f, slug: e.target.value });
-                setPageFormDirty(true);
-              }}
-              style={inputStyle({ width: '100%', fontFamily: 'monospace', fontSize: 12 })}
-            />
-          </div>
+          <ContentSlugFields
+            title={pageForm.title}
+            slug={pageForm.slug}
+            useCustomSlug={pageForm.useCustomSlug}
+            persistedSlug={page?.slug}
+            disabled={savingPage}
+            labelStyle={labelStyle}
+            inputStyle={inputStyle({ width: '100%' })}
+            onUseCustomSlugChange={(useCustomSlug) => {
+              setPageForm((f) =>
+                f
+                  ? {
+                      ...f,
+                      useCustomSlug,
+                      slug: useCustomSlug && !f.slug.trim() ? slugify(f.title) : f.slug,
+                    }
+                  : f,
+              );
+              setPageFormDirty(true);
+            }}
+            onSlugChange={(slug) => {
+              setPageForm((f) => f && { ...f, slug });
+              setPageFormDirty(true);
+            }}
+          />
           <div>
             <label style={labelStyle}>Tip</label>
             <select

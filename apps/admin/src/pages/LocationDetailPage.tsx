@@ -5,6 +5,13 @@ import { useAuth } from '../auth/useAuth';
 import { usePermission } from '../hooks/usePermission';
 import { MultilingualContentFields, LOCATION_I18N_FIELDS } from '../components/MultilingualContentFields';
 import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
+import { WorkingHoursEditor } from '../components/WorkingHoursEditor';
+import {
+  parseFullPayload,
+  buildFullPayload,
+  type WorkingHoursSchedule,
+  type SpecialDay,
+} from '../lib/working-hours';
 import {
   apiLocationGet,
   apiLocationUpdate,
@@ -15,7 +22,7 @@ import {
   type LocationStatus,
   type LocationType,
   type UpdateLocationPayload,
-  apiLocalesList,
+  apiContentLocales,
   apiTranslationDelete,
   apiTranslationsList,
   apiTranslationUpsert,
@@ -47,6 +54,8 @@ export function LocationDetailPage() {
   const [form, setForm] = useState<UpdateLocationPayload>({});
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [workingSchedule, setWorkingSchedule] = useState<WorkingHoursSchedule | null>(null);
+  const [specialDays, setSpecialDays] = useState<SpecialDay[]>([]);
   const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
   const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
   const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
@@ -58,6 +67,9 @@ export function LocationDetailPage() {
     apiLocationGet(accessToken, id)
       .then((loc) => {
         setLocation(loc);
+        const { schedule, specialDays: spDays } = parseFullPayload(loc.workingHoursJson);
+        setWorkingSchedule(schedule);
+        setSpecialDays(spDays);
         setForm({
           name: loc.name, slug: loc.slug, type: loc.type,
           displayName: loc.displayName ?? '', legalName: loc.legalName ?? '',
@@ -67,7 +79,7 @@ export function LocationDetailPage() {
           city: loc.city ?? '', district: loc.district ?? '', country: loc.country ?? '', postalCode: loc.postalCode ?? '',
           latitude: loc.latitude ?? undefined, longitude: loc.longitude ?? undefined,
           timezone: loc.timezone ?? '',
-          workingHoursJson: loc.workingHoursJson ?? '',
+          workingHoursJson: buildFullPayload(schedule, spDays),
           socialLinksJson: loc.socialLinksJson ?? '',
           isPublic: loc.isPublic,
           logoMediaId: loc.logoMediaId ?? undefined,
@@ -90,7 +102,7 @@ export function LocationDetailPage() {
     }
     void (async () => {
       try {
-        const locs = await apiLocalesList(accessToken, activeTenantId);
+        const locs = await apiContentLocales(accessToken, activeTenantId, id);
         setTenantLocales(locs);
         const activeLocales = locs.filter((l) => l.isActive);
         const defaultLocale = locs.find((l) => l.isDefault);
@@ -466,17 +478,23 @@ export function LocationDetailPage() {
         )}
 
         {activeSection === 'hours' && (
-          <div>
-            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
-              Çalışma saatlerini JSON formatında girin. Örnek: {'{'}Mo-Fr: 10:00-22:00, Sa-Su: 10:00-23:00{'}'}
-            </div>
-            <textarea
-              style={{ ...inputStyle, height: 160, fontFamily: 'monospace', fontSize: 12 }}
-              value={typeof form.workingHoursJson === 'string' ? form.workingHoursJson : JSON.stringify(form.workingHoursJson ?? {}, null, 2)}
-              onChange={(e) => setField('workingHoursJson', e.target.value)}
-              disabled={!canEdit}
-            />
-          </div>
+          <WorkingHoursEditor
+            value={workingSchedule}
+            onChange={(schedule) => {
+              setWorkingSchedule(schedule);
+              setField('workingHoursJson', buildFullPayload(schedule, specialDays));
+            }}
+            showUseMallHoursOption={false}
+            showPreview
+            showSpecialDays
+            specialDays={specialDays}
+            onSpecialDaysChange={(days) => {
+              setSpecialDays(days);
+              setField('workingHoursJson', buildFullPayload(workingSchedule, days));
+            }}
+            disabled={!canEdit}
+            formKey={location?.id}
+          />
         )}
 
         {activeSection === 'social' && (

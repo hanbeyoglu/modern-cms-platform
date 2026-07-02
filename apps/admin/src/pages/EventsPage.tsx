@@ -10,6 +10,8 @@ import { MultilingualContentFields, EVENT_I18N_FIELDS } from '../components/Mult
 import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
 import { ContentChannelFields } from '../components/ContentChannelFields';
 import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
+import { ContentSlugFields } from '../components/ContentSlugFields';
+import { contentSlugForPayload, resolveUseCustomSlug, slugify } from '../lib/slugify';
 import {
   buildEventTranslationsPayload,
   getEventSaveBlocker,
@@ -24,7 +26,7 @@ import {
   apiEventPublish,
   apiEventUpdate,
   apiEventsList,
-  apiLocalesList,
+  apiContentLocales,
   apiTranslationUpsert,
   apiTranslationDelete,
   apiTranslationsList,
@@ -67,10 +69,12 @@ function StatusBadge({ status }: { status: ContentStatus }) {
 type FormState = {
   title: string;
   slug: string;
+  useCustomSlug: boolean;
   shortDescription: string;
   description: string;
   sameImageForAllLocales: boolean;
   sharedCoverImageId: string;
+  defaultLocaleCoverImageId: string;
   coverMediaWidthOverride: string;
   coverMediaHeightOverride: string;
   publishStartAt: string;
@@ -90,10 +94,12 @@ type FormState = {
 const EMPTY: FormState = {
   title: '',
   slug: '',
+  useCustomSlug: false,
   shortDescription: '',
   description: '',
   sameImageForAllLocales: true,
   sharedCoverImageId: '',
+  defaultLocaleCoverImageId: '',
   coverMediaWidthOverride: '',
   coverMediaHeightOverride: '',
   publishStartAt: '',
@@ -114,10 +120,12 @@ function evToForm(e: CmsEvent): FormState {
   return {
     title: e.title,
     slug: e.slug,
+    useCustomSlug: resolveUseCustomSlug(e.slug, e.title),
     shortDescription: e.shortDescription ?? '',
     description: e.description ?? '',
     sameImageForAllLocales: e.sameImageForAllLocales ?? true,
     sharedCoverImageId: e.sharedCoverImageId ?? '',
+    defaultLocaleCoverImageId: '',
     coverMediaWidthOverride: e.coverMediaWidthOverride ? String(e.coverMediaWidthOverride) : '',
     coverMediaHeightOverride: e.coverMediaHeightOverride ? String(e.coverMediaHeightOverride) : '',
     publishStartAt: e.publishStartAt ? e.publishStartAt.slice(0, 16) : '',
@@ -147,7 +155,7 @@ function formToPayload(
 ): CreateEventPayload {
   return {
     title: f.title,
-    slug: f.slug.trim() || undefined,
+    slug: contentSlugForPayload({ useCustomSlug: f.useCustomSlug, slug: f.slug }),
     shortDescription: f.shortDescription || undefined,
     description: f.description || undefined,
     sameImageForAllLocales: f.sameImageForAllLocales,
@@ -165,7 +173,10 @@ function formToPayload(
     sortOrder: parseInt(f.sortOrder, 10) || 0,
     status: f.status,
     channels: f.channels.length ? f.channels : undefined,
-    translations: buildEventTranslationsPayload(tenantLocales, localeDrafts),
+    translations: buildEventTranslationsPayload(tenantLocales, localeDrafts, {
+      sameImageForAllLocales: f.sameImageForAllLocales,
+      defaultLocaleCoverImageId: f.defaultLocaleCoverImageId,
+    }),
   };
 }
 
@@ -226,7 +237,7 @@ export function EventsPage() {
     }
     void (async () => {
       try {
-        const locs = await apiLocalesList(accessToken, tenantId);
+        const locs = await apiContentLocales(accessToken, tenantId, mallId);
         setTenantLocales(locs);
         const act = locs.filter((l) => l.isActive);
         const def = locs.find((l) => l.isDefault);
@@ -239,6 +250,13 @@ export function EventsPage() {
             entityType: 'EVENT',
             entityId: editing.id,
           });
+          const defaultTr = editing.translations?.find((t) => t.localeId === def?.id);
+          setForm((prev) => ({
+            ...prev,
+            defaultLocaleCoverImageId: !editing.sameImageForAllLocales
+              ? (defaultTr?.coverImageId ?? editing.sharedCoverImageId ?? '')
+              : '',
+          }));
           const drafts: Record<string, Record<string, string>> = {};
           for (const loc of act) {
             if (loc.id === def?.id) continue;
@@ -270,7 +288,7 @@ export function EventsPage() {
         setLocaleDrafts({});
       }
     })();
-  }, [showForm, editing?.id, accessToken, tenantId]);
+  }, [showForm, editing?.id, accessToken, tenantId, mallId]);
 
   useEffect(() => {
     if (!showForm || (!i18nDirty && !eventFormDirty)) return;
@@ -352,7 +370,7 @@ export function EventsPage() {
       eventStartAt: form.eventStartAt,
       sameImageForAllLocales: form.sameImageForAllLocales,
       sharedCoverImageId: form.sharedCoverImageId,
-      defaultLocaleCoverImageId: form.sharedCoverImageId,
+      defaultLocaleCoverImageId: form.defaultLocaleCoverImageId,
     });
     if (blocker) {
       setFormError(blocker);
@@ -516,17 +534,6 @@ export function EventsPage() {
           {formError && <p style={{ color: '#b91c1c' }}>{formError}</p>}
           <div style={{ display: 'grid', gap: 10, maxWidth: 520 }}>
             <div>
-              <label style={labelStyle}>Slug (boşsa başlıktan üretilir)</label>
-              <input
-                style={inputStyle}
-                value={form.slug}
-                onChange={(e) => {
-                  setForm({ ...form, slug: e.target.value });
-                  setEventFormDirty(true);
-                }}
-              />
-            </div>
-            <div>
               <label
                 style={{
                   display: 'flex',
@@ -541,14 +548,31 @@ export function EventsPage() {
                   checked={form.sameImageForAllLocales}
                   disabled={saving}
                   onChange={(e) => {
-                    setForm({ ...form, sameImageForAllLocales: e.target.checked });
+                    const checked = e.target.checked;
+                    setForm((prev) => {
+                      if (!checked && !prev.defaultLocaleCoverImageId && prev.sharedCoverImageId) {
+                        return {
+                          ...prev,
+                          sameImageForAllLocales: false,
+                          defaultLocaleCoverImageId: prev.sharedCoverImageId,
+                        };
+                      }
+                      return { ...prev, sameImageForAllLocales: checked };
+                    });
                     setEventFormDirty(true);
                   }}
                 />
-                Tüm diller için aynı kapak görseli
+                Tüm diller için aynı kapak görselini kullan
               </label>
+              {!form.sameImageForAllLocales && (
+                <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6b7280', lineHeight: 1.45 }}>
+                  Dil bazlı kapak görseli kullanırsanız, her dil için farklı banner yükleyebilirsiniz.
+                  <br />
+                  Eksik dil görselinde varsayılan dil veya ortak kapak kullanılır.
+                </p>
+              )}
             </div>
-            {form.sameImageForAllLocales ? (
+            {form.sameImageForAllLocales && (
               <div>
                 <ContextualMediaPicker
                   context="EVENT_COVER"
@@ -572,44 +596,6 @@ export function EventsPage() {
                   }}
                 />
               </div>
-            ) : (
-              tenantLocales.filter((l) => l.isActive).length > 0 &&
-              contentLocaleTab && (
-                <ContextualMediaPicker
-                  context="EVENT_COVER"
-                  value={
-                    contentLocaleTab === tenantLocales.find((l) => l.isDefault)?.id
-                      ? form.sharedCoverImageId
-                      : localeDrafts[contentLocaleTab]?.coverImageId ?? ''
-                  }
-                  mallId={mallId}
-                  onChange={(mediaId) => {
-                    const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
-                    if (contentLocaleTab === defaultLocaleId) {
-                      setForm({ ...form, sharedCoverImageId: mediaId });
-                      setEventFormDirty(true);
-                      return;
-                    }
-                    setLocaleDrafts((d) => ({
-                      ...d,
-                      [contentLocaleTab]: { ...d[contentLocaleTab], coverImageId: mediaId },
-                    }));
-                    setI18nDirty(true);
-                  }}
-                  dimensionOverride={{
-                    width: parseOptionalDimension(form.coverMediaWidthOverride),
-                    height: parseOptionalDimension(form.coverMediaHeightOverride),
-                  }}
-                  onDimensionOverrideChange={(dimensions) => {
-                    setForm({
-                      ...form,
-                      coverMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
-                      coverMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
-                    });
-                    setEventFormDirty(true);
-                  }}
-                />
-              )
             )}
             <div style={{ gridColumn: '1 / -1' }}>
               <ContentChannelFields
@@ -698,6 +684,7 @@ export function EventsPage() {
                 activeLocaleId={contentLocaleTab}
                 onTabChange={(id) => setContentLocaleTab(id)}
                 defaultLocaleId={tenantLocales.find((l) => l.isDefault)?.id}
+                fields={EVENT_I18N_FIELDS}
                 getValue={(localeId, field) => {
                   const defId = tenantLocales.find((l) => l.isDefault)?.id;
                   if (defId && localeId === defId) {
@@ -731,6 +718,55 @@ export function EventsPage() {
                   setI18nDirty(true);
                 }}
                 disabled={saving}
+                renderTabExtra={
+                  !form.sameImageForAllLocales
+                    ? (localeId) => {
+                        const defId = tenantLocales.find((l) => l.isDefault)?.id;
+                        const coverValue =
+                          defId && localeId === defId
+                            ? form.defaultLocaleCoverImageId
+                            : localeDrafts[localeId]?.coverImageId ?? '';
+                        return (
+                          <ContextualMediaPicker
+                            context="EVENT_COVER"
+                            value={coverValue}
+                            mallId={mallId}
+                            onChange={(mediaId) => {
+                              if (defId && localeId === defId) {
+                                setForm((prev) => ({
+                                  ...prev,
+                                  defaultLocaleCoverImageId: mediaId,
+                                }));
+                                setEventFormDirty(true);
+                                return;
+                              }
+                              setLocaleDrafts((d) => ({
+                                ...d,
+                                [localeId]: { ...d[localeId], coverImageId: mediaId },
+                              }));
+                              setI18nDirty(true);
+                            }}
+                            dimensionOverride={{
+                              width: parseOptionalDimension(form.coverMediaWidthOverride),
+                              height: parseOptionalDimension(form.coverMediaHeightOverride),
+                            }}
+                            onDimensionOverrideChange={(dimensions) => {
+                              setForm({
+                                ...form,
+                                coverMediaWidthOverride: dimensions.width
+                                  ? String(dimensions.width)
+                                  : '',
+                                coverMediaHeightOverride: dimensions.height
+                                  ? String(dimensions.height)
+                                  : '',
+                              });
+                              setEventFormDirty(true);
+                            }}
+                          />
+                        );
+                      }
+                    : undefined
+                }
               />
             ) : (
               <>
@@ -780,6 +816,27 @@ export function EventsPage() {
                 </div>
               </>
             )}
+            <ContentSlugFields
+              title={form.title}
+              slug={form.slug}
+              useCustomSlug={form.useCustomSlug}
+              persistedSlug={editing?.slug}
+              disabled={saving}
+              labelStyle={labelStyle}
+              inputStyle={inputStyle}
+              onUseCustomSlugChange={(useCustomSlug) => {
+                setForm((prev) => ({
+                  ...prev,
+                  useCustomSlug,
+                  slug: useCustomSlug && !prev.slug.trim() ? slugify(prev.title) : prev.slug,
+                }));
+                setEventFormDirty(true);
+              }}
+              onSlugChange={(slug) => {
+                setForm((prev) => ({ ...prev, slug }));
+                setEventFormDirty(true);
+              }}
+            />
             <div>
               <label style={labelStyle}>Link URL</label>
               <input

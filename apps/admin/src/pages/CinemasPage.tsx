@@ -3,9 +3,7 @@ import type { CSSProperties } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
 import { useMallRequired } from '../hooks/useMallRequired';
-import { MallRequiredStates } from '../components/MallRequiredStates';
-import { PageContainer } from '../components/layout/PageContainer';
-import { PageHeader } from '../components/layout/PageHeader';
+import { LocationScopedModuleShell } from '../components/location-scoped/LocationScopedModuleShell';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
@@ -164,52 +162,44 @@ export function CinemasPage() {
   };
 
   return (
-    <MallRequiredStates
+    <LocationScopedModuleShell
       title="Sinemalar"
-      status={mallCtx}
-      noSelectionDescription="Sinemalar AVM kapsamlıdır; üstten bir AVM seçin."
-    >
-    <PageContainer>
-      <PageHeader
-        title="Sinemalar"
-        meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} kayıt</span>}
-        action={
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditing(null);
-              setForm(EMPTY);
-              setFormError(null);
-              setShowForm(true);
-            }}
-          >
-            + Yeni Sinema
-          </Button>
-        }
-      />
-      <div style={{ fontSize: 13 }}>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="Ada göre ara…"
-            value={filterSearch}
-            onChange={(e) => setFilterSearch(e.target.value)}
-            style={{ ...inputStyle, width: 200 }}
-          />
+      meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} kayıt</span>}
+      headerAction={
+        <Button
+          variant="primary"
+          onClick={() => {
+            setEditing(null);
+            setForm(EMPTY);
+            setFormError(null);
+            setShowForm(true);
+          }}
+        >
+          + Yeni Sinema
+        </Button>
+      }
+      search={{
+        value: filterSearch,
+        onChange: setFilterSearch,
+        placeholder: 'Ada göre ara…',
+      }}
+      filters={
+        <label style={{ display: 'grid', gap: 4 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Durum</span>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as CinemaStatus | '')}
-            style={inputStyle}
+            style={{ ...inputStyle, width: 160 }}
           >
             <option value="">Tüm durumlar</option>
             <option value="ACTIVE">Aktif</option>
             <option value="PASSIVE">Pasif</option>
             <option value="ARCHIVED">Arşiv</option>
           </select>
-          <Button variant="secondary" onClick={() => void load()}>
-            Filtrele
-          </Button>
-        </div>
+        </label>
+      }
+    >
+      <div style={{ fontSize: 13 }}>
         {error && <ErrorBanner message={error} />}
         {loading ? (
           <LoadingState />
@@ -384,7 +374,6 @@ export function CinemasPage() {
           </div>
         </div>
       )}
-    </PageContainer>
-    </MallRequiredStates>
+    </LocationScopedModuleShell>
   );
 }

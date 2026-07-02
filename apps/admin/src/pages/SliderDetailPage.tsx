@@ -17,7 +17,7 @@ import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import { validateRangeSchedule } from '../lib/publishing-workflow';
 import { DEFAULT_CONTENT_CHANNELS } from '../lib/content-channels';
 import {
-  apiLocalesList,
+  apiContentLocales,
   apiSliderArchive,
   apiSliderGet,
   apiSliderItemCreate,
@@ -240,7 +240,7 @@ export function SliderDetailPage() {
     try {
       const [s, locales] = await Promise.all([
         apiSliderGet(accessToken, activeTenantId, id),
-        apiLocalesList(accessToken, activeTenantId),
+        apiContentLocales(accessToken, activeTenantId, activeMallId),
       ]);
       setSlider(s);
       setTenantLocales(locales);
@@ -262,7 +262,7 @@ export function SliderDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, activeTenantId, id]);
+  }, [accessToken, activeTenantId, activeMallId, id]);
 
   useEffect(() => {
     void load();

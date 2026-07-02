@@ -61,7 +61,19 @@ export function getEventSaveBlocker(opts: {
 export function buildCampaignTranslationsPayload(
   tenantLocales: Array<{ id: string; isDefault: boolean; isActive: boolean }>,
   localeDrafts: Record<string, Record<string, string>>,
-): Array<{ localeId: string; title?: string; description?: string; buttonText?: string; coverImageId?: string }> {
+  opts?: {
+    sameImageForAllLocales?: boolean;
+    defaultLocaleCoverImageId?: string;
+    defaultLocaleMobileCoverImageId?: string;
+  },
+): Array<{
+  localeId: string;
+  title?: string;
+  description?: string;
+  buttonText?: string;
+  coverImageId?: string;
+  mobileCoverImageId?: string;
+}> {
   const defaultLocale = tenantLocales.find((l) => l.isDefault);
   const result: Array<{
     localeId: string;
@@ -69,7 +81,20 @@ export function buildCampaignTranslationsPayload(
     description?: string;
     buttonText?: string;
     coverImageId?: string;
+    mobileCoverImageId?: string;
   }> = [];
+
+  if (opts?.sameImageForAllLocales === false && defaultLocale) {
+    const defaultCover = opts.defaultLocaleCoverImageId?.trim();
+    const defaultMobile = opts.defaultLocaleMobileCoverImageId?.trim();
+    if (defaultCover || defaultMobile) {
+      result.push({
+        localeId: defaultLocale.id,
+        coverImageId: defaultCover || undefined,
+        mobileCoverImageId: defaultMobile || undefined,
+      });
+    }
+  }
 
   for (const loc of tenantLocales.filter((l) => l.isActive)) {
     if (defaultLocale && loc.id === defaultLocale.id) continue;
@@ -77,13 +102,15 @@ export function buildCampaignTranslationsPayload(
     if (!slice) continue;
     const hasText = slice.title || slice.description || slice.buttonText;
     const coverImageId = slice.coverImageId || undefined;
-    if (!hasText && !coverImageId) continue;
+    const mobileCoverImageId = slice.mobileCoverImageId || undefined;
+    if (!hasText && !coverImageId && !mobileCoverImageId) continue;
     result.push({
       localeId: loc.id,
       title: slice.title || undefined,
       description: slice.description || undefined,
       buttonText: slice.buttonText || undefined,
-      coverImageId: coverImageId || undefined,
+      coverImageId,
+      mobileCoverImageId,
     });
   }
   return result;
@@ -92,6 +119,10 @@ export function buildCampaignTranslationsPayload(
 export function buildEventTranslationsPayload(
   tenantLocales: Array<{ id: string; isDefault: boolean; isActive: boolean }>,
   localeDrafts: Record<string, Record<string, string>>,
+  opts?: {
+    sameImageForAllLocales?: boolean;
+    defaultLocaleCoverImageId?: string;
+  },
 ): Array<{
   localeId: string;
   title?: string;
@@ -107,6 +138,16 @@ export function buildEventTranslationsPayload(
     shortDescription?: string;
     coverImageId?: string;
   }> = [];
+
+  if (opts?.sameImageForAllLocales === false && defaultLocale) {
+    const defaultCover = opts.defaultLocaleCoverImageId?.trim();
+    if (defaultCover) {
+      result.push({
+        localeId: defaultLocale.id,
+        coverImageId: defaultCover,
+      });
+    }
+  }
 
   for (const loc of tenantLocales.filter((l) => l.isActive)) {
     if (defaultLocale && loc.id === defaultLocale.id) continue;

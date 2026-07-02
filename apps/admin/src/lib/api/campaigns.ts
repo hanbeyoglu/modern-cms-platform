@@ -7,7 +7,7 @@ export type MallStoreSummary = {
   id: string;
   mallId: string;
   tenantId: string;
-  localName: string | null;
+  detailTitle: string | null;
   globalStore: { name: string; slug: string };
 };
 
@@ -17,8 +17,10 @@ export type CampaignTranslation = {
   description?: string | null;
   buttonText?: string | null;
   coverImageId?: string | null;
+  mobileCoverImageId?: string | null;
   locale?: { id: string; code: string };
   coverImage?: EventMediaPreview | null;
+  mobileCoverImage?: EventMediaPreview | null;
 };
 
 export type CmsCampaign = {
@@ -32,6 +34,7 @@ export type CmsCampaign = {
   description: string | null;
   sameImageForAllLocales: boolean;
   sharedCoverImageId: string | null;
+  sharedMobileCoverImageId: string | null;
   coverMediaWidthOverride: number | null;
   coverMediaHeightOverride: number | null;
   publishStartAt: string | null;
@@ -52,6 +55,7 @@ export type CmsCampaign = {
   createdAt: string;
   updatedAt: string;
   sharedCoverImage: EventMediaPreview | null;
+  sharedMobileCoverImage: EventMediaPreview | null;
   translations: CampaignTranslation[];
   store: MallStoreSummary | null;
 };
@@ -70,6 +74,7 @@ export type CreateCampaignPayload = {
   description?: string;
   sameImageForAllLocales?: boolean;
   sharedCoverImageId?: string;
+  sharedMobileCoverImageId?: string;
   coverMediaWidthOverride?: number | null;
   coverMediaHeightOverride?: number | null;
   publishStartAt?: string;

@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router-dom';
-import { NAV_ITEMS, NAV_GROUPS } from '../../navigation/config';
+import { NAV_ITEMS, NAV_GROUPS, type NavItem } from '../../navigation/config';
 import { usePermission } from '../../hooks/usePermission';
 import { useCapability } from '../../hooks/useCapability';
 import { useAuth } from '../../auth/useAuth';
+import { isAuditEnabled } from '../../lib/feature-flags';
 import { BrandAvatar } from '../ui/BrandAvatar';
 import {
   formatContextLabel,
@@ -13,7 +14,7 @@ import {
 const SIDEBAR_WIDTH = 220;
 
 export function Sidebar() {
-  const { can } = usePermission();
+  const { can, canAny } = usePermission();
   const { has } = useCapability();
   const { user, tenants, malls, activeTenantId, activeMallId } = useAuth();
 
@@ -24,8 +25,11 @@ export function Sidebar() {
   const contextLabel = formatContextLabel(activeTenant, activeMall);
 
   const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.requiresAudit && !isAuditEnabled()) return false;
     if (item.superAdminOnly && !user?.isSuperAdmin) return false;
-    if (item.permission !== null && !can(item.permission)) return false;
+    if (item.anyPermission && item.anyPermission.length > 0) {
+      if (!canAny(...item.anyPermission)) return false;
+    } else if (item.permission !== null && !can(item.permission)) return false;
     if (item.capability && !user?.isSuperAdmin && !has(item.capability)) return false;
     return true;
   });
@@ -114,9 +118,7 @@ export function Sidebar() {
             >
               {group}
             </div>
-            {items.map((item) => (
-              <SidebarItem key={item.id} id={item.id} icon={item.icon} label={item.label} href={item.href} />
-            ))}
+            <GroupNavItems items={items} />
           </div>
         ))}
       </nav>
@@ -124,15 +126,59 @@ export function Sidebar() {
   );
 }
 
+function GroupNavItems({ items }: { items: NavItem[] }) {
+  const rootItems = items.filter((item) => !item.subgroup);
+  const subgroups = [
+    ...new Set(items.map((item) => item.subgroup).filter((s): s is string => Boolean(s))),
+  ];
+
+  return (
+    <>
+      {rootItems.map((item) => (
+        <SidebarItem key={item.id} id={item.id} icon={item.icon} label={item.label} href={item.href} />
+      ))}
+      {subgroups.map((subgroup) => (
+        <div key={subgroup}>
+          <div
+            style={{
+              padding: '8px 18px 4px 26px',
+              fontSize: 10,
+              fontWeight: 600,
+              color: '#b0b7c3',
+              letterSpacing: '0.3px',
+            }}
+          >
+            {subgroup}
+          </div>
+          {items
+            .filter((item) => item.subgroup === subgroup)
+            .map((item) => (
+              <SidebarItem
+                key={item.id}
+                id={item.id}
+                icon={item.icon}
+                label={item.label}
+                href={item.href}
+                indent
+              />
+            ))}
+        </div>
+      ))}
+    </>
+  );
+}
+
 function SidebarItem({
   icon,
   label,
   href,
+  indent = false,
 }: {
   id: string;
   icon: string;
   label: string;
   href: string;
+  indent?: boolean;
 }) {
   return (
     <NavLink
@@ -142,6 +188,7 @@ function SidebarItem({
         alignItems: 'center',
         gap: 10,
         padding: '8px 18px',
+        paddingLeft: indent ? 34 : 18,
         fontSize: 13,
         color: isActive ? '#2563eb' : '#374151',
         background: isActive ? '#eff6ff' : 'transparent',

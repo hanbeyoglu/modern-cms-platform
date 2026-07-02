@@ -35,6 +35,12 @@ interface Props {
   context: MediaUsageContextKey;
   value: string;
   onChange: (mediaId: string) => void;
+  fallbackPreview?: {
+    imageUrl: string;
+    alt: string;
+    title: string;
+    badge?: string;
+  };
   dimensionOverride?: { width: number | null; height: number | null };
   onDimensionOverrideChange?: (dimensions: { width: number | null; height: number | null }) => void;
   mallId?: string;
@@ -158,12 +164,14 @@ function LibraryBrowser({
   preset,
   dimensionOverride,
   mallId,
+  posterPreview,
   onSelect,
   onClose,
 }: {
   preset: MediaContextPreset;
   dimensionOverride?: DimensionOverride;
   mallId?: string;
+  posterPreview?: boolean;
   onSelect: (asset: MediaAsset) => void;
   onClose: () => void;
 }) {
@@ -294,9 +302,9 @@ function LibraryBrowser({
                     <div
                       style={{
                         width: '100%',
-                        aspectRatio: '4/3',
+                        aspectRatio: posterPreview ? '2 / 3' : '4 / 3',
                         overflow: 'hidden',
-                        background: '#e5e7eb',
+                        background: '#f3f4f6',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -305,7 +313,12 @@ function LibraryBrowser({
                       <img
                         src={asset.publicUrl}
                         alt={asset.altText ?? asset.originalName}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: posterPreview ? 'contain' : 'cover',
+                          objectPosition: 'center',
+                        }}
                         loading="lazy"
                       />
                     </div>
@@ -652,6 +665,7 @@ export function ContextualMediaPicker({
   context,
   value,
   onChange,
+  fallbackPreview,
   dimensionOverride,
   onDimensionOverrideChange,
   mallId,
@@ -693,6 +707,7 @@ export function ContextualMediaPicker({
 
   const effective = getEffectiveDimensions(preset, dimensionOverride);
   const customEnabled = Boolean(dimensionOverride?.width && dimensionOverride?.height);
+  const isMoviePoster = context === 'MOVIE_POSTER';
   const currentTooSmall =
     currentAsset?.width != null &&
     currentAsset.height != null &&
@@ -714,6 +729,34 @@ export function ContextualMediaPicker({
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 8,
+  };
+  const previewFrameStyle: React.CSSProperties = isMoviePoster
+    ? {
+        width: 72,
+        height: 108,
+        borderRadius: 5,
+        border: '1px solid #e5e7eb',
+        background: '#f3f4f6',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        flexShrink: 0,
+      }
+    : {
+        width: 80,
+        height: 56,
+        borderRadius: 5,
+        border: '1px solid #e5e7eb',
+        background: '#f3f4f6',
+        overflow: 'hidden',
+        flexShrink: 0,
+      };
+  const previewImageStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    objectFit: isMoviePoster ? 'contain' : 'cover',
+    objectPosition: 'center',
   };
 
   return (
@@ -749,18 +792,13 @@ export function ContextualMediaPicker({
             </div>
           ) : currentAsset ? (
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              <img
-                src={currentAsset.publicUrl}
-                alt={currentAsset.altText ?? currentAsset.originalName}
-                style={{
-                  width: 80,
-                  height: 56,
-                  objectFit: 'cover',
-                  borderRadius: 5,
-                  border: '1px solid #e5e7eb',
-                  flexShrink: 0,
-                }}
-              />
+              <div style={previewFrameStyle}>
+                <img
+                  src={currentAsset.publicUrl}
+                  alt={currentAsset.altText ?? currentAsset.originalName}
+                  style={previewImageStyle}
+                />
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12, fontWeight: 500, color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {currentAsset.originalName}
@@ -780,6 +818,42 @@ export function ContextualMediaPicker({
                     Uyarı: Görsel hedef boyuttan küçük.
                   </div>
                 )}
+              </div>
+            </div>
+          ) : fallbackPreview ? (
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <div style={previewFrameStyle}>
+                <img
+                  src={fallbackPreview.imageUrl}
+                  alt={fallbackPreview.alt}
+                  style={previewImageStyle}
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {fallbackPreview.title}
+                  </div>
+                  {fallbackPreview.badge && (
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: '#0369a1',
+                        background: '#e0f2fe',
+                        border: '1px solid #bae6fd',
+                        borderRadius: 4,
+                        padding: '1px 6px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {fallbackPreview.badge}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>
+                  Medya seçilirse bu posterin yerine kullanılır.
+                </div>
               </div>
             </div>
           ) : (
@@ -878,6 +952,7 @@ export function ContextualMediaPicker({
               preset={preset}
               dimensionOverride={dimensionOverride}
               mallId={mallId}
+              posterPreview={isMoviePoster}
               onSelect={handleSelect}
               onClose={() => setModalMode(null)}
           />

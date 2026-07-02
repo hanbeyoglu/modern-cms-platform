@@ -123,6 +123,10 @@ const PERMISSION_LABELS: Record<string, string> = {
   'locale:update': 'Dil düzenle',
   'locale:delete': 'Dil sil',
   'locale:set-default': 'Varsayılan dili belirle',
+  'system-language:read': 'Sistem dili görüntüle',
+  'system-language:create': 'Sistem dili oluştur',
+  'system-language:update': 'Sistem dili düzenle',
+  'system-language:delete': 'Sistem dili kaldır',
   'translation:read': 'Çeviri görüntüle',
   'translation:create': 'Çeviri oluştur',
   'translation:update': 'Çeviri düzenle',
@@ -149,7 +153,7 @@ const PERMISSION_GROUPS: Array<{ key: string; label: string; prefixes: string[] 
   { key: 'cinema', label: 'Sinema Yönetimi', prefixes: ['cinema:', 'movie:', 'movie-session:'] },
   { key: 'analytics', label: 'Analitik / Raporlama', prefixes: ['analytics:'] },
   { key: 'notifications', label: 'Bildirimler', prefixes: ['notification:'] },
-  { key: 'localization', label: 'Dil / Çeviri Yönetimi', prefixes: ['locale:', 'translation:'] },
+  { key: 'localization', label: 'Diller / Çeviri', prefixes: ['system-language:', 'locale:', 'translation:'] },
   { key: 'system', label: 'Sistem / Operasyon', prefixes: ['capability:'] },
 ];
 

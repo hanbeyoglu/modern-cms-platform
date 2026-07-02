@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { usePermission } from '../hooks/usePermission';
+import { isAuditEnabled } from '../lib/feature-flags';
 import { apiAuditLogsTimeline, type AuditLog, type AuditSeverity } from '../lib/api';
 
 const SEVERITY_COLORS: Record<AuditSeverity, string> = {
@@ -56,7 +57,7 @@ export function AuditTimeline({ entityType, entityId }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!accessToken || !canRead || !entityId) return;
+    if (!isAuditEnabled() || !accessToken || !canRead || !entityId) return;
     setLoading(true);
     apiAuditLogsTimeline(accessToken, entityType, entityId)
       .then(setLogs)
@@ -64,7 +65,7 @@ export function AuditTimeline({ entityType, entityId }: Props) {
       .finally(() => setLoading(false));
   }, [accessToken, canRead, entityType, entityId]);
 
-  if (!canRead) return null;
+  if (!isAuditEnabled() || !canRead) return null;
 
   return (
     <div>

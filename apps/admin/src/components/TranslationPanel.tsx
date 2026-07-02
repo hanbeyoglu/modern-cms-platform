@@ -7,7 +7,7 @@ import { Button } from './ui/Button';
 import { ErrorBanner } from './ui/ErrorBanner';
 import { LoadingState } from './ui/LoadingState';
 import {
-  apiLocalesList,
+  apiContentLocales,
   apiTranslationDelete,
   apiTranslationsList,
   apiTranslationUpsert,
@@ -102,7 +102,7 @@ type Props = {
 };
 
 export function TranslationPanel({ entityType, entityId, fields, title }: Props) {
-  const { accessToken, activeTenantId } = useAuth();
+  const { accessToken, activeTenantId, activeMallId } = useAuth();
   const { can } = usePermission();
 
   const canRead = can('translation:read');
@@ -125,12 +125,12 @@ export function TranslationPanel({ entityType, entityId, fields, title }: Props)
     setError(null);
     try {
       const [locList, trList] = await Promise.all([
-        apiLocalesList(accessToken, activeTenantId),
+        apiContentLocales(accessToken, activeTenantId, activeMallId),
         apiTranslationsList(accessToken, activeTenantId, { entityType, entityId }),
       ]);
       setLocales(locList);
       setRows(trList);
-      const active = locList.filter((l) => l.isActive).sort((a, b) => a.sortOrder - b.sortOrder);
+      const active = locList.sort((a, b) => a.sortOrder - b.sortOrder);
       const firstId = active[0]?.id ?? null;
       setActiveLocaleId((prev) => {
         if (prev && active.some((l) => l.id === prev)) return prev;
@@ -155,7 +155,7 @@ export function TranslationPanel({ entityType, entityId, fields, title }: Props)
     } finally {
       setLoading(false);
     }
-  }, [accessToken, activeTenantId, entityId, entityType, fields, canRead]);
+  }, [accessToken, activeTenantId, activeMallId, entityId, entityType, fields, canRead]);
 
   useEffect(() => {
     void load();
@@ -300,7 +300,7 @@ export function TranslationPanel({ entityType, entityId, fields, title }: Props)
       {loading && <LoadingState />}
       {!loading && tabLocales.length === 0 && (
         <p style={{ fontSize: 13, color: '#6b7280' }}>
-          Aktif dil yok. Ayarlar → Yerelleştirme üzerinden en az bir dili etkinleştirin.
+          Aktif dil yok. Ayarlar → Diller üzerinden bu lokasyon için en az bir dili etkinleştirin.
         </p>
       )}
       {!loading && tabLocales.length > 0 && (

@@ -20,6 +20,7 @@ export type CreateLocalePayload = {
   nativeName: string;
   isDefault?: boolean;
   isActive?: boolean;
+  rtl?: boolean;
 };
 
 export type UpdateLocalePayload = {

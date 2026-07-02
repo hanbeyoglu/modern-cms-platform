@@ -75,3 +75,64 @@ export function apiTenantUpdateStatus(
 ): Promise<{ success: boolean; status: string }> {
   return request(`/tenants/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }), token });
 }
+
+export type TenantDeletePreviewCounts = {
+  malls: number;
+  users: number;
+  mallStores: number;
+  campaigns: number;
+  events: number;
+  media: number;
+  movies: number;
+  movieSessions: number;
+  screeningHalls: number;
+  sliders: number;
+  popups: number;
+  pages: number;
+  services: number;
+  storeCategories: number;
+  mallFloors: number;
+  locales: number;
+  localizedContent: number;
+  searchIndexEntries: number;
+  notifications: number;
+  movieSyncLogs: number;
+  cinemas: number;
+  movieCategories: number;
+  pageBlocks: number;
+  pageAttachments: number;
+  analyticsEvents: number;
+  tenantSettings: number;
+  tenantCapabilities: number;
+};
+
+export type TenantDeletePreview = {
+  tenant: { id: string; name: string; slug: string; status: TenantStatus; deletedAt: string | null };
+  counts: TenantDeletePreviewCounts;
+  isProtected: boolean;
+  isActorOnlyTenant: boolean;
+  confirmHint: string;
+};
+
+export type TenantDeleteMode = 'SOFT' | 'HARD';
+
+export type TenantDeleteResult = {
+  mode: TenantDeleteMode;
+  tenantId: string;
+  deleted: TenantDeletePreviewCounts;
+  deletedMediaCount: number;
+  failedMediaDeletes: number;
+  warnings: string[];
+};
+
+export function apiTenantDeletePreview(token: string, id: string): Promise<TenantDeletePreview> {
+  return request(`/system/tenants/${id}/delete-preview`, { token });
+}
+
+export function apiTenantDelete(
+  token: string,
+  id: string,
+  data: { mode: TenantDeleteMode; confirmSlug: string },
+): Promise<TenantDeleteResult> {
+  return request(`/system/tenants/${id}`, { method: 'DELETE', body: JSON.stringify(data), token });
+}

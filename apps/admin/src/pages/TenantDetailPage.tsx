@@ -7,12 +7,14 @@ import {
   apiTenantUpdate,
   apiTenantUpdateStatus,
   type CmsTenant,
+  type TenantDeleteResult,
   type TenantStatus,
   type UpdateTenantPayload,
 } from '../lib/api';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
 import { AuditTimeline } from '../components/AuditTimeline';
+import { TenantDeleteModal } from '../components/TenantDeleteModal';
 
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: 'Aktif',
@@ -50,6 +52,8 @@ export function TenantDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<UpdateTenantPayload>({});
   const [saving, setSaving] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteResult, setDeleteResult] = useState<TenantDeleteResult | null>(null);
 
   const reload = () => {
     if (!accessToken || !id) return;
@@ -240,6 +244,75 @@ export function TenantDetailPage() {
           }}
         >
           <AuditTimeline entityType="tenant" entityId={tenant.id} />
+        </div>
+      )}
+
+      {isSA && tenant && (
+        <div style={{ border: '1px solid #fecaca', borderRadius: 8, padding: 20, marginTop: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', marginBottom: 10 }}>
+            Tehlikeli Bölge
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+            <div style={{ fontSize: 13, color: '#374151' }}>
+              Bu müşteriyi devre dışı bırakın veya kalıcı olarak silin. İşlem geri alınamaz.
+            </div>
+            <button
+              onClick={() => setShowDelete(true)}
+              style={{ padding: '6px 14px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+            >
+              Müşteriyi Sil
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showDelete && accessToken && tenant && (
+        <TenantDeleteModal
+          tenantId={tenant.id}
+          accessToken={accessToken}
+          onClose={() => setShowDelete(false)}
+          onDeleted={(result) => {
+            setShowDelete(false);
+            setDeleteResult(result);
+            toast.success(result.mode === 'HARD' ? 'Müşteri kalıcı olarak silindi' : 'Müşteri devre dışı bırakıldı');
+            if (result.mode === 'HARD') {
+              navigate('/tenants');
+            } else {
+              reload();
+            }
+          }}
+        />
+      )}
+
+      {deleteResult && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        }}>
+          <div style={{ background: '#fff', borderRadius: 10, padding: 24, width: 440, maxWidth: '100%' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
+              {deleteResult.mode === 'HARD' ? 'Kalıcı Silme Tamamlandı' : 'Devre Dışı Bırakma Tamamlandı'}
+            </div>
+            <div style={{ fontSize: 13, color: '#374151', marginBottom: 12 }}>
+              Mod: <strong>{deleteResult.mode}</strong>
+              {deleteResult.mode === 'HARD' && (
+                <> · Medya: {deleteResult.deletedMediaCount} silindi
+                  {deleteResult.failedMediaDeletes > 0 && `, ${deleteResult.failedMediaDeletes} başarısız`}
+                </>
+              )}
+            </div>
+            {deleteResult.warnings.length > 0 && (
+              <div style={{ fontSize: 12, color: '#b45309', background: '#fffbeb', padding: 10, borderRadius: 6, marginBottom: 12 }}>
+                {deleteResult.warnings.map((w, i) => <div key={i}>{w}</div>)}
+              </div>
+            )}
+            <button
+              onClick={() => setDeleteResult(null)}
+              style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              Tamam
+            </button>
+          </div>
         </div>
       )}
     </PageContainer>

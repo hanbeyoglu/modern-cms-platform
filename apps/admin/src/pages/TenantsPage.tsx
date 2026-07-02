@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
-import { apiTenantsList, apiTenantCreate, type CmsTenant, type CreateTenantPayload } from '../lib/api';
+import { apiTenantsList, apiTenantCreate, type CmsTenant, type CreateTenantPayload, type TenantDeleteResult } from '../lib/api';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
+import { TenantDeleteModal } from '../components/TenantDeleteModal';
 
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: 'Aktif',
@@ -41,6 +42,8 @@ export function TenantsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState<CreateTenantPayload>(INIT_FORM);
   const [creating, setCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<CmsTenant | null>(null);
+  const [deleteResult, setDeleteResult] = useState<TenantDeleteResult | null>(null);
 
   const load = useCallback(() => {
     if (!accessToken) return;
@@ -187,17 +190,71 @@ export function TenantsPage() {
                     </span>
                   </td>
                   <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                    <button
-                      onClick={() => navigate(`/tenants/${t.id}`)}
-                      style={{ padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: 5, fontSize: 12, cursor: 'pointer', background: '#fff' }}
-                    >
-                      Detay
-                    </button>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => navigate(`/tenants/${t.id}`)}
+                        style={{ padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: 5, fontSize: 12, cursor: 'pointer', background: '#fff' }}
+                      >
+                        Detay
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(t)}
+                        style={{ padding: '4px 10px', border: '1px solid #fecaca', borderRadius: 5, fontSize: 12, cursor: 'pointer', background: '#fef2f2', color: '#dc2626' }}
+                      >
+                        Sil
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {deleteTarget && accessToken && (
+        <TenantDeleteModal
+          tenantId={deleteTarget.id}
+          accessToken={accessToken}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={(result) => {
+            setDeleteTarget(null);
+            setDeleteResult(result);
+            toast.success(result.mode === 'HARD' ? 'Müşteri kalıcı olarak silindi' : 'Müşteri devre dışı bırakıldı');
+            load();
+          }}
+        />
+      )}
+
+      {deleteResult && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        }}>
+          <div style={{ background: '#fff', borderRadius: 10, padding: 24, width: 440, maxWidth: '100%' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
+              {deleteResult.mode === 'HARD' ? 'Kalıcı Silme Tamamlandı' : 'Devre Dışı Bırakma Tamamlandı'}
+            </div>
+            <div style={{ fontSize: 13, color: '#374151', marginBottom: 12 }}>
+              Mod: <strong>{deleteResult.mode}</strong>
+              {deleteResult.mode === 'HARD' && (
+                <> · Medya: {deleteResult.deletedMediaCount} silindi
+                  {deleteResult.failedMediaDeletes > 0 && `, ${deleteResult.failedMediaDeletes} başarısız`}
+                </>
+              )}
+            </div>
+            {deleteResult.warnings.length > 0 && (
+              <div style={{ fontSize: 12, color: '#b45309', background: '#fffbeb', padding: 10, borderRadius: 6, marginBottom: 12 }}>
+                {deleteResult.warnings.map((w, i) => <div key={i}>{w}</div>)}
+              </div>
+            )}
+            <button
+              onClick={() => setDeleteResult(null)}
+              style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              Tamam
+            </button>
+          </div>
         </div>
       )}
     </PageContainer>

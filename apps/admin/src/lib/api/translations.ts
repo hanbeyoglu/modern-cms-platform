@@ -10,8 +10,12 @@ export type LocalizedEntityType =
   | 'CAMPAIGN'
   | 'LOCATION'
   | 'STORE'
+  | 'STORE_CATEGORY'
   | 'MOVIE'
-  | 'CINEMA';
+  | 'CINEMA'
+  | 'POPUP'
+  | 'SERVICE'
+  | 'MALL_FLOOR';
 
 export type LocalizedContentRow = {
   id: string;

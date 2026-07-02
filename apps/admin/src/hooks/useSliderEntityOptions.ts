@@ -29,7 +29,7 @@ function logEntityOptions(
 }
 
 export function mallStoreLabel(store: MallStore): string {
-  const name = store.localName || store.globalStore.name;
+  const name = store.globalStore.name;
   return store.floor ? `${name} (${store.floor})` : name;
 }
 

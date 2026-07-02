@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
 import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
+import { ContentSlugFields } from '../components/ContentSlugFields';
+import { contentSlugForPayload, slugify } from '../lib/slugify';
 import { validatePageSchedule } from '../lib/publishing-workflow';
 import {
   apiPagesList,
@@ -48,6 +50,7 @@ const TYPE_LABELS: Record<PageType, string> = {
 type FormState = {
   title: string;
   slug: string;
+  useCustomSlug: boolean;
   type: PageType;
   customTypeLabel: string;
   status: PageStatus;
@@ -61,6 +64,7 @@ type FormState = {
 const EMPTY_FORM: FormState = {
   title: '',
   slug: '',
+  useCustomSlug: false,
   type: 'ABOUT',
   customTypeLabel: '',
   status: 'DRAFT',
@@ -135,7 +139,10 @@ export function PagesPage() {
     try {
       const payload: CreatePagePayload = {
         title: formState.title,
-        slug: formState.slug || undefined,
+        slug: contentSlugForPayload({
+          useCustomSlug: formState.useCustomSlug,
+          slug: formState.slug,
+        }),
         type: formState.type,
         customTypeLabel: formState.type === 'CUSTOM' ? formState.customTypeLabel : undefined,
         status: formState.status,
@@ -191,7 +198,7 @@ export function PagesPage() {
     }
   }
 
-  const field = (key: keyof FormState) => ({
+  const field = (key: Exclude<keyof FormState, 'useCustomSlug'>) => ({
     value: formState[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setFormState((s) => ({ ...s, [key]: e.target.value })),
@@ -242,14 +249,26 @@ export function PagesPage() {
         <div style={cardStyle({ marginBottom: 20 })}>
           <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 600 }}>Yeni Sayfa</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
+            <div style={{ gridColumn: '1 / -1' }}>
               <label style={labelStyle}>Başlık *</label>
               <input {...field('title')} style={inputStyle({ width: '100%' })} placeholder="Hakkımızda" />
             </div>
-            <div>
-              <label style={labelStyle}>Slug (boş bırakırsanız otomatik)</label>
-              <input {...field('slug')} style={inputStyle({ width: '100%' })} placeholder="hakkimizda" />
-            </div>
+            <ContentSlugFields
+              title={formState.title}
+              slug={formState.slug}
+              useCustomSlug={formState.useCustomSlug}
+              disabled={saving}
+              labelStyle={labelStyle}
+              inputStyle={inputStyle({ width: '100%' })}
+              onUseCustomSlugChange={(useCustomSlug) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  useCustomSlug,
+                  slug: useCustomSlug && !prev.slug.trim() ? slugify(prev.title) : prev.slug,
+                }))
+              }
+              onSlugChange={(slug) => setFormState((prev) => ({ ...prev, slug }))}
+            />
             <div>
               <label style={labelStyle}>Tip</label>
               <select {...field('type')} style={inputStyle({ width: '100%' })}>

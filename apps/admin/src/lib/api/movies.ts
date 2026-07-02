@@ -6,6 +6,16 @@ export type MovieStatus = 'ACTIVE' | 'PASSIVE' | 'ARCHIVED';
 
 export type MovieMediaPreview = Pick<MediaAsset, 'id' | 'publicUrl' | 'originalName' | 'mimeType'>;
 
+export type MovieCategory = {
+  id: string;
+  tenantId: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CmsMovie = {
   id: string;
   tenantId: string;
@@ -13,18 +23,38 @@ export type CmsMovie = {
   slug: string;
   originalTitle: string | null;
   posterMediaId: string | null;
+  posterPath: string | null;
+  backdropPath: string | null;
   description: string | null;
   durationMinutes: number | null;
   genre: string | null;
   rating: string | null;
   trailerUrl: string | null;
+  ticketUrl: string | null;
   releaseDate: string | null;
+  publishStartAt: string | null;
+  publishEndAt: string | null;
+  sortOrder: number;
   status: MovieStatus;
+  provider: 'TMDB' | 'MANUAL';
+  tmdbId: number | null;
+  tmdbVoteAverage: number | null;
+  tmdbVoteCount: number | null;
+  tmdbPopularity: number | null;
+  lastSyncedAt: string | null;
+  imdbId: string | null;
+  notCurrentlyAvailable: boolean;
   createdBy: string;
   updatedBy: string | null;
   createdAt: string;
   updatedAt: string;
   posterMedia: MovieMediaPreview | null;
+  categories: Array<{ movieId: string; categoryId: string; assignedAt: string; category: MovieCategory }>;
+  sessionSummary?: {
+    sessionCount: number;
+    todaySessionStartAt: string | null;
+    nextSessionStartAt: string | null;
+  };
 };
 
 export type MovieListResponse = { movies: CmsMovie[]; total: number; page: number; limit: number };
@@ -39,7 +69,12 @@ export type CreateMoviePayload = {
   genre?: string;
   rating?: string;
   trailerUrl?: string;
+  ticketUrl?: string;
   releaseDate?: string;
+  publishStartAt?: string | null;
+  publishEndAt?: string | null;
+  sortOrder?: number;
+  categoryIds?: string[];
   status?: MovieStatus;
 };
 
@@ -49,10 +84,11 @@ export async function apiMoviesList(
   opts?: {
     status?: MovieStatus;
     search?: string;
-    sortBy?: 'title' | 'createdAt' | 'releaseDate';
+    sortBy?: 'sortOrder' | 'title' | 'createdAt' | 'releaseDate';
     sortDir?: 'asc' | 'desc';
     page?: number;
     limit?: number;
+    mallId?: string;
   },
 ): Promise<MovieListResponse> {
   const params = new URLSearchParams();
@@ -61,13 +97,19 @@ export async function apiMoviesList(
   if (opts?.sortBy) params.set('sortBy', opts.sortBy);
   if (opts?.sortDir) params.set('sortDir', opts.sortDir);
   if (opts?.page) params.set('page', String(opts.page));
+  if (opts?.mallId) params.set('mallId', opts.mallId);
   appendLimitParam(params, opts?.limit);
   const qs = params.toString();
   return request<MovieListResponse>(`/movies${qs ? `?${qs}` : ''}`, {
     method: 'GET',
     token,
     tenantId,
+    mallId: opts?.mallId,
   });
+}
+
+export async function apiMovieCategoriesList(token: string, tenantId: string): Promise<MovieCategory[]> {
+  return request<MovieCategory[]>('/movies/categories', { method: 'GET', token, tenantId });
 }
 
 export async function apiMovieGet(token: string, tenantId: string, id: string): Promise<CmsMovie> {
@@ -103,4 +145,10 @@ export async function apiMovieUpdate(
 
 export async function apiMovieDelete(token: string, tenantId: string, id: string): Promise<void> {
   return request<void>(`/movies/${id}`, { method: 'DELETE', token, tenantId });
+}
+
+export function tmdbPosterUrl(posterPath: string | null | undefined, size = 'w500'): string | null {
+  if (!posterPath?.trim()) return null;
+  const normalized = posterPath.startsWith('/') ? posterPath : `/${posterPath}`;
+  return `https://image.tmdb.org/t/p/${size}${normalized}`;
 }

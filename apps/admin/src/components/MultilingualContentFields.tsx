@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { CmsLocale } from '../lib/api';
 
 export const EVENT_I18N_FIELDS = ['title', 'shortDescription', 'description', 'buttonText'] as const;
@@ -28,8 +28,12 @@ export const LOCATION_I18N_FIELDS = ['displayName', 'shortDescription', 'descrip
 export type LocationI18nField = (typeof LOCATION_I18N_FIELDS)[number];
 export const GLOBAL_STORE_I18N_FIELDS = ['name', 'description'] as const;
 export type GlobalStoreI18nField = (typeof GLOBAL_STORE_I18N_FIELDS)[number];
-export const MALL_STORE_I18N_FIELDS = ['localName', 'localDescription'] as const;
+export const MALL_STORE_I18N_FIELDS = ['detailTitle', 'localDescription'] as const;
 export type MallStoreI18nField = (typeof MALL_STORE_I18N_FIELDS)[number];
+export const STORE_CATEGORY_I18N_FIELDS = ['name', 'description'] as const;
+export type StoreCategoryI18nField = (typeof STORE_CATEGORY_I18N_FIELDS)[number];
+export const MALL_FLOOR_I18N_FIELDS = ['label'] as const;
+export type MallFloorI18nField = (typeof MALL_FLOOR_I18N_FIELDS)[number];
 export type MultilingualContentField =
   | EventI18nField
   | CampaignI18nField
@@ -38,23 +42,26 @@ export type MultilingualContentField =
   | PageI18nField
   | LocationI18nField
   | GlobalStoreI18nField
-  | MallStoreI18nField;
+  | MallStoreI18nField
+  | StoreCategoryI18nField
+  | MallFloorI18nField;
 
 const LABELS: Record<MultilingualContentField, string> = {
   name: 'Ad',
   title: 'Başlık',
   displayName: 'Görünen Ad',
-  localName: 'Yerel ad',
+  detailTitle: 'Detay Başlığı',
   subtitle: 'Alt Başlık',
   shortDescription: 'Kısa açıklama',
   description: 'Açıklama',
-  localDescription: 'Yerel açıklama',
+  localDescription: 'Yerel Açıklama',
   terms: 'Şartlar',
   buttonText: 'Buton metni',
   customTypeLabel: 'Özel tip etiketi',
   contentHtml: 'İçerik HTML',
   seoTitle: 'SEO Başlığı',
   seoDescription: 'SEO Açıklaması',
+  label: 'Etiket',
 };
 
 function completionForLocale(
@@ -110,6 +117,8 @@ type Props = {
   setValue: (localeId: string, field: MultilingualContentField, v: string) => void;
   onCopyFromDefault: (targetLocaleId: string) => void;
   disabled?: boolean;
+  renderTabExtra?: (activeLocaleId: string) => ReactNode;
+  labelForField?: (field: MultilingualContentField, localeCode: string) => string;
 };
 
 export function MultilingualContentFields({
@@ -123,6 +132,8 @@ export function MultilingualContentFields({
   setValue,
   onCopyFromDefault,
   disabled,
+  renderTabExtra,
+  labelForField,
 }: Props) {
   const tabLocales = locales.filter((l) => l.isActive);
   if (tabLocales.length === 0) return null;
@@ -207,7 +218,7 @@ export function MultilingualContentFields({
         {fields.map((field) => (
           <div key={field}>
             <label style={labelStyle}>
-              {LABELS[field]}
+              {labelForField ? labelForField(field, active.code) : LABELS[field]}
               {field === (requiredField === undefined ? fields[0] : requiredField) &&
                 active.id === defaultLocaleId &&
                 ' *'}
@@ -238,6 +249,7 @@ export function MultilingualContentFields({
             )}
           </div>
         ))}
+        {renderTabExtra?.(active.id)}
       </div>
     </div>
   );

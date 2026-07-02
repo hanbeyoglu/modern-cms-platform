@@ -18,5 +18,9 @@ export function usePermission() {
     return codes.includes(permission);
   }
 
-  return { can };
+  function canAny(...permissions: string[]): boolean {
+    return permissions.some((p) => can(p));
+  }
+
+  return { can, canAny };
 }

@@ -5,6 +5,7 @@ export type MediaUsageContextKey =
   | 'SLIDER_KIOSK'
   | 'EVENT_COVER'
   | 'CAMPAIGN_COVER'
+  | 'CAMPAIGN_MOBILE_COVER'
   | 'POPUP_IMAGE'
   | 'MOVIE_POSTER'
   | 'STORE_LOGO'
@@ -64,6 +65,13 @@ export const MEDIA_CONTEXTS: Record<MediaUsageContextKey, MediaContextPreset> = 
     label: 'Kampanya Kapak Görseli',
     recommendedWidth: 1200,
     recommendedHeight: 630,
+    acceptedMime: 'image/*',
+  },
+  CAMPAIGN_MOBILE_COVER: {
+    key: 'CAMPAIGN_MOBILE_COVER',
+    label: 'Kampanya Mobil Kapak Görseli',
+    recommendedWidth: 768,
+    recommendedHeight: 1024,
     acceptedMime: 'image/*',
   },
   POPUP_IMAGE: {

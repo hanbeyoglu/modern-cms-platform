@@ -10,6 +10,8 @@ import { CAMPAIGN_I18N_FIELDS, MultilingualContentFields } from '../components/M
 import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
 import { ContentChannelFields } from '../components/ContentChannelFields';
 import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
+import { ContentSlugFields } from '../components/ContentSlugFields';
+import { contentSlugForPayload, resolveUseCustomSlug, slugify } from '../lib/slugify';
 import {
   buildCampaignTranslationsPayload,
   getCampaignSaveBlocker,
@@ -24,7 +26,7 @@ import {
   apiCampaignPublish,
   apiCampaignUpdate,
   apiCampaignsList,
-  apiLocalesList,
+  apiContentLocales,
   apiMallStoresList,
   apiTranslationDelete,
   apiTranslationsList,
@@ -71,16 +73,20 @@ function StatusBadge({ status }: { status: ContentStatus }) {
 function storeRowLabel(store: CmsCampaign['store']): string {
   if (!store) return '—';
   const base = store.globalStore.name;
-  return store.localName ? `${base} — ${store.localName}` : base;
+  return store.detailTitle ? `${base} — ${store.detailTitle}` : base;
 }
 
 type FormState = {
   title: string;
   slug: string;
+  useCustomSlug: boolean;
   shortDescription: string;
   description: string;
   sameImageForAllLocales: boolean;
   sharedCoverImageId: string;
+  sharedMobileCoverImageId: string;
+  defaultLocaleCoverImageId: string;
+  defaultLocaleMobileCoverImageId: string;
   coverMediaWidthOverride: string;
   coverMediaHeightOverride: string;
   publishStartAt: string;
@@ -101,10 +107,14 @@ type FormState = {
 const EMPTY: FormState = {
   title: '',
   slug: '',
+  useCustomSlug: false,
   shortDescription: '',
   description: '',
   sameImageForAllLocales: true,
   sharedCoverImageId: '',
+  sharedMobileCoverImageId: '',
+  defaultLocaleCoverImageId: '',
+  defaultLocaleMobileCoverImageId: '',
   coverMediaWidthOverride: '',
   coverMediaHeightOverride: '',
   publishStartAt: '',
@@ -126,10 +136,14 @@ function cToForm(c: CmsCampaign): FormState {
   return {
     title: c.title,
     slug: c.slug,
+    useCustomSlug: resolveUseCustomSlug(c.slug, c.title),
     shortDescription: c.shortDescription ?? '',
     description: c.description ?? '',
     sameImageForAllLocales: c.sameImageForAllLocales ?? true,
     sharedCoverImageId: c.sharedCoverImageId ?? '',
+    sharedMobileCoverImageId: c.sharedMobileCoverImageId ?? '',
+    defaultLocaleCoverImageId: '',
+    defaultLocaleMobileCoverImageId: '',
     coverMediaWidthOverride: c.coverMediaWidthOverride ? String(c.coverMediaWidthOverride) : '',
     coverMediaHeightOverride: c.coverMediaHeightOverride ? String(c.coverMediaHeightOverride) : '',
     publishStartAt: c.publishStartAt ? c.publishStartAt.slice(0, 16) : '',
@@ -151,11 +165,12 @@ function cToForm(c: CmsCampaign): FormState {
 function formToPayload(f: FormState, localeDrafts: Record<string, Record<string, string>>, tenantLocales: CmsLocale[]): CreateCampaignPayload {
   return {
     title: f.title,
-    slug: f.slug.trim() || undefined,
+    slug: contentSlugForPayload({ useCustomSlug: f.useCustomSlug, slug: f.slug }),
     shortDescription: f.shortDescription || undefined,
     description: f.description || undefined,
     sameImageForAllLocales: f.sameImageForAllLocales,
     sharedCoverImageId: f.sharedCoverImageId || undefined,
+    sharedMobileCoverImageId: f.sharedMobileCoverImageId || undefined,
     coverMediaWidthOverride: parseOptionalDimension(f.coverMediaWidthOverride),
     coverMediaHeightOverride: parseOptionalDimension(f.coverMediaHeightOverride),
     publishStartAt: f.publishStartAt ? new Date(f.publishStartAt).toISOString() : undefined,
@@ -170,7 +185,11 @@ function formToPayload(f: FormState, localeDrafts: Record<string, Record<string,
     sortOrder: parseInt(f.sortOrder, 10) || 0,
     status: f.status,
     channels: f.channels.length ? f.channels : undefined,
-    translations: buildCampaignTranslationsPayload(tenantLocales, localeDrafts),
+    translations: buildCampaignTranslationsPayload(tenantLocales, localeDrafts, {
+      sameImageForAllLocales: f.sameImageForAllLocales,
+      defaultLocaleCoverImageId: f.defaultLocaleCoverImageId,
+      defaultLocaleMobileCoverImageId: f.defaultLocaleMobileCoverImageId,
+    }),
   };
 }
 
@@ -254,7 +273,7 @@ export function CampaignsPage() {
     }
     void (async () => {
       try {
-        const locs = await apiLocalesList(accessToken, tenantId);
+        const locs = await apiContentLocales(accessToken, tenantId, mallId);
         setTenantLocales(locs);
         const activeLocales = locs.filter((l) => l.isActive);
         const defaultLocale = locs.find((l) => l.isDefault);
@@ -267,6 +286,16 @@ export function CampaignsPage() {
             entityType: 'CAMPAIGN',
             entityId: editing.id,
           });
+          const defaultTr = editing.translations?.find((t) => t.localeId === defaultLocale?.id);
+          setForm((prev) => ({
+            ...prev,
+            defaultLocaleCoverImageId: !editing.sameImageForAllLocales
+              ? (defaultTr?.coverImageId ?? editing.sharedCoverImageId ?? '')
+              : '',
+            defaultLocaleMobileCoverImageId: !editing.sameImageForAllLocales
+              ? (defaultTr?.mobileCoverImageId ?? editing.sharedMobileCoverImageId ?? '')
+              : '',
+          }));
           const drafts: Record<string, Record<string, string>> = {};
           for (const loc of activeLocales) {
             if (loc.id === defaultLocale?.id) continue;
@@ -278,6 +307,7 @@ export function CampaignsPage() {
               terms: '',
               buttonText: tableTr?.buttonText ?? '',
               coverImageId: tableTr?.coverImageId ?? '',
+              mobileCoverImageId: tableTr?.mobileCoverImageId ?? '',
             };
             for (const field of CAMPAIGN_I18N_FIELDS) {
               if (field === 'title' || field === 'description' || field === 'buttonText') {
@@ -302,7 +332,7 @@ export function CampaignsPage() {
         setLocaleDrafts({});
       }
     })();
-  }, [showForm, editing?.id, accessToken, tenantId]);
+  }, [showForm, editing?.id, accessToken, tenantId, mallId]);
 
   useEffect(() => {
     if (!showForm || (!i18nDirty && !campaignFormDirty)) return;
@@ -377,7 +407,6 @@ export function CampaignsPage() {
   );
 
   async function handleSubmit() {
-    const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
     const blocker = getCampaignSaveBlocker({
       title: form.title,
       status: form.status,
@@ -385,7 +414,7 @@ export function CampaignsPage() {
       campaignStartAt: form.campaignStartAt,
       sameImageForAllLocales: form.sameImageForAllLocales,
       sharedCoverImageId: form.sharedCoverImageId,
-      defaultLocaleCoverImageId: defaultLocaleId ? form.sharedCoverImageId : undefined,
+      defaultLocaleCoverImageId: form.defaultLocaleCoverImageId,
     });
     if (blocker) {
       setFormError(blocker);
@@ -536,17 +565,6 @@ export function CampaignsPage() {
           {formError && <p style={{ color: '#b91c1c' }}>{formError}</p>}
           <div style={{ display: 'grid', gap: 10, maxWidth: 520 }}>
             <div>
-              <label style={labelStyle}>Slug</label>
-              <input
-                style={inputStyle}
-                value={form.slug}
-                onChange={(e) => {
-                  setForm({ ...form, slug: e.target.value });
-                  setCampaignFormDirty(true);
-                }}
-              />
-            </div>
-            <div>
               <label
                 style={{
                   display: 'flex',
@@ -561,15 +579,35 @@ export function CampaignsPage() {
                   checked={form.sameImageForAllLocales}
                   disabled={saving}
                   onChange={(e) => {
-                    setForm({ ...form, sameImageForAllLocales: e.target.checked });
+                    const checked = e.target.checked;
+                    setForm((prev) => {
+                      if (!checked) {
+                        return {
+                          ...prev,
+                          sameImageForAllLocales: false,
+                          defaultLocaleCoverImageId:
+                            prev.defaultLocaleCoverImageId || prev.sharedCoverImageId,
+                          defaultLocaleMobileCoverImageId:
+                            prev.defaultLocaleMobileCoverImageId || prev.sharedMobileCoverImageId,
+                        };
+                      }
+                      return { ...prev, sameImageForAllLocales: true };
+                    });
                     setCampaignFormDirty(true);
                   }}
                 />
-                Tüm diller için aynı kapak görseli
+                Tüm diller için aynı kapak görselini kullan
               </label>
+              {!form.sameImageForAllLocales && (
+                <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6b7280', lineHeight: 1.45 }}>
+                  Dil bazlı görsel kullanırsanız her dil için farklı kampanya bannerı yükleyebilirsiniz.
+                  <br />
+                  Eksik dil görsellerinde varsayılan dil veya ortak görsel kullanılır.
+                </p>
+              )}
             </div>
-            {form.sameImageForAllLocales ? (
-              <div>
+            {form.sameImageForAllLocales && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <ContextualMediaPicker
                   context="CAMPAIGN_COVER"
                   value={form.sharedCoverImageId}
@@ -591,30 +629,13 @@ export function CampaignsPage() {
                     setCampaignFormDirty(true);
                   }}
                 />
-              </div>
-            ) : (
-              tenantLocales.filter((l) => l.isActive).length > 0 &&
-              contentLocaleTab && (
                 <ContextualMediaPicker
-                  context="CAMPAIGN_COVER"
-                  value={
-                    contentLocaleTab === tenantLocales.find((l) => l.isDefault)?.id
-                      ? form.sharedCoverImageId
-                      : localeDrafts[contentLocaleTab]?.coverImageId ?? ''
-                  }
+                  context="CAMPAIGN_MOBILE_COVER"
+                  value={form.sharedMobileCoverImageId}
                   mallId={mallId}
-                  onChange={(mediaId) => {
-                    const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
-                    if (contentLocaleTab === defaultLocaleId) {
-                      setForm({ ...form, sharedCoverImageId: mediaId });
-                      setCampaignFormDirty(true);
-                      return;
-                    }
-                    setLocaleDrafts((d) => ({
-                      ...d,
-                      [contentLocaleTab]: { ...d[contentLocaleTab], coverImageId: mediaId },
-                    }));
-                    setI18nDirty(true);
+                  onChange={(id) => {
+                    setForm({ ...form, sharedMobileCoverImageId: id });
+                    setCampaignFormDirty(true);
                   }}
                   dimensionOverride={{
                     width: parseOptionalDimension(form.coverMediaWidthOverride),
@@ -629,7 +650,7 @@ export function CampaignsPage() {
                     setCampaignFormDirty(true);
                   }}
                 />
-              )
+              </div>
             )}
             <div>
               <label style={labelStyle}>AVM mağazası</label>
@@ -646,7 +667,7 @@ export function CampaignsPage() {
                 {mallStores.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.globalStore.name}
-                    {s.localName ? ` — ${s.localName}` : ''}
+                    {s.detailTitle ? ` — ${s.detailTitle}` : ''}
                   </option>
                 ))}
               </select>
@@ -751,6 +772,97 @@ export function CampaignsPage() {
                   setI18nDirty(true);
                 }}
                 disabled={saving}
+                renderTabExtra={
+                  !form.sameImageForAllLocales
+                    ? (localeId) => {
+                        const defId = tenantLocales.find((l) => l.isDefault)?.id;
+                        const coverValue =
+                          defId && localeId === defId
+                            ? form.defaultLocaleCoverImageId
+                            : localeDrafts[localeId]?.coverImageId ?? '';
+                        const mobileValue =
+                          defId && localeId === defId
+                            ? form.defaultLocaleMobileCoverImageId
+                            : localeDrafts[localeId]?.mobileCoverImageId ?? '';
+                        return (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                            <ContextualMediaPicker
+                              context="CAMPAIGN_COVER"
+                              value={coverValue}
+                              mallId={mallId}
+                              onChange={(mediaId) => {
+                                if (defId && localeId === defId) {
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    defaultLocaleCoverImageId: mediaId,
+                                  }));
+                                  setCampaignFormDirty(true);
+                                  return;
+                                }
+                                setLocaleDrafts((d) => ({
+                                  ...d,
+                                  [localeId]: { ...d[localeId], coverImageId: mediaId },
+                                }));
+                                setI18nDirty(true);
+                              }}
+                              dimensionOverride={{
+                                width: parseOptionalDimension(form.coverMediaWidthOverride),
+                                height: parseOptionalDimension(form.coverMediaHeightOverride),
+                              }}
+                              onDimensionOverrideChange={(dimensions) => {
+                                setForm({
+                                  ...form,
+                                  coverMediaWidthOverride: dimensions.width
+                                    ? String(dimensions.width)
+                                    : '',
+                                  coverMediaHeightOverride: dimensions.height
+                                    ? String(dimensions.height)
+                                    : '',
+                                });
+                                setCampaignFormDirty(true);
+                              }}
+                            />
+                            <ContextualMediaPicker
+                              context="CAMPAIGN_MOBILE_COVER"
+                              value={mobileValue}
+                              mallId={mallId}
+                              onChange={(mediaId) => {
+                                if (defId && localeId === defId) {
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    defaultLocaleMobileCoverImageId: mediaId,
+                                  }));
+                                  setCampaignFormDirty(true);
+                                  return;
+                                }
+                                setLocaleDrafts((d) => ({
+                                  ...d,
+                                  [localeId]: { ...d[localeId], mobileCoverImageId: mediaId },
+                                }));
+                                setI18nDirty(true);
+                              }}
+                              dimensionOverride={{
+                                width: parseOptionalDimension(form.coverMediaWidthOverride),
+                                height: parseOptionalDimension(form.coverMediaHeightOverride),
+                              }}
+                              onDimensionOverrideChange={(dimensions) => {
+                                setForm({
+                                  ...form,
+                                  coverMediaWidthOverride: dimensions.width
+                                    ? String(dimensions.width)
+                                    : '',
+                                  coverMediaHeightOverride: dimensions.height
+                                    ? String(dimensions.height)
+                                    : '',
+                                });
+                                setCampaignFormDirty(true);
+                              }}
+                            />
+                          </div>
+                        );
+                      }
+                    : undefined
+                }
               />
             ) : (
               <>
@@ -811,6 +923,27 @@ export function CampaignsPage() {
                 </div>
               </>
             )}
+            <ContentSlugFields
+              title={form.title}
+              slug={form.slug}
+              useCustomSlug={form.useCustomSlug}
+              persistedSlug={editing?.slug}
+              disabled={saving}
+              labelStyle={labelStyle}
+              inputStyle={inputStyle}
+              onUseCustomSlugChange={(useCustomSlug) => {
+                setForm((prev) => ({
+                  ...prev,
+                  useCustomSlug,
+                  slug: useCustomSlug && !prev.slug.trim() ? slugify(prev.title) : prev.slug,
+                }));
+                setCampaignFormDirty(true);
+              }}
+              onSlugChange={(slug) => {
+                setForm((prev) => ({ ...prev, slug }));
+                setCampaignFormDirty(true);
+              }}
+            />
             <div>
               <label style={labelStyle}>Kupon kodu</label>
               <input

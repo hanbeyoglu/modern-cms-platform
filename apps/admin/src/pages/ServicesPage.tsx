@@ -2,8 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
-import { PageContainer } from '../components/layout/PageContainer';
-import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
@@ -20,7 +18,7 @@ import {
 } from '../lib/api';
 import { usePermission } from '../hooks/usePermission';
 import { useMallRequired } from '../hooks/useMallRequired';
-import { MallRequiredStates } from '../components/MallRequiredStates';
+import { LocationScopedModuleShell } from '../components/location-scoped/LocationScopedModuleShell';
 
 const STATUS_STYLE: Record<ServiceStatus, { bg: string; color: string; label: string }> = {
   ACTIVE: { bg: '#d1fae5', color: '#065f46', label: 'Aktif' },
@@ -243,53 +241,45 @@ export function ServicesPage() {
   }
 
   return (
-    <MallRequiredStates
-      title="Lokasyon Hizmetleri"
-      status={mallCtx}
-      noSelectionDescription="Hizmetler AVM kapsamlıdır; üstten bir AVM seçin."
-    >
-    <PageContainer>
-      <PageHeader
-        title="Lokasyon Hizmetleri"
-        meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} kayıt</span>}
-        action={
-          can('service:create') ? (
-            <Button
-              variant="primary"
-              onClick={() => {
-                setEditing(null);
-                setForm(EMPTY);
-                setFormError(null);
-                setShowForm(true);
-              }}
-            >
-              + Yeni Hizmet
-            </Button>
-          ) : undefined
-        }
-      />
-      <div style={{ fontSize: 13 }}>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-          <input
-            type="text"
-            placeholder="Ada göre ara…"
-            value={filterSearch}
-            onChange={(e) => setFilterSearch(e.target.value)}
-            style={{ ...inputStyle, width: 200 }}
-          />
+    <LocationScopedModuleShell
+      title="Hizmetler"
+      meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} kayıt</span>}
+      headerAction={
+        can('service:create') ? (
+          <Button
+            variant="primary"
+            onClick={() => {
+              setEditing(null);
+              setForm(EMPTY);
+              setFormError(null);
+              setShowForm(true);
+            }}
+          >
+            + Yeni Hizmet
+          </Button>
+        ) : undefined
+      }
+      search={{
+        value: filterSearch,
+        onChange: setFilterSearch,
+        placeholder: 'Ada göre ara…',
+      }}
+      filters={
+        <label style={{ display: 'grid', gap: 4 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Durum</span>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as ServiceStatus | '')}
-            style={inputStyle}
+            style={{ ...inputStyle, width: 160 }}
           >
             <option value="">Tüm durumlar</option>
             <option value="ACTIVE">Aktif</option>
             <option value="INACTIVE">Pasif</option>
           </select>
-          <Button variant="secondary" onClick={() => void load()}>
-            Filtrele
-          </Button>
-        </div>
+        </label>
+      }
+    >
+      <div style={{ fontSize: 13 }}>
 
         {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
         {loading && <LoadingState />}
@@ -458,7 +448,6 @@ export function ServicesPage() {
           </table>
         )}
       </div>
-    </PageContainer>
-    </MallRequiredStates>
+    </LocationScopedModuleShell>
   );
 }

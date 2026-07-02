@@ -8,13 +8,17 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
+import { ContentSlugFields } from '../components/ContentSlugFields';
 import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
+import { SocialLinksEditor } from '../components/SocialLinksEditor';
+import { contentSlugForPayload, resolveUseCustomSlug } from '../lib/slugify';
+import { parseStoreSocialLinks, validateStoreSocialLinks, type StoreSocialLink } from '../lib/store-social-links';
 import {
   apiGlobalStoreCreate,
   apiGlobalStoreDelete,
   apiGlobalStoreUpdate,
   apiGlobalStoresList,
-  apiLocalesList,
+  apiSystemLocalesList,
   apiTranslationDelete,
   apiTranslationsList,
   apiTranslationUpsert,
@@ -60,6 +64,9 @@ export function GlobalStoresPage() {
   const [email, setEmail] = useState('');
   const [logoMediaId, setLogoMediaId] = useState('');
   const [formStatus, setFormStatus] = useState<StoreStatus>('ACTIVE');
+  const [useCustomSlug, setUseCustomSlug] = useState(false);
+  const [socialLinks, setSocialLinks] = useState<StoreSocialLink[]>([]);
+  const [duplicateStoreId, setDuplicateStoreId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
   const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
@@ -109,7 +116,7 @@ export function GlobalStoresPage() {
     }
     void (async () => {
       try {
-        const locs = await apiLocalesList(accessToken, tenantId);
+        const locs = await apiSystemLocalesList(accessToken, tenantId);
         setTenantLocales(locs);
         const activeLocales = locs.filter((l) => l.isActive);
         const defaultLocale = locs.find((l) => l.isDefault);
@@ -182,6 +189,9 @@ export function GlobalStoresPage() {
     setEditing(null);
     setName('');
     setSlug('');
+    setUseCustomSlug(false);
+    setSocialLinks([]);
+    setDuplicateStoreId(null);
     setDescription('');
     setWebsiteUrl('');
     setPhone('');
@@ -197,6 +207,9 @@ export function GlobalStoresPage() {
     setEditing(g);
     setName(g.name);
     setSlug(g.slug);
+    setUseCustomSlug(resolveUseCustomSlug(g.slug, g.name));
+    setSocialLinks(parseStoreSocialLinks(g.socialLinksJson));
+    setDuplicateStoreId(null);
     setDescription(g.description ?? '');
     setWebsiteUrl(g.websiteUrl ?? '');
     setPhone(g.phone ?? '');
@@ -209,17 +222,25 @@ export function GlobalStoresPage() {
 
   async function save() {
     if (!accessToken || !tenantId || !name.trim()) return;
+    const socialErr = validateStoreSocialLinks(socialLinks);
+    if (socialErr) {
+      setError(socialErr);
+      return;
+    }
     setSaving(true);
+    setDuplicateStoreId(null);
     try {
+      const slugPayload = contentSlugForPayload({ useCustomSlug, slug });
       if (editing) {
         const u = await apiGlobalStoreUpdate(accessToken, tenantId, editing.id, {
           name: name.trim(),
-          slug: slug.trim() || undefined,
+          ...(slugPayload !== undefined ? { slug: slugPayload } : {}),
           description: description.trim() || null,
           phone: phone.trim() || null,
           email: email.trim() || null,
           websiteUrl: websiteUrl.trim() || null,
           logoMediaId: logoMediaId || null,
+          socialLinks,
           status: formStatus,
         });
         setItems((prev) => prev.map((x) => (x.id === u.id ? u : x)));
@@ -227,12 +248,13 @@ export function GlobalStoresPage() {
       } else {
         const c = await apiGlobalStoreCreate(accessToken, tenantId, {
           name: name.trim(),
-          slug: slug.trim() || undefined,
+          ...(slugPayload !== undefined ? { slug: slugPayload } : {}),
           description: description.trim() || undefined,
           phone: phone.trim() || undefined,
           email: email.trim() || undefined,
           websiteUrl: websiteUrl.trim() || undefined,
           logoMediaId: logoMediaId || undefined,
+          socialLinks,
           status: formStatus,
         });
         setItems((prev) => [c, ...prev]);
@@ -244,7 +266,12 @@ export function GlobalStoresPage() {
       setI18nDirty(false);
       toast.success(editing ? 'Mağaza güncellendi' : 'Mağaza oluşturuldu');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Kayıt hatası');
+      const message = e instanceof Error ? e.message : 'Kayıt hatası';
+      setError(message);
+      if (message.includes('zaten var')) {
+        const match = items.find((g) => g.name.toLowerCase() === name.trim().toLowerCase());
+        if (match) setDuplicateStoreId(match.id);
+      }
     } finally {
       setSaving(false);
     }
@@ -277,7 +304,7 @@ export function GlobalStoresPage() {
       <PageHeader
         title="Global Mağazalar"
         meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} mağaza</span>}
-        action={canWrite ? <Button variant="primary" onClick={openCreate}>+ Yeni Mağaza</Button> : undefined}
+        action={canWrite ? <Button variant="primary" onClick={openCreate}>+ Global Mağaza Ekle</Button> : undefined}
       />
     <div style={{ fontSize: 13 }}>
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
@@ -299,11 +326,6 @@ export function GlobalStoresPage() {
           Filtrele
         </button>
         <span style={{ color: '#6b7280' }}>{total} kayıt</span>
-        {canWrite && (
-          <button type="button" onClick={openCreate} style={{ marginLeft: 'auto', padding: '6px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6 }}>
-            + Global mağaza
-          </button>
-        )}
         {!canWrite && (
           <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>
             Salt okunur — Global mağaza yönetimi yalnızca Super Admin yetkisine sahiptir
@@ -366,13 +388,32 @@ export function GlobalStoresPage() {
               )}
             </div>
             <label>
-              Slug
-              <input value={slug} onChange={(e) => setSlug(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
-            </label>
-            <label>
               Telefon
               <input value={phone} onChange={(e) => setPhone(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
             </label>
+            <ContentSlugFields
+              title={name}
+              slug={slug}
+              useCustomSlug={useCustomSlug}
+              persistedSlug={editing?.slug}
+              onUseCustomSlugChange={setUseCustomSlug}
+              onSlugChange={setSlug}
+              disabled={saving}
+            />
+            <div style={{ gridColumn: '1 / -1' }}>
+              <SocialLinksEditor value={socialLinks} onChange={setSocialLinks} disabled={saving} />
+            </div>
+            {duplicateStoreId ? (
+              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: '#b45309' }}>
+                Bu isimde bir kayıt zaten var.{' '}
+                <button type="button" onClick={() => {
+                  const existing = items.find((g) => g.id === duplicateStoreId);
+                  if (existing) openEdit(existing);
+                }}>
+                  Mevcut mağazayı aç
+                </button>
+              </div>
+            ) : null}
             <label>
               E-posta
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />

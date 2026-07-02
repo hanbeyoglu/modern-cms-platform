@@ -132,9 +132,12 @@ export type {
 
 export {
   apiStoreCategoriesList,
+  apiStoreCategoryGet,
   apiStoreCategoryCreate,
   apiStoreCategoryUpdate,
+  apiStoreCategoriesReorder,
   apiStoreCategoryDelete,
+  buildStoreCategoryTreeOptions,
   apiGlobalStoresList,
   apiGlobalStoreGet,
   apiGlobalStoreCreate,
@@ -147,18 +150,23 @@ export {
   apiMallStoreDelete,
   apiMallStoreFeature,
   apiMallStoreUnfeature,
+  apiMallFloorsList,
+  apiMallFloorCreate,
+  apiMallFloorUpdate,
+  apiMallFloorsReorder,
+  apiMallFloorDelete,
 } from './stores';
 export type {
-  StoreCategoryStatus,
   StoreCategory,
-  StoreCategoryListResponse,
-  GlobalStoreCategoryPreview,
+  StoreCategoryMediaPreview,
   GlobalStoreMediaPreview,
   GlobalStore,
   GlobalStoreListResponse,
   StoreStatus,
+  MallFloor,
   MallStore,
   MallStoreListResponse,
+  StoreSocialLink,
 } from './stores';
 
 export {
@@ -176,8 +184,8 @@ export type {
   CreateCinemaPayload,
 } from './cinemas';
 
-export { apiMoviesList, apiMovieGet, apiMovieCreate, apiMovieUpdate, apiMovieDelete } from './movies';
-export type { MovieStatus, CmsMovie, MovieListResponse, CreateMoviePayload } from './movies';
+export { apiMoviesList, apiMovieGet, apiMovieCreate, apiMovieUpdate, apiMovieDelete, apiMovieCategoriesList, tmdbPosterUrl } from './movies';
+export type { MovieStatus, CmsMovie, MovieCategory, MovieListResponse, CreateMoviePayload } from './movies';
 
 export {
   apiMovieSessionsList,
@@ -186,13 +194,25 @@ export {
   apiMovieSessionUpdate,
   apiMovieSessionDelete,
   apiMovieSessionCancel,
+  apiMovieSessionsForMovieList,
+  apiMovieSessionForMovieCreate,
+  apiMovieSessionForMovieUpdate,
+  apiMovieSessionForMovieDelete,
 } from './movie-sessions';
 export type {
   MovieSessionStatus,
   MovieSessionRow,
   MovieSessionListResponse,
   CreateMovieSessionPayload,
+  CreateMovieSessionForMoviePayload,
 } from './movie-sessions';
+
+export {
+  apiScreeningHallsList,
+  apiScreeningHallCreate,
+  apiScreeningHallDelete,
+} from './screening-halls';
+export type { ScreeningHall, ScreeningHallListResponse } from './screening-halls';
 
 export {
   apiPagesList,
@@ -221,6 +241,17 @@ export type {
 } from './pages';
 
 export {
+  apiSystemLocalesList,
+  apiSystemLocaleCreate,
+  apiSystemLocaleUpdate,
+  apiSystemLocaleDeactivate,
+  apiSystemLocaleSetDefault,
+  apiSystemLocalesReorder,
+} from './system-locales';
+export type { CmsLocale, CreateLocalePayload, UpdateLocalePayload } from './system-locales';
+
+/** @deprecated Use system-locales API — kept for backward compatibility */
+export {
   apiLocalesList,
   apiLocaleCreate,
   apiLocaleUpdate,
@@ -228,7 +259,6 @@ export {
   apiLocaleSetDefault,
   apiLocalesReorder,
 } from './locales';
-export type { CmsLocale, CreateLocalePayload, UpdateLocalePayload } from './locales';
 
 export {
   apiTranslationsList,
@@ -349,9 +379,15 @@ export {
   apiTenantCreate,
   apiTenantUpdate,
   apiTenantUpdateStatus,
+  apiTenantDeletePreview,
+  apiTenantDelete,
 } from './tenants';
 export type {
   TenantStatus,
+  TenantDeleteMode,
+  TenantDeletePreview,
+  TenantDeletePreviewCounts,
+  TenantDeleteResult,
   CmsTenant,
   TenantListResponse,
   CreateTenantPayload,
@@ -375,6 +411,14 @@ export type {
   CreateLocationPayload,
   UpdateLocationPayload,
 } from './locations';
+
+export {
+  apiLocationLocalesList,
+  apiLocationActiveLocales,
+  apiLocationLocalesUpdate,
+  apiContentLocales,
+} from './location-locales';
+export type { LocationLocaleRow } from './location-locales';
 
 export {
   apiAuditLogsList,

@@ -1,19 +1,22 @@
+import { Link } from 'react-router-dom';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
 import { usePermission } from '../hooks/usePermission';
 import { useMallRequired } from '../hooks/useMallRequired';
-import { MallRequiredStates } from '../components/MallRequiredStates';
-import { MALL_STORE_I18N_FIELDS, MultilingualContentFields } from '../components/MultilingualContentFields';
+import { LocationScopedModuleShell } from '../components/location-scoped/LocationScopedModuleShell';
+import { MALL_STORE_I18N_FIELDS, MultilingualContentFields, type MultilingualContentField } from '../components/MultilingualContentFields';
 import { LinkedSliderGroupsSection } from '../components/LinkedSliderGroupsSection';
-import { PageContainer } from '../components/layout/PageContainer';
-import { PageHeader } from '../components/layout/PageHeader';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { GlobalStoreSearchSelect } from '../components/GlobalStoreSearchSelect';
+import { WorkingHoursEditor } from '../components/WorkingHoursEditor';
 import {
   apiGlobalStoresList,
-  apiLocalesList,
+  apiContentLocales,
+  apiLocationGet,
+  apiMallFloorsList,
   apiMallStoreAssign,
   apiMallStoreDelete,
   apiMallStoreFeature,
@@ -21,16 +24,23 @@ import {
   apiMallStoreUpdate,
   apiMallStoresList,
   apiStoreCategoriesList,
+  buildStoreCategoryTreeOptions,
   apiTranslationDelete,
   apiTranslationsList,
   apiTranslationUpsert,
   type CmsLocale,
   type GlobalStore,
-  type GlobalStoreCategoryPreview,
+  type MallFloor,
   type MallStore,
   type StoreCategory,
   type StoreStatus,
 } from '../lib/api';
+import {
+  parseWorkingHours,
+  validateWorkingHoursSchedule,
+  workingHoursToPayload,
+  type WorkingHoursSchedule,
+} from '../lib/working-hours';
 
 const STORE_STATUS: Record<StoreStatus, { label: string; bg: string; color: string }> = {
   ACTIVE: { label: 'Aktif', bg: '#d1fae5', color: '#065f46' },
@@ -47,9 +57,8 @@ function StatusBadge({ status }: { status: StoreStatus }) {
   );
 }
 
-function mallStoreCategories(m: MallStore): GlobalStoreCategoryPreview[] {
-  if (m.categories?.length) return m.categories;
-  return (m.categoryLinks ?? []).map((link) => link.storeCategory);
+function mallStoreCategory(m: MallStore): StoreCategory | null {
+  return m.category ?? null;
 }
 
 function GlobalStorePreview({ store, readonly }: { store: GlobalStore; readonly?: boolean }) {
@@ -152,14 +161,19 @@ export function MallStoresPage() {
 
   const [showAssign, setShowAssign] = useState(false);
   const [globalStoreId, setGlobalStoreId] = useState('');
-  const [globalStoreSearch, setGlobalStoreSearch] = useState('');
-  const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [categoryId, setCategoryId] = useState('');
   const [editing, setEditing] = useState<MallStore | null>(null);
-  const [localName, setLocalName] = useState('');
+  const [detailTitle, setDetailTitle] = useState('');
   const [localDescription, setLocalDescription] = useState('');
-  const [floor, setFloor] = useState('');
+  const [floorId, setFloorId] = useState('');
+  const [customFloor, setCustomFloor] = useState('');
+  const [useCustomFloor, setUseCustomFloor] = useState(false);
+  const [floors, setFloors] = useState<MallFloor[]>([]);
+  const [mallWorkingHours, setMallWorkingHours] = useState<WorkingHoursSchedule | null>(null);
   const [storeNo, setStoreNo] = useState('');
-  const [workingHoursJson, setWorkingHoursJson] = useState('');
+  const [phone, setPhone] = useState('');
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [workingHours, setWorkingHours] = useState<WorkingHoursSchedule | null>(null);
   const [locationJson, setLocationJson] = useState('');
   const [sortOrder, setSortOrder] = useState('0');
   const [formStatus, setFormStatus] = useState<StoreStatus>('ACTIVE');
@@ -180,15 +194,19 @@ export function MallStoresPage() {
     setLoading(true);
     setError(null);
     try {
-      const [res, glob, cats] = await Promise.all([
+      const [res, glob, cats, floorRows, location] = await Promise.all([
         apiMallStoresList(accessToken, tenantId, mallId, { search: search || undefined, limit: 100 }),
         apiGlobalStoresList(accessToken, tenantId, { limit: 100, status: 'ACTIVE' }),
-        apiStoreCategoriesList(accessToken, tenantId, { limit: 100, status: 'ACTIVE' }),
+        apiStoreCategoriesList(accessToken, tenantId, mallId, { activeOnly: true }),
+        apiMallFloorsList(accessToken, tenantId, mallId),
+        apiLocationGet(accessToken, mallId).catch(() => null),
       ]);
       setItems(res.items);
       setTotal(res.total);
       setGlobals(glob.items);
-      setCategories(cats.items);
+      setCategories(cats);
+      setFloors(floorRows);
+      setMallWorkingHours(location?.workingHoursJson ? parseWorkingHours(location.workingHoursJson) : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Yükleme hatası');
     } finally {
@@ -218,7 +236,7 @@ export function MallStoresPage() {
     }
     void (async () => {
       try {
-        const locs = await apiLocalesList(accessToken, tenantId);
+        const locs = await apiContentLocales(accessToken, tenantId, mallId);
         setTenantLocales(locs);
         const activeLocales = locs.filter((l) => l.isActive);
         const defaultLocale = locs.find((l) => l.isDefault);
@@ -234,7 +252,7 @@ export function MallStoresPage() {
           const drafts: Record<string, Record<string, string>> = {};
           for (const loc of activeLocales) {
             if (loc.id === defaultLocale?.id) continue;
-            drafts[loc.id] = { localName: '', localDescription: '' };
+            drafts[loc.id] = { detailTitle: '', localDescription: '' };
             for (const field of MALL_STORE_I18N_FIELDS) {
               drafts[loc.id][field] =
                 translations.find((row) => row.localeId === loc.id && row.field === field)?.value ?? '';
@@ -287,29 +305,38 @@ export function MallStoresPage() {
     [accessToken, tenantId, tenantLocales, localeDrafts, can],
   );
 
-  const filteredGlobals = globals.filter((g) => {
-    const q = globalStoreSearch.trim().toLowerCase();
-    if (!q) return true;
-    return g.name.toLowerCase().includes(q) || g.slug.toLowerCase().includes(q);
-  });
+  const assignedGlobalStoreIds = items.map((m) => m.globalStoreId);
 
   const selectedGlobal =
     globals.find((g) => g.id === globalStoreId) ?? (editing ? editing.globalStore : null);
 
-  function toggleCategory(id: string) {
-    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  function mallStoreFieldLabel(field: MultilingualContentField, localeCode: string): string {
+    if (field !== 'detailTitle' && field !== 'localDescription') return field;
+    const code = localeCode.toLowerCase();
+    if (field === 'detailTitle') {
+      if (code === 'tr') return 'Detay Başlığı';
+      if (code === 'ru') return 'Заголовок детальной страницы';
+      return 'Detail Title';
+    }
+    if (field === 'localDescription') return code === 'tr' ? 'Yerel Açıklama' : 'Local Description';
+    return field;
   }
+
+  const categoryOptions = buildStoreCategoryTreeOptions(categories);
 
   function openAssign() {
     setEditing(null);
     setGlobalStoreId('');
-    setGlobalStoreSearch('');
-    setCategoryIds([]);
-    setLocalName('');
+    setCategoryId('');
+    setDetailTitle('');
     setLocalDescription('');
-    setFloor('');
+    setFloorId('');
+    setCustomFloor('');
+    setUseCustomFloor(false);
     setStoreNo('');
-    setWorkingHoursJson('');
+    setPhone('');
+    setWhatsappPhone('');
+    setWorkingHours(null);
     setLocationJson('');
     setSortOrder('0');
     setFormStatus('ACTIVE');
@@ -324,13 +351,16 @@ export function MallStoresPage() {
   function openEdit(m: MallStore) {
     setEditing(m);
     setGlobalStoreId(m.globalStoreId);
-    setGlobalStoreSearch('');
-    setCategoryIds(mallStoreCategories(m).map((c) => c.id));
-    setLocalName(m.localName ?? '');
+    setCategoryId(m.categoryId ?? m.category?.id ?? '');
+    setDetailTitle(m.detailTitle ?? '');
     setLocalDescription(m.localDescription ?? '');
-    setFloor(m.floor ?? '');
+    setFloorId(m.floorId ?? m.floorRecord?.id ?? '');
+    setCustomFloor(m.floor && !m.floorId ? m.floor : '');
+    setUseCustomFloor(Boolean(m.floor && !m.floorId));
     setStoreNo(m.storeNo ?? '');
-    setWorkingHoursJson(m.workingHoursJson ? JSON.stringify(m.workingHoursJson, null, 2) : '');
+    setPhone(m.phone ?? '');
+    setWhatsappPhone(m.whatsappPhone ?? '');
+    setWorkingHours(parseWorkingHours(m.workingHoursJson));
     setLocationJson(m.locationJson ? JSON.stringify(m.locationJson, null, 2) : '');
     setSortOrder(String(m.sortOrder));
     setFormStatus(m.status);
@@ -353,10 +383,15 @@ export function MallStoresPage() {
     setSaving(true);
     setError(null);
     try {
-      let wh: Record<string, unknown> | undefined;
+      const whErr = validateWorkingHoursSchedule(workingHours);
+      if (whErr) {
+        setError(whErr);
+        setSaving(false);
+        return;
+      }
+      const wh = workingHoursToPayload(workingHours);
       let loc: Record<string, unknown> | undefined;
       try {
-        wh = parseJsonField(workingHoursJson, 'Çalışma saatleri');
         loc = parseJsonField(locationJson, 'Konum');
       } catch (e) {
         setError(e instanceof Error ? e.message : 'JSON');
@@ -364,20 +399,26 @@ export function MallStoresPage() {
         return;
       }
 
+      const floorPayload = useCustomFloor
+        ? { floor: customFloor.trim() || null, floorId: null }
+        : { floorId: floorId || null, floor: null };
+
       if (editing) {
         const u = await apiMallStoreUpdate(accessToken, tenantId, mallId, editing.id, {
-          localName: localName.trim() || null,
+          detailTitle: detailTitle.trim() || null,
           localDescription: localDescription.trim() || null,
-          floor: floor.trim() || null,
+          ...floorPayload,
           storeNo: storeNo.trim() || null,
-          ...(wh !== undefined ? { workingHoursJson: wh } : {}),
+          phone: phone.trim() || null,
+          whatsappPhone: whatsappPhone.trim() || null,
+          workingHoursJson: wh,
           ...(loc !== undefined ? { locationJson: loc } : {}),
           sortOrder: parseInt(sortOrder, 10) || 0,
           status: formStatus,
           isFeatured,
           isSoon,
           searchTags: parseSearchTags(searchTagsText),
-          categoryIds,
+          categoryId: categoryId || null,
         });
         setItems((prev) => prev.map((x) => (x.id === u.id ? u : x)));
         await flushMallStoreTranslations(u.id);
@@ -389,18 +430,22 @@ export function MallStoresPage() {
         }
         const c = await apiMallStoreAssign(accessToken, tenantId, mallId, {
           globalStoreId,
-          localName: localName.trim() || undefined,
+          detailTitle: detailTitle.trim() || undefined,
           localDescription: localDescription.trim() || undefined,
-          floor: floor.trim() || undefined,
+          ...(useCustomFloor
+            ? { floor: customFloor.trim() || undefined }
+            : { floorId: floorId || undefined }),
           storeNo: storeNo.trim() || undefined,
-          ...(wh !== undefined ? { workingHoursJson: wh } : {}),
+          phone: phone.trim() || undefined,
+          whatsappPhone: whatsappPhone.trim() || undefined,
+          ...(wh ? { workingHoursJson: wh } : {}),
           ...(loc !== undefined ? { locationJson: loc } : {}),
           sortOrder: parseInt(sortOrder, 10) || 0,
           status: formStatus,
           isFeatured,
           isSoon,
           searchTags: parseSearchTags(searchTagsText),
-          categoryIds,
+          categoryId: categoryId || null,
         });
         setItems((prev) => [c, ...prev]);
         setTotal((t) => t + 1);
@@ -444,104 +489,61 @@ export function MallStoresPage() {
   }
 
   return (
-    <MallRequiredStates
+    <LocationScopedModuleShell
       title="AVM Mağazaları"
-      status={mallCtx}
-      noSelectionDescription="AVM mağaza listesi için üstten bir AVM seçin."
+      meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} mağaza</span>}
+      headerAction={<Button variant="primary" onClick={openAssign}>+ Mağaza Ata</Button>}
+      search={{
+        value: search,
+        onChange: setSearch,
+        placeholder: 'Global / yerel ada…',
+      }}
+      toolbarExtra={<span style={{ fontSize: 12, color: '#6b7280', paddingBottom: 6 }}>{total} atama</span>}
     >
-    <PageContainer>
-      <PageHeader
-        title="AVM Mağazaları"
-        meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} mağaza</span>}
-        action={<Button variant="primary" onClick={openAssign}>+ Mağaza Ata</Button>}
-      />
     <div style={{ fontSize: 13 }}>
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
-
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-        <input
-          placeholder="Global / yerel ada göre ara"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ padding: 5, borderRadius: 4, width: 200 }}
-        />
-        <button type="button" onClick={() => void load()}>
-          Filtrele
-        </button>
-        <span style={{ color: '#6b7280' }}>{total} atama</span>
-        <button type="button" onClick={openAssign} style={{ marginLeft: 'auto', padding: '6px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6 }}>
-          + Mağaza ata
-        </button>
-      </div>
 
       {showAssign && (
         <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, marginBottom: 16, background: '#fafafa' }}>
           <h3 style={{ marginTop: 0, fontSize: 14 }}>{editing ? 'AVM mağaza detayı' : 'Global mağazayı AVM\'ye ata'}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, maxWidth: 800 }}>
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>
-                Global Mağaza {!editing && '*'}
-              </label>
-              {!editing && (
-                <input
-                  type="search"
-                  placeholder="Marka adı veya slug ile ara…"
-                  value={globalStoreSearch}
-                  onChange={(e) => setGlobalStoreSearch(e.target.value)}
-                  style={{ display: 'block', width: '100%', marginBottom: 6, padding: 6, borderRadius: 4, border: '1px solid #d1d5db' }}
-                />
-              )}
               {!editing ? (
-                <select
-                  required
+                <GlobalStoreSearchSelect
+                  stores={globals}
+                  assignedGlobalStoreIds={assignedGlobalStoreIds}
                   value={globalStoreId}
-                  onChange={(e) => setGlobalStoreId(e.target.value)}
-                  style={{ display: 'block', width: '100%', padding: 6, borderRadius: 4, border: '1px solid #d1d5db' }}
-                >
-                  <option value="">— Global mağaza seçin —</option>
-                  {filteredGlobals.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name} ({g.slug})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setGlobalStoreId}
+                  disabled={saving}
+                />
               ) : null}
               {selectedGlobal ? <GlobalStorePreview store={selectedGlobal} readonly={!!editing} /> : null}
             </div>
 
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>AVM içindeki kategoriler</label>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Kategori</label>
               <p style={{ margin: '0 0 8px', fontSize: 12, color: '#6b7280' }}>
-                Aynı marka farklı lokasyonlarda farklı kategorilere sahip olabilir.
+                Bu lokasyona özel kategorilerden birini seçin. Kategorileri{' '}
+                <Link to="/store-categories" style={{ color: '#2563eb' }}>
+                  Mağaza Kategorileri
+                </Link>{' '}
+                sayfasından yönetin.
               </p>
               {categories.length === 0 ? (
                 <p style={{ fontSize: 12, color: '#9ca3af' }}>Henüz kategori tanımlı değil.</p>
               ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {categories.map((cat) => (
-                    <label
-                      key={cat.id}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '4px 10px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: 6,
-                        background: categoryIds.includes(cat.id) ? '#eff6ff' : '#fff',
-                        cursor: 'pointer',
-                        fontSize: 13,
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={categoryIds.includes(cat.id)}
-                        onChange={() => toggleCategory(cat.id)}
-                      />
-                      {cat.name}
-                    </label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  style={{ width: '100%', maxWidth: 420, padding: 6 }}
+                >
+                  <option value="">— Kategori seçilmedi —</option>
+                  {categoryOptions.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {`${'  '.repeat(opt.depth)}${opt.label}`}
+                    </option>
                   ))}
-                </div>
+                </select>
               )}
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
@@ -553,17 +555,18 @@ export function MallStoresPage() {
                   activeLocaleId={contentLocaleTab}
                   onTabChange={(localeId) => setContentLocaleTab(localeId)}
                   defaultLocaleId={tenantLocales.find((l) => l.isDefault)?.id}
+                  labelForField={mallStoreFieldLabel}
                   getValue={(localeId, field) => {
                     const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
                     if (defaultLocaleId && localeId === defaultLocaleId) {
-                      return field === 'localName' ? localName : localDescription;
+                      return field === 'detailTitle' ? detailTitle : localDescription;
                     }
                     return localeDrafts[localeId]?.[field] ?? '';
                   }}
                   setValue={(localeId, field, value) => {
                     const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
                     if (defaultLocaleId && localeId === defaultLocaleId) {
-                      if (field === 'localName') setLocalName(value);
+                      if (field === 'detailTitle') setDetailTitle(value);
                       if (field === 'localDescription') setLocalDescription(value);
                       return;
                     }
@@ -576,7 +579,7 @@ export function MallStoresPage() {
                   onCopyFromDefault={(targetId) => {
                     setLocaleDrafts((drafts) => ({
                       ...drafts,
-                      [targetId]: { localName, localDescription },
+                      [targetId]: { detailTitle, localDescription },
                     }));
                     setI18nDirty(true);
                   }}
@@ -585,8 +588,11 @@ export function MallStoresPage() {
               ) : (
                 <>
                   <label style={{ display: 'block', marginBottom: 10 }}>
-                    Yerel ad
-                    <input value={localName} onChange={(e) => setLocalName(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
+                    Detay başlığı
+                    <p style={{ margin: '4px 0 6px', fontSize: 12, color: '#6b7280' }}>
+                      Mağaza detay sayfası başlığı. Liste görünümünde her zaman global marka adı gösterilir.
+                    </p>
+                    <input value={detailTitle} onChange={(e) => setDetailTitle(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
                   </label>
                   <label style={{ display: 'block', marginBottom: 10 }}>
                     Yerel açıklama
@@ -595,9 +601,39 @@ export function MallStoresPage() {
                 </>
               )}
             </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Kat</label>
+              {!useCustomFloor ? (
+                <select
+                  value={floorId}
+                  onChange={(e) => setFloorId(e.target.value)}
+                  style={{ display: 'block', width: '100%', padding: 6, marginBottom: 6 }}
+                >
+                  <option value="">— Kat seçin —</option>
+                  {floors.filter((f) => f.active).map((f) => (
+                    <option key={f.id} value={f.id}>{f.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={customFloor}
+                  onChange={(e) => setCustomFloor(e.target.value)}
+                  placeholder="Özel kat adı"
+                  style={{ display: 'block', width: '100%', padding: 6, marginBottom: 6 }}
+                />
+              )}
+              <label style={{ fontSize: 12, display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                <input type="checkbox" checked={useCustomFloor} onChange={(e) => setUseCustomFloor(e.target.checked)} />
+                Özel kat gir
+              </label>
+            </div>
             <label>
-              Kat
-              <input value={floor} onChange={(e) => setFloor(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
+              Telefon
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
+            </label>
+            <label>
+              WhatsApp Telefonu
+              <input value={whatsappPhone} onChange={(e) => setWhatsappPhone(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
             </label>
             <label>
               Mağaza no
@@ -632,10 +668,16 @@ export function MallStoresPage() {
                 style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }}
               />
             </label>
-            <label style={{ gridColumn: '1 / -1' }}>
-              Çalışma saatleri (JSON nesnesi, opsiyonel)
-              <textarea value={workingHoursJson} onChange={(e) => setWorkingHoursJson(e.target.value)} rows={3} style={{ display: 'block', width: '100%', marginTop: 2, fontFamily: 'monospace', fontSize: 12 }} placeholder='{"mon": "10-22"}' />
-            </label>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>Çalışma saatleri</label>
+              <WorkingHoursEditor
+                value={workingHours}
+                onChange={setWorkingHours}
+                formKey={editing?.id ?? 'new'}
+                disabled={saving}
+                mallHours={mallWorkingHours}
+              />
+            </div>
             <label style={{ gridColumn: '1 / -1' }}>
               Konum (JSON nesnesi, opsiyonel)
               <textarea value={locationJson} onChange={(e) => setLocationJson(e.target.value)} rows={2} style={{ display: 'block', width: '100%', marginTop: 2, fontFamily: 'monospace', fontSize: 12 }} />
@@ -678,7 +720,7 @@ export function MallStoresPage() {
             {items.map((m) => (
               <tr key={m.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                 <td style={{ padding: 8 }}>
-                  <div style={{ fontWeight: 600 }}>{m.localName || m.globalStore.name}</div>
+                  <div style={{ fontWeight: 600 }}>{m.globalStore.name}</div>
                   {m.isSoon ? (
                     <span style={{ marginTop: 4, display: 'inline-block' }}>
                       <Badge variant="blue">Yakında</Badge>
@@ -712,19 +754,15 @@ export function MallStoresPage() {
                 </td>
                 <td style={{ padding: 8 }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    {mallStoreCategories(m).length > 0 ? (
-                      mallStoreCategories(m).map((cat) => (
-                        <Badge key={cat.id} variant="gray">
-                          {cat.name}
-                        </Badge>
-                      ))
+                    {mallStoreCategory(m) ? (
+                      <Badge variant="gray">{mallStoreCategory(m)!.name}</Badge>
                     ) : (
                       <span style={{ fontSize: 12, color: '#9ca3af' }}>—</span>
                     )}
                   </div>
                 </td>
                 <td style={{ padding: 8 }}>
-                  {m.floor ?? '—'} / {m.storeNo ?? '—'}
+                  {m.floorRecord?.label ?? m.floor ?? '—'} / {m.storeNo ?? '—'}
                 </td>
                 <td style={{ padding: 8 }}>{m.isFeatured ? 'Evet' : 'Hayır'}</td>
                 <td style={{ padding: 8 }}>
@@ -747,7 +785,6 @@ export function MallStoresPage() {
         </table>
       )}
     </div>
-    </PageContainer>
-    </MallRequiredStates>
+    </LocationScopedModuleShell>
   );
 }
