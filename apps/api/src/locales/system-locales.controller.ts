@@ -33,65 +33,59 @@ import {
   ApiUuidParam,
 } from '../swagger/swagger.decorators';
 
-@ApiTags(SWAGGER_TAGS.LOCALES)
+@ApiTags(SWAGGER_TAGS.SYSTEM_LOCALES)
 @ApiAdminContext()
-@Controller('locales')
+@Controller('system/locales')
 @RequireTenantContext()
 @UseGuards(TenantAccessGuard, PermissionsGuard, CapabilityGuard)
 @RequireCapability('localization')
-export class LocalesController {
+export class SystemLocalesController {
   constructor(private readonly locales: LocalesService) {}
 
   @Get()
-  @RequirePermission('locale:read')
+  @RequirePermission('system-language:read')
   @ApiAdminOperation({
-    summary: 'locale.list.summary',
-    description: 'locale.list.deprecated',
-    permissions: ['locale:read'],
-    related: [SWAGGER_TAGS.SYSTEM_LOCALES, SWAGGER_TAGS.TRANSLATIONS, SWAGGER_TAGS.PUBLIC],
-    deprecated: true,
+    summary: 'systemLanguage.list.summary',
+    description: 'systemLanguage.list.description',
+    permissions: ['system-language:read'],
+    related: [SWAGGER_TAGS.TRANSLATIONS, SWAGGER_TAGS.PUBLIC],
   })
-  @ApiResponse({ status: 200, description: 'locale.response.200' })
+  @ApiResponse({ status: 200, description: 'systemLanguage.response.200' })
   list(@Req() req: Request, @Query() query: ListLocalesDto) {
     return this.locales.list(req.tenantId!, query);
   }
 
   @Post()
-  @RequirePermission('locale:create')
+  @RequirePermission('system-language:create')
   @ApiAdminOperation({
-    summary: 'locale.create.summary',
-    description: 'locale.deprecated.useSystem',
-    permissions: ['locale:create'],
-    deprecated: true,
+    summary: 'systemLanguage.create.summary',
+    permissions: ['system-language:create'],
   })
-  @ApiResponse({ status: 201, description: 'locale.response.201' })
+  @ApiResponse({ status: 201, description: 'systemLanguage.response.201' })
   create(@Body() dto: CreateLocaleDto, @CurrentUser() user: User, @Req() req: Request) {
     return this.locales.create(dto, user, req.tenantId!);
   }
 
   @Patch('reorder')
-  @RequirePermission('locale:update')
+  @RequirePermission('system-language:update')
   @ApiAdminOperation({
-    summary: 'locale.reorder.summary',
-    description: 'locale.deprecated.useSystem',
-    permissions: ['locale:update'],
-    deprecated: true,
+    summary: 'systemLanguage.reorder.summary',
+    description: 'systemLanguage.reorder.description',
+    permissions: ['system-language:update'],
   })
-  @ApiResponse({ status: 200, description: 'locale.response.200' })
+  @ApiResponse({ status: 200, description: 'systemLanguage.response.200' })
   reorder(@Body() dto: ReorderLocalesDto, @CurrentUser() user: User, @Req() req: Request) {
     return this.locales.reorder(dto.orderedIds, user, req.tenantId!);
   }
 
   @Patch(':id')
-  @RequirePermission('locale:update')
+  @RequirePermission('system-language:update')
   @ApiAdminOperation({
-    summary: 'locale.update.summary',
-    description: 'locale.deprecated.useSystem',
-    permissions: ['locale:update'],
-    deprecated: true,
+    summary: 'systemLanguage.update.summary',
+    permissions: ['system-language:update'],
   })
   @ApiUuidParam('id', 'common.param.uuid')
-  @ApiResponse({ status: 200, description: 'locale.response.200' })
+  @ApiResponse({ status: 200, description: 'systemLanguage.response.200' })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateLocaleDto,
@@ -103,29 +97,27 @@ export class LocalesController {
 
   @Delete(':id')
   @HttpCode(204)
-  @RequirePermission('locale:delete')
+  @RequirePermission('system-language:delete')
   @ApiAdminOperation({
-    summary: 'locale.deactivate.locale.summary',
-    description: 'locale.deprecated.useSystem',
-    permissions: ['locale:delete'],
-    deprecated: true,
+    summary: 'systemLanguage.deactivate.summary',
+    description: 'systemLanguage.deactivate.description',
+    permissions: ['system-language:delete'],
   })
   @ApiUuidParam('id', 'common.param.uuid')
-  @ApiResponse({ status: 204, description: 'locale.response.204' })
+  @ApiResponse({ status: 204, description: 'systemLanguage.response.204' })
   async remove(@Param('id') id: string, @CurrentUser() user: User, @Req() req: Request) {
     await this.locales.deactivate(id, user, req.tenantId!);
   }
 
   @Post(':id/default')
-  @RequirePermission('locale:set-default')
+  @RequirePermission('system-language:update')
   @ApiAdminOperation({
-    summary: 'locale.set.default.locale.summary',
-    description: 'locale.deprecated.useSystem',
-    permissions: ['locale:set-default'],
-    deprecated: true,
+    summary: 'systemLanguage.setDefault.summary',
+    description: 'systemLanguage.setDefault.description',
+    permissions: ['system-language:update'],
   })
   @ApiUuidParam('id', 'common.param.uuid')
-  @ApiResponse({ status: 200, description: 'locale.response.200' })
+  @ApiResponse({ status: 200, description: 'systemLanguage.response.200' })
   setDefault(@Param('id') id: string, @CurrentUser() user: User, @Req() req: Request) {
     return this.locales.setDefault(id, user, req.tenantId!);
   }

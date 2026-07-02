@@ -67,14 +67,14 @@ export class LocalesService {
         isDefault,
         isActive: dto.isActive ?? true,
         sortOrder: nextOrder,
-        rtl: rtlForLocaleCode(code),
+        rtl: dto.rtl ?? rtlForLocaleCode(code),
       },
     });
 
     await this.audit.logAction({
       userId: user.id,
       tenantId,
-      action: 'locale:create',
+      action: 'system-language:create',
       entityType: 'locale',
       entityId: locale.id,
       after: { code: locale.code, name: locale.name, isDefault: locale.isDefault },
@@ -129,7 +129,7 @@ export class LocalesService {
     await this.audit.logAction({
       userId: user.id,
       tenantId,
-      action: 'locale:update',
+      action: 'system-language:update',
       entityType: 'locale',
       entityId: locale.id,
       before: { code: existing.code, name: existing.name, isActive: existing.isActive },
@@ -176,7 +176,7 @@ export class LocalesService {
     await this.audit.logAction({
       userId: user.id,
       tenantId,
-      action: 'locale:delete',
+      action: 'system-language:delete',
       entityType: 'locale',
       entityId: id,
       before: { code: existing.code, isDefault: existing.isDefault, isActive: existing.isActive },
@@ -209,7 +209,7 @@ export class LocalesService {
     await this.audit.logAction({
       userId: user.id,
       tenantId,
-      action: 'locale:set-default',
+      action: 'system-language:set-default',
       entityType: 'locale',
       entityId: id,
       before: { isDefault: locale.isDefault },
@@ -250,7 +250,7 @@ export class LocalesService {
     await this.audit.logAction({
       userId: user.id,
       tenantId,
-      action: 'locale:reorder',
+      action: 'system-language:reorder',
       entityType: 'locale',
       entityId: tenantId,
       after: { orderedIds: unique },

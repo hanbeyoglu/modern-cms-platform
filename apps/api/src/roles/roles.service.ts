@@ -19,7 +19,7 @@ const PERMISSION_GROUPS: Record<string, string[]> = {
   pages: ['page:read', 'page:create', 'page:update', 'page:delete', 'page:publish', 'page:archive', 'page-block:read', 'page-block:create', 'page-block:update', 'page-block:delete', 'page-block:reorder'],
   analytics: ['analytics:view', 'analytics:export'],
   notifications: ['notification:read', 'notification:update', 'notification:delete'],
-  localization: ['locale:read', 'locale:create', 'locale:update', 'locale:delete', 'locale:set-default', 'translation:read', 'translation:create', 'translation:update', 'translation:delete'],
+  localization: ['system-language:read', 'system-language:create', 'system-language:update', 'system-language:delete', 'locale:read', 'translation:read', 'translation:create', 'translation:update', 'translation:delete'],
   search: ['search:global'],
   users: ['user:read', 'user:create', 'user:update', 'user:delete'],
   roles: ['role:read', 'role:create', 'role:update', 'role:delete'],

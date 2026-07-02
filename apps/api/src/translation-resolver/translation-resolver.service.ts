@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Locale, LocalizedContent, LocalizedEntityType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { MallLocalesService } from '../mall-locales/mall-locales.service';
 
 export interface EntityTranslationMap {
   [entityId: string]: { [field: string]: string };
@@ -8,19 +9,34 @@ export interface EntityTranslationMap {
 
 @Injectable()
 export class TranslationResolverService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mallLocales: MallLocalesService,
+  ) {}
 
   // Returns the locale to use for a given request.
   // Falls back to the tenant default when the requested code is unknown or inactive.
-  async resolveLocale(tenantId: string, requestedLocaleCode?: string): Promise<Locale | null> {
+  async resolveLocale(
+    tenantId: string,
+    requestedLocaleCode?: string,
+    mallId?: string | null,
+  ): Promise<Locale | null> {
+    const activeLocales = mallId
+      ? await this.mallLocales.getActiveLocalesForMall(tenantId, mallId)
+      : await this.getActiveLocalesOrdered(tenantId);
+
     const normalized = this.normalizeLocaleCode(requestedLocaleCode);
     if (normalized) {
-      const locale = await this.prisma.locale.findUnique({
-        where: { tenantId_code: { tenantId, code: normalized } },
-      });
-      if (locale?.isActive) return locale;
+      const locale = activeLocales.find((l) => l.code === normalized);
+      if (locale) return locale;
     }
-    return this.getDefaultLocale(tenantId);
+
+    return (
+      activeLocales.find((l) => l.isDefault) ??
+      (await this.getDefaultLocale(tenantId)) ??
+      activeLocales[0] ??
+      null
+    );
   }
 
   /** Safe for untrusted query/header values (no throw). */

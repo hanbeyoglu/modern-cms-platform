@@ -24,4 +24,8 @@ export class CreateLocaleDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  rtl?: boolean;
 }
