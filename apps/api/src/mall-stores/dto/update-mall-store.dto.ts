@@ -1,4 +1,4 @@
-import { ArrayUnique, IsArray, IsBoolean, IsEmail, IsInt, IsObject, IsOptional, IsString, MaxLength, Min, ValidateIf, IsIn } from 'class-validator';
+import { IsArray, IsBoolean, IsEmail, IsInt, IsObject, IsOptional, IsString, MaxLength, Min, ValidateIf, IsIn } from 'class-validator';
 import { STORE_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
 import type { StoreStatus } from '@prisma/client';
@@ -7,7 +7,7 @@ export class UpdateMallStoreDto {
   @IsOptional()
   @IsString()
   @MaxLength(300)
-  localName?: string | null;
+  detailTitle?: string | null;
 
   @IsOptional()
   @IsString()
@@ -17,6 +17,10 @@ export class UpdateMallStoreDto {
   @IsOptional()
   @IsString()
   localLogoMediaId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  floorId?: string | null;
 
   @IsOptional()
   @IsString()
@@ -32,6 +36,11 @@ export class UpdateMallStoreDto {
   @IsString()
   @MaxLength(50)
   phone?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  whatsappPhone?: string | null;
 
   @IsOptional()
   @ValidateIf((_, v) => v !== null && v !== undefined && String(v).trim() !== '')
@@ -71,8 +80,6 @@ export class UpdateMallStoreDto {
   status?: StoreStatus;
 
   @IsOptional()
-  @IsArray()
-  @ArrayUnique()
-  @IsString({ each: true })
-  categoryIds?: string[];
+  @IsString()
+  categoryId?: string | null;
 }

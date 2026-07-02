@@ -23,9 +23,5 @@ export class ListGlobalStoresDto {
 
   @IsOptional()
   @IsString()
-  categoryId?: string;
-
-  @IsOptional()
-  @IsString()
   search?: string;
 }

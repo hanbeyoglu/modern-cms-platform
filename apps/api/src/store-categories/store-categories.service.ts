@@ -1,131 +1,283 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma, StoreCategory, User } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma, type User } from '@prisma/client';
+import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
+import { AccessService } from '../access/access.service';
 import { slugify } from '../common/utils/slugify';
+import { normalizeStoreName } from '../common/utils/normalize-store-name';
 import type { CreateStoreCategoryDto } from './dto/create-store-category.dto';
 import type { UpdateStoreCategoryDto } from './dto/update-store-category.dto';
 import type { ListStoreCategoriesDto } from './dto/list-store-categories.dto';
+
+const MEDIA_SELECT = {
+  id: true,
+  publicUrl: true,
+  originalName: true,
+  mimeType: true,
+} as const;
+
+const CATEGORY_INCLUDE = {
+  iconMedia: { select: MEDIA_SELECT },
+  coverMedia: { select: MEDIA_SELECT },
+  parent: { select: { id: true, name: true, slug: true } },
+  translations: {
+    include: {
+      locale: { select: { id: true, code: true } },
+      iconMedia: { select: MEDIA_SELECT },
+      coverMedia: { select: MEDIA_SELECT },
+    },
+  },
+} satisfies Prisma.StoreCategoryInclude;
+
+export type StoreCategoryResponse = Prisma.StoreCategoryGetPayload<{
+  include: typeof CATEGORY_INCLUDE;
+}>;
 
 @Injectable()
 export class StoreCategoriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly access: AccessService,
   ) {}
 
-  async list(query: ListStoreCategoriesDto): Promise<{
-    items: StoreCategory[];
-    total: number;
-    page: number;
-    limit: number;
-  }> {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
-    const skip = (page - 1) * limit;
-
-    const where: Prisma.StoreCategoryWhereInput = {
-      deletedAt: null,
-      ...(query.status ? { status: query.status } : {}),
-      ...(query.search
-        ? { name: { contains: query.search, mode: 'insensitive' as const } }
-        : {}),
-    };
-
-    const [items, total] = await Promise.all([
-      this.prisma.storeCategory.findMany({
-        where,
-        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-        skip,
-        take: limit,
-      }),
-      this.prisma.storeCategory.count({ where }),
-    ]);
-
-    return { items, total, page, limit };
+  private resolveScope(req: Request): { tenantId: string; mallId: string } {
+    const tenantId = req.tenantId;
+    const mallId = req.mallId;
+    if (!tenantId) throw new BadRequestException('x-tenant-id başlığı gerekli');
+    if (!mallId) throw new BadRequestException('x-mall-id başlığı gerekli');
+    return { tenantId, mallId };
   }
 
-  async findOne(id: string): Promise<StoreCategory> {
-    const row = await this.prisma.storeCategory.findFirst({
-      where: { id, deletedAt: null },
+  async list(req: Request, user: User, query: ListStoreCategoriesDto): Promise<StoreCategoryResponse[]> {
+    const { tenantId, mallId } = this.resolveScope(req);
+    await this.access.assertMallAccess(user, tenantId, mallId);
+
+    return this.prisma.storeCategory.findMany({
+      where: {
+        tenantId,
+        mallId,
+        deletedAt: null,
+        ...(query.activeOnly ? { active: true } : {}),
+        ...(query.parentCategoryId !== undefined
+          ? { parentCategoryId: query.parentCategoryId || null }
+          : {}),
+        ...(query.search
+          ? { name: { contains: query.search, mode: 'insensitive' as const } }
+          : {}),
+      },
+      include: CATEGORY_INCLUDE,
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
-    if (!row) throw new NotFoundException('Store category not found');
+  }
+
+  async findOne(req: Request, user: User, id: string): Promise<StoreCategoryResponse> {
+    const { tenantId, mallId } = this.resolveScope(req);
+    await this.access.assertMallAccess(user, tenantId, mallId);
+
+    const row = await this.prisma.storeCategory.findFirst({
+      where: { id, tenantId, mallId, deletedAt: null },
+      include: CATEGORY_INCLUDE,
+    });
+    if (!row) throw new NotFoundException('Mağaza kategorisi bulunamadı');
     return row;
   }
 
-  async create(dto: CreateStoreCategoryDto, user: User): Promise<StoreCategory> {
+  async create(req: Request, user: User, dto: CreateStoreCategoryDto): Promise<StoreCategoryResponse> {
+    const { tenantId, mallId } = this.resolveScope(req);
+    await this.access.assertMallAccess(user, tenantId, mallId);
+
+    const normalizedName = normalizeStoreName(dto.name);
+    await this.assertUniqueName(mallId, normalizedName);
+
+    if (dto.parentCategoryId) {
+      await this.assertParentInMall(dto.parentCategoryId, tenantId, mallId);
+    }
+
     const baseSlug = dto.slug?.trim() ? slugify(dto.slug) : slugify(dto.name);
-    const slug = await this.ensureUniqueSlug(baseSlug);
+    const slug = await this.ensureUniqueSlug(mallId, baseSlug);
+    const slugAutoGenerated = !dto.slug?.trim();
 
     const row = await this.prisma.storeCategory.create({
       data: {
+        tenantId,
+        mallId,
         name: dto.name.trim(),
+        description: dto.description?.trim() || null,
+        normalizedName,
         slug,
-        icon: dto.icon?.trim() || null,
+        slugAutoGenerated,
+        parentCategoryId: dto.parentCategoryId || null,
         sortOrder: dto.sortOrder ?? 0,
-        status: dto.status ?? 'ACTIVE',
+        active: dto.active ?? true,
+        color: dto.color?.trim() || null,
+        showInWebsite: dto.showInWebsite ?? true,
+        showInMobile: dto.showInMobile ?? true,
+        showInKiosk: dto.showInKiosk ?? true,
+        seoTitle: dto.seoTitle?.trim() || null,
+        seoDescription: dto.seoDescription?.trim() || null,
+        sameImageForAllLocales: dto.sameImageForAllLocales ?? true,
+        iconMediaId: dto.iconMediaId || null,
+        coverMediaId: dto.coverMediaId || null,
       },
+      include: CATEGORY_INCLUDE,
     });
 
     await this.audit.logAction({
       userId: user.id,
+      tenantId,
+      mallId,
       action: 'store-category:create',
       entityType: 'store-category',
       entityId: row.id,
-      after: { name: row.name, slug: row.slug, status: row.status },
+      after: { name: row.name, slug: row.slug, mallId },
     });
 
     return row;
   }
 
-  async update(id: string, dto: UpdateStoreCategoryDto, user: User): Promise<StoreCategory> {
-    const existing = await this.findOne(id);
+  async update(
+    req: Request,
+    user: User,
+    id: string,
+    dto: UpdateStoreCategoryDto,
+  ): Promise<StoreCategoryResponse> {
+    const { tenantId, mallId } = this.resolveScope(req);
+    await this.access.assertMallAccess(user, tenantId, mallId);
 
-    const data: Prisma.StoreCategoryUpdateInput = {};
-    if (dto.name !== undefined) data.name = dto.name.trim();
-    if (dto.icon !== undefined) data.icon = dto.icon;
-    if (dto.sortOrder !== undefined) data.sortOrder = dto.sortOrder;
-    if (dto.status !== undefined) data.status = dto.status;
+    const existing = await this.findOne(req, user, id);
+
+    if (dto.name !== undefined) {
+      const normalizedName = normalizeStoreName(dto.name);
+      if (normalizedName !== existing.normalizedName) {
+        await this.assertUniqueName(mallId, normalizedName, id);
+      }
+    }
+
+    if (dto.parentCategoryId !== undefined && dto.parentCategoryId) {
+      if (dto.parentCategoryId === id) {
+        throw new BadRequestException('Kategori kendi üst kategorisi olamaz');
+      }
+      await this.assertParentInMall(dto.parentCategoryId, tenantId, mallId);
+    }
+
+    const data: Prisma.StoreCategoryUpdateInput = {
+      ...(dto.name !== undefined && {
+        name: dto.name.trim(),
+        normalizedName: normalizeStoreName(dto.name),
+      }),
+      ...(dto.description !== undefined && { description: dto.description }),
+      ...(dto.parentCategoryId !== undefined && { parentCategoryId: dto.parentCategoryId }),
+      ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
+      ...(dto.active !== undefined && { active: dto.active }),
+      ...(dto.color !== undefined && { color: dto.color }),
+      ...(dto.showInWebsite !== undefined && { showInWebsite: dto.showInWebsite }),
+      ...(dto.showInMobile !== undefined && { showInMobile: dto.showInMobile }),
+      ...(dto.showInKiosk !== undefined && { showInKiosk: dto.showInKiosk }),
+      ...(dto.seoTitle !== undefined && { seoTitle: dto.seoTitle }),
+      ...(dto.seoDescription !== undefined && { seoDescription: dto.seoDescription }),
+      ...(dto.sameImageForAllLocales !== undefined && {
+        sameImageForAllLocales: dto.sameImageForAllLocales,
+      }),
+      ...(dto.iconMediaId !== undefined && { iconMediaId: dto.iconMediaId }),
+      ...(dto.coverMediaId !== undefined && { coverMediaId: dto.coverMediaId }),
+    };
 
     if (dto.slug !== undefined && dto.slug !== null && String(dto.slug).trim().length > 0) {
       const candidate = slugify(String(dto.slug));
       if (candidate !== existing.slug) {
-        data.slug = await this.ensureUniqueSlug(candidate, existing.id);
+        data.slug = await this.ensureUniqueSlug(mallId, candidate, existing.id);
       }
-    } else if (dto.name !== undefined) {
+      data.slugAutoGenerated = false;
+    } else if (dto.name !== undefined && existing.slugAutoGenerated) {
       const candidate = slugify(dto.name);
       if (candidate !== existing.slug) {
-        data.slug = await this.ensureUniqueSlug(candidate, existing.id);
+        data.slug = await this.ensureUniqueSlug(mallId, candidate, existing.id);
       }
     }
 
     const row = await this.prisma.storeCategory.update({
       where: { id },
       data,
+      include: CATEGORY_INCLUDE,
     });
 
     await this.audit.logAction({
       userId: user.id,
+      tenantId,
+      mallId,
       action: 'store-category:update',
       entityType: 'store-category',
-      entityId: row.id,
-      before: { name: existing.name, status: existing.status, slug: existing.slug },
-      after: { name: row.name, status: row.status, slug: row.slug },
+      entityId: id,
+      before: { name: existing.name, slug: existing.slug, active: existing.active },
+      after: { name: row.name, slug: row.slug, active: row.active },
     });
 
     return row;
   }
 
-  async remove(id: string, user: User): Promise<void> {
-    const existing = await this.findOne(id);
+  async reorder(req: Request, user: User, orderedIds: string[]): Promise<StoreCategoryResponse[]> {
+    const { tenantId, mallId } = this.resolveScope(req);
+    await this.access.assertMallAccess(user, tenantId, mallId);
 
-    await this.prisma.storeCategory.update({
-      where: { id },
-      data: { deletedAt: new Date() },
+    const rows = await this.prisma.storeCategory.findMany({
+      where: { tenantId, mallId, deletedAt: null, parentCategoryId: null },
+      select: { id: true },
     });
+    if (rows.length !== orderedIds.length) {
+      throw new BadRequestException('Sıralama listesi kök kategorilerin tamamını içermelidir');
+    }
+    const known = new Set(rows.map((r) => r.id));
+    if (!orderedIds.every((id) => known.has(id))) {
+      throw new BadRequestException('Geçersiz kategori kimliği');
+    }
+
+    await this.prisma.$transaction(
+      orderedIds.map((id, index) =>
+        this.prisma.storeCategory.update({
+          where: { id },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
+
+    return this.list(req, user, {});
+  }
+
+  async remove(req: Request, user: User, id: string): Promise<void> {
+    const { tenantId, mallId } = this.resolveScope(req);
+    await this.access.assertMallAccess(user, tenantId, mallId);
+
+    const existing = await this.findOne(req, user, id);
+
+    const childCount = await this.prisma.storeCategory.count({
+      where: { parentCategoryId: id, deletedAt: null },
+    });
+    if (childCount > 0) {
+      throw new BadRequestException('Alt kategorileri olan bir kategori silinemez');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.mallStore.updateMany({
+        where: { categoryId: id },
+        data: { categoryId: null },
+      }),
+      this.prisma.storeCategory.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+      }),
+    ]);
 
     await this.audit.logAction({
       userId: user.id,
+      tenantId,
+      mallId,
       action: 'store-category:delete',
       entityType: 'store-category',
       entityId: id,
@@ -133,12 +285,34 @@ export class StoreCategoriesService {
     });
   }
 
-  private async ensureUniqueSlug(base: string, excludeId?: string): Promise<string> {
+  private async assertUniqueName(mallId: string, normalizedName: string, excludeId?: string): Promise<void> {
+    const conflict = await this.prisma.storeCategory.findFirst({
+      where: {
+        mallId,
+        normalizedName,
+        deletedAt: null,
+        ...(excludeId ? { NOT: { id: excludeId } } : {}),
+      },
+    });
+    if (conflict) {
+      throw new ConflictException('Bu AVM içinde aynı isimde bir kategori zaten var.');
+    }
+  }
+
+  private async assertParentInMall(parentId: string, tenantId: string, mallId: string): Promise<void> {
+    const parent = await this.prisma.storeCategory.findFirst({
+      where: { id: parentId, tenantId, mallId, deletedAt: null },
+    });
+    if (!parent) throw new BadRequestException('Geçersiz üst kategori');
+  }
+
+  private async ensureUniqueSlug(mallId: string, base: string, excludeId?: string): Promise<string> {
     let slug = base;
     let n = 0;
     while (true) {
       const conflict = await this.prisma.storeCategory.findFirst({
         where: {
+          mallId,
           slug,
           deletedAt: null,
           ...(excludeId ? { NOT: { id: excludeId } } : {}),
@@ -147,7 +321,7 @@ export class StoreCategoriesService {
       if (!conflict) return slug;
       n += 1;
       slug = `${base}-${n}`;
-      if (n > 50) throw new ConflictException('Could not allocate unique slug');
+      if (n > 50) throw new ConflictException('Benzersiz slug oluşturulamadı');
     }
   }
 }

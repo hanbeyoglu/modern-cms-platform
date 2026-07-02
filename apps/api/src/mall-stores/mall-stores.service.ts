@@ -13,6 +13,7 @@ import { SearchIndexerService } from '../search/search-indexer.service';
 import type { AssignMallStoreDto } from './dto/assign-mall-store.dto';
 import type { UpdateMallStoreDto } from './dto/update-mall-store.dto';
 import type { ListMallStoresDto } from './dto/list-mall-stores.dto';
+import { validateWorkingHours } from '../common/types/working-hours';
 
 const MEDIA_SELECT = {
   id: true,
@@ -25,7 +26,11 @@ const CATEGORY_SELECT = {
   id: true,
   name: true,
   slug: true,
-  status: true,
+  description: true,
+  color: true,
+  active: true,
+  parentCategoryId: true,
+  sortOrder: true,
 } as const;
 
 const MALL_STORE_INCLUDE = {
@@ -35,25 +40,25 @@ const MALL_STORE_INCLUDE = {
     },
   },
   localLogoMedia: { select: MEDIA_SELECT },
-  categoryLinks: {
-    include: {
-      storeCategory: { select: CATEGORY_SELECT },
-    },
-    orderBy: { storeCategory: { sortOrder: 'asc' as const } },
-  },
+  floorRecord: true,
+  category: { select: CATEGORY_SELECT },
 } satisfies Prisma.MallStoreInclude;
 
-export type MallStoreCategoryLink = {
+export type MallStoreCategoryPreview = {
   id: string;
   name: string;
   slug: string;
-  status: string;
+  description: string | null;
+  color: string | null;
+  active: boolean;
+  parentCategoryId: string | null;
+  sortOrder: number;
 };
 
-export function mapMallStoreCategories(
+export function mapMallStoreCategory(
   row: Prisma.MallStoreGetPayload<{ include: typeof MALL_STORE_INCLUDE }>,
-): MallStoreCategoryLink[] {
-  return row.categoryLinks.map((link) => link.storeCategory);
+): MallStoreCategoryPreview | null {
+  return row.category;
 }
 
 export type MallStoreResponse = Prisma.MallStoreGetPayload<{ include: typeof MALL_STORE_INCLUDE }>;
@@ -62,11 +67,13 @@ export type PublicMallStore = {
   id: string;
   mallId: string;
   tenantId: string;
-  localName: string | null;
+  detailTitle: string | null;
   localDescription: string | null;
   floor: string | null;
+  floorId: string | null;
   storeNo: string | null;
   phone: string | null;
+  whatsappPhone: string | null;
   email: string | null;
   workingHoursJson: Prisma.JsonValue | null;
   locationJson: Prisma.JsonValue | null;
@@ -74,7 +81,7 @@ export type PublicMallStore = {
   isSoon: boolean;
   searchTags: string[];
   sortOrder: number;
-  categories: { id: string; name: string; slug: string }[];
+  category: { id: string; name: string; slug: string } | null;
   globalStore: {
     id: string;
     name: string;
@@ -131,16 +138,12 @@ export class MallStoresService {
       ...(query.status ? { status: query.status } : {}),
       ...(query.isFeatured === true || query.isFeatured === false ? { isFeatured: query.isFeatured } : {}),
       ...(query.categoryId
-        ? {
-            categoryLinks: {
-              some: { storeCategoryId: query.categoryId, storeCategory: { deletedAt: null } },
-            },
-          }
+        ? { categoryId: query.categoryId, category: { is: { deletedAt: null } } }
         : {}),
       ...(query.search
         ? {
             OR: [
-              { localName: { contains: query.search, mode: 'insensitive' as const } },
+              { detailTitle: { contains: query.search, mode: 'insensitive' as const } },
               {
                 globalStore: {
                   is: { name: { contains: query.search, mode: 'insensitive' as const }, deletedAt: null },
@@ -193,15 +196,32 @@ export class MallStoresService {
       throw new ConflictException('Bu global mağaza bu AVM için zaten atanmış');
     }
 
+    if (dto.workingHoursJson !== undefined) {
+      const err = validateWorkingHours(dto.workingHoursJson);
+      if (err) throw new BadRequestException(err);
+    }
+
+    const floorFields = await this.resolveFloorFields(tenantId, mallId, dto.floorId, dto.floor);
+
+    let categoryId: string | null = null;
+    if (dto.categoryId) {
+      categoryId = await this.assertCategoryInMall(dto.categoryId, tenantId, mallId);
+    }
+
     const row = await this.prisma.mallStore.create({
       data: {
         tenantId,
         mallId,
         globalStoreId: dto.globalStoreId,
-        localName: dto.localName?.trim() || null,
+        categoryId,
+        detailTitle: dto.detailTitle?.trim() || null,
         localDescription: dto.localDescription?.trim() || null,
-        floor: dto.floor?.trim() || null,
+        floor: floorFields.floor,
+        floorId: floorFields.floorId,
         storeNo: dto.storeNo?.trim() || null,
+        phone: dto.phone?.trim() || null,
+        whatsappPhone: dto.whatsappPhone?.trim() || null,
+        email: dto.email?.trim() || null,
         workingHoursJson:
           dto.workingHoursJson !== undefined
             ? (dto.workingHoursJson as Prisma.InputJsonValue)
@@ -228,13 +248,9 @@ export class MallStoresService {
       after: {
         globalStoreId: dto.globalStoreId,
         mallId,
-        localName: row.localName,
+        detailTitle: row.detailTitle,
       },
     });
-
-    if (dto.categoryIds !== undefined) {
-      await this.syncMallStoreCategories(row.id, dto.categoryIds);
-    }
 
     this.scheduleMallStoreIndex(row.id);
     return this.findOne(req, user, row.id);
@@ -249,11 +265,36 @@ export class MallStoresService {
     });
     if (!existing) throw new NotFoundException('Mall store not found');
 
+    if (dto.workingHoursJson !== undefined && dto.workingHoursJson !== null) {
+      const err = validateWorkingHours(dto.workingHoursJson);
+      if (err) throw new BadRequestException(err);
+    }
+
+    let floorUpdate: Prisma.MallStoreUpdateInput = {};
+    if (dto.floorId !== undefined || dto.floor !== undefined) {
+      const floorFields = await this.resolveFloorFields(
+        tenantId,
+        mallId,
+        dto.floorId ?? undefined,
+        dto.floor ?? undefined,
+        true,
+      );
+      floorUpdate = {
+        floor: floorFields.floor,
+        floorRecord: floorFields.floorId
+          ? { connect: { id: floorFields.floorId } }
+          : { disconnect: true },
+      };
+    }
+
     const data: Prisma.MallStoreUpdateInput = {
-      ...(dto.localName !== undefined && { localName: dto.localName }),
+      ...(dto.detailTitle !== undefined && { detailTitle: dto.detailTitle }),
       ...(dto.localDescription !== undefined && { localDescription: dto.localDescription }),
-      ...(dto.floor !== undefined && { floor: dto.floor }),
+      ...floorUpdate,
       ...(dto.storeNo !== undefined && { storeNo: dto.storeNo }),
+      ...(dto.phone !== undefined && { phone: dto.phone?.trim() || null }),
+      ...(dto.whatsappPhone !== undefined && { whatsappPhone: dto.whatsappPhone?.trim() || null }),
+      ...(dto.email !== undefined && { email: dto.email }),
       ...(dto.isFeatured !== undefined && { isFeatured: dto.isFeatured }),
       ...(dto.isSoon !== undefined && { isSoon: dto.isSoon }),
       ...(dto.searchTags !== undefined && { searchTags: dto.searchTags }),
@@ -270,6 +311,15 @@ export class MallStoresService {
       updatedByUser: { connect: { id: user.id } },
     };
 
+    if (dto.categoryId !== undefined) {
+      if (dto.categoryId === null || dto.categoryId === '') {
+        data.category = { disconnect: true };
+      } else {
+        const categoryId = await this.assertCategoryInMall(dto.categoryId, tenantId, mallId);
+        data.category = { connect: { id: categoryId } };
+      }
+    }
+
     const row = await this.prisma.mallStore.update({
       where: { id },
       data,
@@ -284,20 +334,16 @@ export class MallStoresService {
       entityType: 'mall-store',
       entityId: id,
       before: {
-        localName: existing.localName,
+        detailTitle: existing.detailTitle,
         status: existing.status,
         isFeatured: existing.isFeatured,
       },
       after: {
-        localName: row.localName,
+        detailTitle: row.detailTitle,
         status: row.status,
         isFeatured: row.isFeatured,
       },
     });
-
-    if (dto.categoryIds !== undefined) {
-      await this.syncMallStoreCategories(id, dto.categoryIds);
-    }
 
     this.scheduleMallStoreIndex(id);
     return this.findOne(req, user, id);
@@ -327,7 +373,7 @@ export class MallStoresService {
       action: 'mall-store:delete',
       entityType: 'mall-store',
       entityId: id,
-      before: { globalStoreId: existing.globalStoreId, localName: existing.localName },
+      before: { globalStoreId: existing.globalStoreId, detailTitle: existing.detailTitle },
     });
 
     this.scheduleMallStoreIndex(id);
@@ -381,11 +427,7 @@ export class MallStoresService {
         status: 'ACTIVE',
         ...(opts.featuredOnly ? { isFeatured: true } : {}),
         ...(opts.categoryId
-          ? {
-              categoryLinks: {
-                some: { storeCategoryId: opts.categoryId, storeCategory: { deletedAt: null } },
-              },
-            }
+          ? { categoryId: opts.categoryId, category: { is: { deletedAt: null, active: true } } }
           : {}),
         globalStore: {
           is: {
@@ -396,7 +438,7 @@ export class MallStoresService {
         ...(opts.search
           ? {
               OR: [
-                { localName: { contains: opts.search, mode: 'insensitive' as const } },
+                { detailTitle: { contains: opts.search, mode: 'insensitive' as const } },
                 {
                   globalStore: {
                     is: {
@@ -414,12 +456,7 @@ export class MallStoresService {
           : {}),
       },
       include: {
-        categoryLinks: {
-          include: {
-            storeCategory: { select: { id: true, name: true, slug: true } },
-          },
-          orderBy: { storeCategory: { sortOrder: 'asc' } },
-        },
+        category: { select: { id: true, name: true, slug: true } },
         globalStore: {
           include: {
             logoMedia: { select: MEDIA_SELECT },
@@ -430,16 +467,18 @@ export class MallStoresService {
     });
 
     return rows.map((r) => {
-      const categories = r.categoryLinks.map((link) => link.storeCategory);
+      const category = r.category;
       return {
         id: r.id,
         mallId: r.mallId,
         tenantId: r.tenantId,
-        localName: r.localName,
+        detailTitle: r.detailTitle,
         localDescription: r.localDescription,
         floor: r.floor,
+        floorId: r.floorId,
         storeNo: r.storeNo,
-        phone: r.globalStore.phone ?? r.phone,
+        phone: r.phone ?? r.globalStore.phone,
+        whatsappPhone: r.whatsappPhone,
         email: r.globalStore.email ?? r.email,
         workingHoursJson: r.workingHoursJson,
         locationJson: r.locationJson,
@@ -447,7 +486,7 @@ export class MallStoresService {
         isSoon: r.isSoon,
         searchTags: r.searchTags,
         sortOrder: r.sortOrder,
-        categories,
+        category,
         globalStore: {
           id: r.globalStore.id,
           name: r.globalStore.name,
@@ -462,27 +501,36 @@ export class MallStoresService {
     });
   }
 
-  private async syncMallStoreCategories(mallStoreId: string, categoryIds: string[]): Promise<void> {
-    const unique = [...new Set(categoryIds)];
-    if (unique.length === 0) {
-      await this.prisma.mallStoreOnCategory.deleteMany({ where: { mallStoreId } });
-      return;
+  private async resolveFloorFields(
+    tenantId: string,
+    mallId: string,
+    floorId?: string | null,
+    floorText?: string | null,
+    allowNull = false,
+  ): Promise<{ floorId: string | null; floor: string | null }> {
+    if (floorId) {
+      const row = await this.prisma.mallFloor.findFirst({
+        where: { id: floorId, tenantId, mallId, active: true },
+      });
+      if (!row) throw new BadRequestException('Geçersiz kat seçimi');
+      return { floorId: row.id, floor: row.label };
     }
-
-    const rows = await this.prisma.storeCategory.findMany({
-      where: { id: { in: unique }, deletedAt: null },
-      select: { id: true },
-    });
-    if (rows.length !== unique.length) {
-      throw new BadRequestException('Geçersiz veya silinmiş kategori kimliği');
-    }
-
-    await this.prisma.$transaction([
-      this.prisma.mallStoreOnCategory.deleteMany({ where: { mallStoreId } }),
-      this.prisma.mallStoreOnCategory.createMany({
-        data: unique.map((storeCategoryId) => ({ mallStoreId, storeCategoryId })),
-      }),
-    ]);
+    const custom = floorText?.trim();
+    if (custom) return { floorId: null, floor: custom };
+    if (allowNull) return { floorId: null, floor: null };
+    return { floorId: null, floor: null };
   }
 
+  private async assertCategoryInMall(
+    categoryId: string,
+    tenantId: string,
+    mallId: string,
+  ): Promise<string> {
+    const row = await this.prisma.storeCategory.findFirst({
+      where: { id: categoryId, tenantId, mallId, deletedAt: null, active: true },
+      select: { id: true },
+    });
+    if (!row) throw new BadRequestException('Geçersiz veya pasif kategori');
+    return row.id;
+  }
 }

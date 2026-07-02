@@ -1,6 +1,17 @@
-import { IsNotEmpty, IsObject, IsOptional, IsString, IsUrl, MaxLength, IsIn } from 'class-validator';
+import { ArrayUnique, IsArray, IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { STORE_STATUSES } from '../../common/prisma-validation-enums.js';
 import type { StoreStatus } from '@prisma/client';
+import { STORE_SOCIAL_PLATFORMS } from '../../common/types/store-social-link.js';
+
+class StoreSocialLinkDto {
+  @IsIn(STORE_SOCIAL_PLATFORMS)
+  platform!: (typeof STORE_SOCIAL_PLATFORMS)[number];
+
+  @IsUrl({ require_tld: false })
+  @MaxLength(2000)
+  url!: string;
+}
 
 export class CreateGlobalStoreDto {
   @IsString()
@@ -16,10 +27,6 @@ export class CreateGlobalStoreDto {
   @IsOptional()
   @IsString()
   logoMediaId?: string;
-
-  @IsOptional()
-  @IsString()
-  categoryId?: string;
 
   @IsOptional()
   @IsString()
@@ -42,8 +49,11 @@ export class CreateGlobalStoreDto {
   websiteUrl?: string;
 
   @IsOptional()
-  @IsObject()
-  socialLinksJson?: Record<string, unknown>;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => StoreSocialLinkDto)
+  @ArrayUnique((item: StoreSocialLinkDto) => item.platform === 'OTHER' ? `${item.platform}:${item.url}` : item.platform)
+  socialLinks?: StoreSocialLinkDto[];
 
   @IsOptional()
   @IsIn(STORE_STATUSES)

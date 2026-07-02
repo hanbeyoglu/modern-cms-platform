@@ -1,7 +1,12 @@
-import { IsInt, IsOptional, IsString, MaxLength, Min, IsIn } from 'class-validator';
-import { STORE_CATEGORY_STATUSES } from '../../common/prisma-validation-enums.js';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
-import type { StoreCategoryStatus } from '@prisma/client';
 
 export class UpdateStoreCategoryDto {
   @IsOptional()
@@ -11,21 +16,64 @@ export class UpdateStoreCategoryDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(5000)
+  description?: string | null;
+
+  @IsOptional()
+  @IsString()
+  parentCategoryId?: string | null;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(200)
   slug?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  icon?: string | null;
-
-  @IsOptional()
-  @Transform(({ value }: { value: unknown }) => (value !== undefined && value !== null ? Number(value) : undefined))
+  @Transform(({ value }: { value: unknown }) => (value !== undefined ? Number(value) : undefined))
   @IsInt()
   @Min(0)
   sortOrder?: number;
 
   @IsOptional()
-  @IsIn(STORE_CATEGORY_STATUSES)
-  status?: StoreCategoryStatus;
+  @IsBoolean()
+  active?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  color?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  showInWebsite?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  showInMobile?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  showInKiosk?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  seoTitle?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  seoDescription?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  sameImageForAllLocales?: boolean;
+
+  @IsOptional()
+  @IsString()
+  iconMediaId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  coverMediaId?: string | null;
 }
