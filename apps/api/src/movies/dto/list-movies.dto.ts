@@ -26,10 +26,14 @@ export class ListMoviesDto {
   search?: string;
 
   @IsOptional()
-  @IsIn(['title', 'createdAt', 'releaseDate'])
-  sortBy?: 'title' | 'createdAt' | 'releaseDate' = 'title';
+  @IsIn(['sortOrder', 'title', 'createdAt', 'releaseDate'])
+  sortBy?: 'sortOrder' | 'title' | 'createdAt' | 'releaseDate' = 'sortOrder';
 
   @IsOptional()
   @IsIn(['asc', 'desc'])
   sortDir?: 'asc' | 'desc' = 'asc';
+
+  @IsOptional()
+  @IsString()
+  mallId?: string;
 }

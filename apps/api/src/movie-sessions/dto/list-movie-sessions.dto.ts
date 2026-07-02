@@ -41,9 +41,14 @@ export class ListMovieSessionsDto {
   @IsDateString()
   startsTo?: string;
 
+  /** Filter by exact show date (YYYY-MM-DD). */
   @IsOptional()
-  @IsIn(['startsAt', 'createdAt'])
-  sortBy?: 'startsAt' | 'createdAt' = 'startsAt';
+  @IsString()
+  showDate?: string;
+
+  @IsOptional()
+  @IsIn(['startsAt', 'createdAt', 'showDate'])
+  sortBy?: 'startsAt' | 'createdAt' | 'showDate' = 'startsAt';
 
   @IsOptional()
   @IsIn(['asc', 'desc'])
