@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { shouldInitializeInfrastructure } from '../../common/app-mode';
 
 @Injectable()
 export class PublicCacheService implements OnModuleInit, OnModuleDestroy {
@@ -12,6 +13,11 @@ export class PublicCacheService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly config: ConfigService) {}
 
   onModuleInit(): void {
+    if (!shouldInitializeInfrastructure('redis')) {
+      this.logger.debug('Skipping Redis init — swagger mode');
+      return;
+    }
+
     const url = this.config.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
     try {
       this.client = new Redis(url, {

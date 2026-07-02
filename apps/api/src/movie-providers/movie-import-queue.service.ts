@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 import { randomUUID } from 'node:crypto';
@@ -11,22 +11,37 @@ import {
   type MovieImportBatchProgress,
   type MovieImportBulkJobData,
 } from '@modern-cms/movie-providers';
+import { shouldInitializeInfrastructure } from '../common/app-mode';
 
 @Injectable()
-export class MovieImportQueueService implements OnModuleDestroy {
+export class MovieImportQueueService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MovieImportQueueService.name);
-  private readonly queue: Queue<MovieImportBulkJobData>;
+  private queue: Queue<MovieImportBulkJobData> | null = null;
 
-  constructor(config: ConfigService) {
-    const redisUrl = config.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
-    this.queue = new Queue<MovieImportBulkJobData>(MOVIE_IMPORT_QUEUE_NAME, {
-      connection: parseRedisConnection(redisUrl),
-      defaultJobOptions: {
-        removeOnComplete: 200,
-        removeOnFail: 200,
-        attempts: 1,
-      },
-    });
+  constructor(private readonly config: ConfigService) {}
+
+  onModuleInit(): void {
+    if (shouldInitializeInfrastructure('bullmq')) {
+      this.getQueue();
+    }
+  }
+
+  private getQueue(): Queue<MovieImportBulkJobData> {
+    if (!shouldInitializeInfrastructure('bullmq')) {
+      throw new Error('BullMQ is not initialized in swagger mode');
+    }
+    if (!this.queue) {
+      const redisUrl = this.config.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
+      this.queue = new Queue<MovieImportBulkJobData>(MOVIE_IMPORT_QUEUE_NAME, {
+        connection: parseRedisConnection(redisUrl),
+        defaultJobOptions: {
+          removeOnComplete: 200,
+          removeOnFail: 200,
+          attempts: 1,
+        },
+      });
+    }
+    return this.queue;
   }
 
   async enqueueBulkImport(
@@ -36,7 +51,7 @@ export class MovieImportQueueService implements OnModuleDestroy {
     const jobId = movieImportJobId(batchId);
     const payload: MovieImportBulkJobData = { ...data, batchId };
 
-    const job = await this.queue.add('bulk-import', payload, { jobId });
+    const job = await this.getQueue().add('bulk-import', payload, { jobId });
 
     const queued = buildImportProgress(payload, {
       status: 'queued',
@@ -57,7 +72,7 @@ export class MovieImportQueueService implements OnModuleDestroy {
 
   async getProgress(batchId: string, tenantId: string): Promise<MovieImportBatchProgress | null> {
     const jobId = movieImportJobId(batchId);
-    const job = await this.queue.getJob(jobId);
+    const job = await this.getQueue().getJob(jobId);
     if (!job) {
       this.logger.warn(`[MovieImport] Job not found jobId=${jobId}`);
       return null;
@@ -75,6 +90,8 @@ export class MovieImportQueueService implements OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.queue.close();
+    if (this.queue) {
+      await this.queue.close();
+    }
   }
 }

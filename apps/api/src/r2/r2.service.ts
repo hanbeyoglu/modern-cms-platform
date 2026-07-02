@@ -5,6 +5,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { shouldInitializeInfrastructure } from '../common/app-mode';
 
 export interface R2UploadInput {
   key: string;
@@ -27,6 +28,11 @@ export class R2Service implements OnModuleInit {
   constructor(private readonly config: ConfigService) {}
 
   onModuleInit(): void {
+    if (!shouldInitializeInfrastructure('object-storage')) {
+      this.logger.debug('Skipping object storage init — swagger mode');
+      return;
+    }
+
     if (!this.isConfigured()) {
       this.logger.warn('R2 is not configured — media uploads will fall back to local storage');
       return;

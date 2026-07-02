@@ -1,6 +1,7 @@
 /**
  * Generates localized openapi JSON files at build time.
  * Requires DATABASE_URL (Prisma connects on module init).
+ * Sets APP_MODE=swagger to skip Redis, BullMQ, and other runtime infrastructure.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -22,6 +23,8 @@ import {
 
 async function main(): Promise<void> {
   const logger = new Logger('OpenApiGenerate');
+
+  process.env.APP_MODE = 'swagger';
 
   validateLocaleParity();
 
