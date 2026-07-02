@@ -1,12 +1,22 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { OFFICIAL_SUPPORTED_LANGUAGES } from '../src/locales/supported-languages';
+import { slugify } from '../src/common/utils/slugify';
+import { DEFAULT_MOVIE_CATEGORIES } from '../src/movies/movie-categories.constants';
 
 const prisma = new PrismaClient();
 
 type CapCat =
-  | 'CORE' | 'CONTENT' | 'OPERATIONS' | 'ANALYTICS'
-  | 'LOCALIZATION' | 'PUBLIC_DELIVERY' | 'SEARCH' | 'CDP' | 'AI' | 'INTEGRATION';
+  | 'CORE'
+  | 'CONTENT'
+  | 'OPERATIONS'
+  | 'ANALYTICS'
+  | 'LOCALIZATION'
+  | 'PUBLIC_DELIVERY'
+  | 'SEARCH'
+  | 'CDP'
+  | 'AI'
+  | 'INTEGRATION';
 
 const CAPABILITIES: Array<{
   code: string;
@@ -17,45 +27,157 @@ const CAPABILITIES: Array<{
   // CORE
   { code: 'cms_core', name: 'CMS Core', description: 'Temel CMS işlevleri', category: 'CORE' },
   { code: 'media', name: 'Medya Kütüphanesi', description: 'Medya yönetimi', category: 'CORE' },
-  { code: 'public_api', name: 'Public API', description: 'Halka açık içerik API\'si', category: 'PUBLIC_DELIVERY' },
+  {
+    code: 'public_api',
+    name: 'Public API',
+    description: "Halka açık içerik API'si",
+    category: 'PUBLIC_DELIVERY',
+  },
   // CONTENT
-  { code: 'sliders', name: 'Slider Yönetimi', description: 'Slider ve banner yönetimi', category: 'CONTENT' },
-  { code: 'pages', name: 'Sayfa Oluşturucu', description: 'Dinamik sayfa oluşturucu', category: 'CONTENT' },
-  { code: 'stores', name: 'Mağaza Yönetimi', description: 'Mağaza ve kategori yönetimi', category: 'CONTENT' },
+  {
+    code: 'sliders',
+    name: 'Slider Yönetimi',
+    description: 'Slider ve banner yönetimi',
+    category: 'CONTENT',
+  },
+  {
+    code: 'pages',
+    name: 'Sayfa Oluşturucu',
+    description: 'Dinamik sayfa oluşturucu',
+    category: 'CONTENT',
+  },
+  {
+    code: 'stores',
+    name: 'Mağaza Yönetimi',
+    description: 'Mağaza ve kategori yönetimi',
+    category: 'CONTENT',
+  },
   { code: 'events', name: 'Etkinlikler', description: 'Etkinlik yönetimi', category: 'CONTENT' },
   { code: 'campaigns', name: 'Kampanyalar', description: 'Kampanya yönetimi', category: 'CONTENT' },
   { code: 'cinema', name: 'Sinema', description: 'Sinema ve film yönetimi', category: 'CONTENT' },
-  { code: 'popups', name: 'Popup Yönetimi', description: 'Popup ve duyuru yönetimi', category: 'CONTENT' },
-  { code: 'location_services', name: 'Lokasyon Hizmetleri', description: 'WC, ATM, vale gibi lokasyon hizmetleri', category: 'CONTENT' },
+  {
+    code: 'popups',
+    name: 'Popup Yönetimi',
+    description: 'Popup ve duyuru yönetimi',
+    category: 'CONTENT',
+  },
+  {
+    code: 'location_services',
+    name: 'Lokasyon Hizmetleri',
+    description: 'WC, ATM, vale gibi lokasyon hizmetleri',
+    category: 'CONTENT',
+  },
   // OPERATIONS
-  { code: 'scheduling', name: 'Zamanlama', description: 'İçerik zamanlama ve otomasyonu', category: 'OPERATIONS' },
-  { code: 'notifications', name: 'Bildirimler', description: 'In-app bildirim sistemi', category: 'OPERATIONS' },
+  {
+    code: 'scheduling',
+    name: 'Zamanlama',
+    description: 'İçerik zamanlama ve otomasyonu',
+    category: 'OPERATIONS',
+  },
+  {
+    code: 'notifications',
+    name: 'Bildirimler',
+    description: 'In-app bildirim sistemi',
+    category: 'OPERATIONS',
+  },
   // ANALYTICS
-  { code: 'analytics', name: 'Analitik & Raporlar', description: 'İçerik ve kullanıcı analitikleri', category: 'ANALYTICS' },
+  {
+    code: 'analytics',
+    name: 'Analitik & Raporlar',
+    description: 'İçerik ve kullanıcı analitikleri',
+    category: 'ANALYTICS',
+  },
   // LOCALIZATION
-  { code: 'localization', name: 'Çoklu Dil', description: 'İçerik lokalizasyonu ve çeviri yönetimi', category: 'LOCALIZATION' },
+  {
+    code: 'localization',
+    name: 'Çoklu Dil',
+    description: 'İçerik lokalizasyonu ve çeviri yönetimi',
+    category: 'LOCALIZATION',
+  },
   // SEARCH
-  { code: 'search', name: 'Genel Arama', description: 'Full-text içerik araması', category: 'SEARCH' },
+  {
+    code: 'search',
+    name: 'Genel Arama',
+    description: 'Full-text içerik araması',
+    category: 'SEARCH',
+  },
   // CDP (future — not enabled by default)
-  { code: 'cdp_basic', name: 'CDP Temel', description: 'Temel müşteri veri platformu', category: 'CDP' },
-  { code: 'cdp_advanced', name: 'CDP Gelişmiş', description: 'Gelişmiş müşteri segmentasyonu', category: 'CDP' },
-  { code: 'segments', name: 'Segmentler', description: 'Müşteri segment yönetimi', category: 'CDP' },
-  { code: 'journeys', name: 'Müşteri Yolculukları', description: 'Otomatik müşteri yolculukları', category: 'CDP' },
-  { code: 'personalization', name: 'Kişiselleştirme', description: 'İçerik kişiselleştirme motoru', category: 'CDP' },
+  {
+    code: 'cdp_basic',
+    name: 'CDP Temel',
+    description: 'Temel müşteri veri platformu',
+    category: 'CDP',
+  },
+  {
+    code: 'cdp_advanced',
+    name: 'CDP Gelişmiş',
+    description: 'Gelişmiş müşteri segmentasyonu',
+    category: 'CDP',
+  },
+  {
+    code: 'segments',
+    name: 'Segmentler',
+    description: 'Müşteri segment yönetimi',
+    category: 'CDP',
+  },
+  {
+    code: 'journeys',
+    name: 'Müşteri Yolculukları',
+    description: 'Otomatik müşteri yolculukları',
+    category: 'CDP',
+  },
+  {
+    code: 'personalization',
+    name: 'Kişiselleştirme',
+    description: 'İçerik kişiselleştirme motoru',
+    category: 'CDP',
+  },
   // AI (future)
-  { code: 'ai_assistant', name: 'AI Asistan', description: 'AI destekli içerik önerileri', category: 'AI' },
+  {
+    code: 'ai_assistant',
+    name: 'AI Asistan',
+    description: 'AI destekli içerik önerileri',
+    category: 'AI',
+  },
   // INTEGRATIONS (future)
-  { code: 'external_cinema_provider', name: 'Harici Sinema Sağlayıcı', description: 'Sinema API/XML feed entegrasyonu', category: 'INTEGRATION' },
-  { code: 'signage', name: 'Dijital Tabela', description: 'Dijital tabela entegrasyonu', category: 'INTEGRATION' },
-  { code: 'mobile_app_api', name: 'Mobil Uygulama API', description: 'Mobil uygulama API erişimi', category: 'INTEGRATION' },
+  {
+    code: 'external_cinema_provider',
+    name: 'Harici Sinema Sağlayıcı',
+    description: 'Sinema API/XML feed entegrasyonu',
+    category: 'INTEGRATION',
+  },
+  {
+    code: 'signage',
+    name: 'Dijital Tabela',
+    description: 'Dijital tabela entegrasyonu',
+    category: 'INTEGRATION',
+  },
+  {
+    code: 'mobile_app_api',
+    name: 'Mobil Uygulama API',
+    description: 'Mobil uygulama API erişimi',
+    category: 'INTEGRATION',
+  },
 ];
 
 // Capabilities enabled for all demo tenants
 const DEMO_TENANT_CAPABILITIES = [
-  'cms_core', 'media', 'public_api',
-  'sliders', 'pages', 'stores', 'events', 'campaigns', 'cinema',
-  'popups', 'location_services',
-  'scheduling', 'notifications', 'analytics', 'localization', 'search',
+  'cms_core',
+  'media',
+  'public_api',
+  'sliders',
+  'pages',
+  'stores',
+  'events',
+  'campaigns',
+  'cinema',
+  'popups',
+  'location_services',
+  'scheduling',
+  'notifications',
+  'analytics',
+  'localization',
+  'search',
 ];
 
 const PERMISSIONS = [
@@ -150,6 +272,10 @@ const PERMISSIONS = [
   'locale:update',
   'locale:delete',
   'locale:set-default',
+  'system-language:read',
+  'system-language:create',
+  'system-language:update',
+  'system-language:delete',
   'translation:read',
   'translation:create',
   'translation:update',
@@ -184,10 +310,9 @@ async function main(): Promise<void> {
       }),
     ),
   );
-  const permByCode = Object.fromEntries(permissionRows.map((p) => [p.code, p])) as unknown as Record<
-    (typeof PERMISSIONS)[number],
-    { id: string }
-  >;
+  const permByCode = Object.fromEntries(
+    permissionRows.map((p) => [p.code, p]),
+  ) as unknown as Record<(typeof PERMISSIONS)[number], { id: string }>;
 
   const roleDefs: Array<{
     code: string;
@@ -203,18 +328,27 @@ async function main(): Promise<void> {
     {
       code: 'TENANT_ADMIN',
       name: 'Tenant Admin',
-      permissions: PERMISSIONS.filter((p) =>
-        // Tenant Admin cannot: create/delete tenants, use security/export audit,
-        // or mutate global store master data (platform-level, Option A ownership).
-        ![
-          'tenant:create',
-          'tenant:delete',
-          'audit:security',
-          'audit:export',
-          'global-store:create',
-          'global-store:update',
-          'global-store:delete',
-        ].includes(p)
+      permissions: PERMISSIONS.filter(
+        (p) =>
+          // Tenant Admin cannot: create/delete tenants, use security/export audit,
+          // mutate global store master data, manage system languages, or legacy locale mutations.
+          ![
+            'tenant:create',
+            'tenant:delete',
+            'audit:security',
+            'audit:export',
+            'global-store:create',
+            'global-store:update',
+            'global-store:delete',
+            'locale:create',
+            'locale:update',
+            'locale:delete',
+            'locale:set-default',
+            'system-language:read',
+            'system-language:create',
+            'system-language:update',
+            'system-language:delete',
+          ].includes(p),
       ),
     },
     {
@@ -223,6 +357,8 @@ async function main(): Promise<void> {
       permissions: [
         'mall:read',
         'mall:switch',
+        'location:read',
+        'location:update',
         'analytics:view',
         'search:global',
         'content:read',
@@ -244,6 +380,10 @@ async function main(): Promise<void> {
         'mall-store:assign',
         'mall-store:update',
         'mall-store:feature',
+        'store-category:read',
+        'store-category:create',
+        'store-category:update',
+        'store-category:delete',
         'event:read',
         'event:create',
         'event:update',
@@ -439,6 +579,40 @@ async function main(): Promise<void> {
     },
   });
 
+  for (const tenant of [tenantEmaar, tenantMallGroup]) {
+    await prisma.tenantSetting.upsert({
+      where: { tenantId_key: { tenantId: tenant.id, key: 'movieProviders' } },
+      update: {},
+      create: {
+        tenantId: tenant.id,
+        key: 'movieProviders',
+        value: {
+          tmdb: {
+            readAccessToken: '',
+            language: 'tr-TR',
+            region: 'TR',
+            posterSize: 'w500',
+            syncEnabled: true,
+            cronTime: '03:00',
+          },
+        },
+      },
+    });
+
+    for (const [index, name] of DEFAULT_MOVIE_CATEGORIES.entries()) {
+      await prisma.movieCategory.upsert({
+        where: { tenantId_slug: { tenantId: tenant.id, slug: slugify(name) } },
+        update: { name, sortOrder: (index + 1) * 10 },
+        create: {
+          tenantId: tenant.id,
+          name,
+          slug: slugify(name),
+          sortOrder: (index + 1) * 10,
+        },
+      });
+    }
+  }
+
   const superAdmin = await prisma.user.upsert({
     where: { email: 'superadmin@example.com' },
     update: {
@@ -521,25 +695,32 @@ async function main(): Promise<void> {
   await prisma.userMallAccess.deleteMany({ where: { tenantUserId: groupAdminTu.id } });
 
   const catFashion = await prisma.storeCategory.upsert({
-    where: { slug: 'fashion' },
-    update: { name: 'Moda', deletedAt: null, status: 'ACTIVE' },
+    where: { mallId_normalizedName: { mallId: mallIstanbul.id, normalizedName: 'moda' } },
+    update: { name: 'Moda', deletedAt: null, active: true },
     create: {
+      tenantId: tenantMallGroup.id,
+      mallId: mallIstanbul.id,
       name: 'Moda',
-      slug: 'fashion',
-      icon: null,
+      normalizedName: 'moda',
+      slug: 'moda',
+      slugAutoGenerated: true,
       sortOrder: 10,
-      status: 'ACTIVE',
+      active: true,
     },
   });
 
   await prisma.storeCategory.upsert({
-    where: { slug: 'food-beverage' },
-    update: { name: 'Yeme-İçme', deletedAt: null, status: 'ACTIVE' },
+    where: { mallId_normalizedName: { mallId: mallIstanbul.id, normalizedName: 'yeme-icme' } },
+    update: { name: 'Yeme-İçme', deletedAt: null, active: true },
     create: {
+      tenantId: tenantMallGroup.id,
+      mallId: mallIstanbul.id,
       name: 'Yeme-İçme',
-      slug: 'food-beverage',
+      normalizedName: 'yeme-icme',
+      slug: 'yeme-icme',
+      slugAutoGenerated: true,
       sortOrder: 20,
-      status: 'ACTIVE',
+      active: true,
     },
   });
 
@@ -547,15 +728,16 @@ async function main(): Promise<void> {
     where: { slug: 'zara' },
     update: {
       name: 'Zara',
-      categoryId: catFashion.id,
+      normalizedName: 'zara',
       deletedAt: null,
       status: 'ACTIVE',
       updatedBy: superAdmin.id,
     },
     create: {
       name: 'Zara',
+      normalizedName: 'zara',
       slug: 'zara',
-      categoryId: catFashion.id,
+      slugAutoGenerated: true,
       description: 'Global mağaza havuzu — Zara',
       websiteUrl: 'https://www.zara.com',
       status: 'ACTIVE',
@@ -572,7 +754,8 @@ async function main(): Promise<void> {
         tenantId: tenantMallGroup.id,
         mallId: mallIstanbul.id,
         globalStoreId: globalZara.id,
-        localName: 'Zara — Mall of İstanbul',
+        categoryId: catFashion.id,
+        detailTitle: 'Zara — Mall of İstanbul',
         floor: '2',
         storeNo: '230',
         phone: '+90 212 555 0000',
@@ -591,7 +774,13 @@ async function main(): Promise<void> {
       prisma.capability.upsert({
         where: { code: cap.code },
         update: { name: cap.name, description: cap.description, category: cap.category },
-        create: { code: cap.code, name: cap.name, description: cap.description, category: cap.category, isSystem: true },
+        create: {
+          code: cap.code,
+          name: cap.name,
+          description: cap.description,
+          category: cap.category,
+          isSystem: true,
+        },
       }),
     ),
   );
@@ -631,7 +820,9 @@ async function main(): Promise<void> {
   if (superAdminRole) {
     for (const code of capabilityPerms) {
       await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: superAdminRole.id, permissionId: capPermByCode[code].id } },
+        where: {
+          roleId_permissionId: { roleId: superAdminRole.id, permissionId: capPermByCode[code].id },
+        },
         update: {},
         create: { roleId: superAdminRole.id, permissionId: capPermByCode[code].id },
       });
@@ -639,7 +830,12 @@ async function main(): Promise<void> {
   }
   if (tenantAdminRole) {
     await prisma.rolePermission.upsert({
-      where: { roleId_permissionId: { roleId: tenantAdminRole.id, permissionId: capPermByCode['capability:read'].id } },
+      where: {
+        roleId_permissionId: {
+          roleId: tenantAdminRole.id,
+          permissionId: capPermByCode['capability:read'].id,
+        },
+      },
       update: {},
       create: { roleId: tenantAdminRole.id, permissionId: capPermByCode['capability:read'].id },
     });
@@ -654,19 +850,118 @@ async function main(): Promise<void> {
     helperText: string | null;
     aspectRatioLocked: boolean;
   }> = [
-    { usageKey: 'HOMEPAGE_HERO', recommendedWidth: 1920, recommendedHeight: 800, acceptedMimeTypes: ['image/*'], helperText: 'Ana sayfa üst banner görseli', aspectRatioLocked: true },
-    { usageKey: 'SLIDER_DESKTOP', recommendedWidth: 1920, recommendedHeight: 720, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
-    { usageKey: 'SLIDER_MOBILE', recommendedWidth: 768, recommendedHeight: 1024, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
-    { usageKey: 'SLIDER_KIOSK', recommendedWidth: 1080, recommendedHeight: 1920, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
-    { usageKey: 'EVENT_COVER', recommendedWidth: 1200, recommendedHeight: 630, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
-    { usageKey: 'CAMPAIGN_COVER', recommendedWidth: 1200, recommendedHeight: 630, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
-    { usageKey: 'POPUP_IMAGE', recommendedWidth: 800, recommendedHeight: 800, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
-    { usageKey: 'MOVIE_POSTER', recommendedWidth: 600, recommendedHeight: 900, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
-    { usageKey: 'STORE_LOGO', recommendedWidth: 512, recommendedHeight: 512, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: true },
-    { usageKey: 'LOCATION_LOGO', recommendedWidth: 512, recommendedHeight: 512, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: true },
-    { usageKey: 'LOCATION_COVER', recommendedWidth: 1600, recommendedHeight: 600, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
-    { usageKey: 'SERVICE_ICON', recommendedWidth: 256, recommendedHeight: 256, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: true },
-    { usageKey: 'SERVICE_COVER', recommendedWidth: 1200, recommendedHeight: 630, acceptedMimeTypes: ['image/*'], helperText: null, aspectRatioLocked: false },
+    {
+      usageKey: 'HOMEPAGE_HERO',
+      recommendedWidth: 1920,
+      recommendedHeight: 800,
+      acceptedMimeTypes: ['image/*'],
+      helperText: 'Ana sayfa üst banner görseli',
+      aspectRatioLocked: true,
+    },
+    {
+      usageKey: 'SLIDER_DESKTOP',
+      recommendedWidth: 1920,
+      recommendedHeight: 720,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: false,
+    },
+    {
+      usageKey: 'SLIDER_MOBILE',
+      recommendedWidth: 768,
+      recommendedHeight: 1024,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: false,
+    },
+    {
+      usageKey: 'SLIDER_KIOSK',
+      recommendedWidth: 1080,
+      recommendedHeight: 1920,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: false,
+    },
+    {
+      usageKey: 'EVENT_COVER',
+      recommendedWidth: 1200,
+      recommendedHeight: 630,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: false,
+    },
+    {
+      usageKey: 'CAMPAIGN_COVER',
+      recommendedWidth: 1200,
+      recommendedHeight: 630,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: false,
+    },
+    {
+      usageKey: 'CAMPAIGN_MOBILE_COVER',
+      recommendedWidth: 768,
+      recommendedHeight: 1024,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: false,
+    },
+    {
+      usageKey: 'POPUP_IMAGE',
+      recommendedWidth: 800,
+      recommendedHeight: 800,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: false,
+    },
+    {
+      usageKey: 'MOVIE_POSTER',
+      recommendedWidth: 600,
+      recommendedHeight: 900,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: false,
+    },
+    {
+      usageKey: 'STORE_LOGO',
+      recommendedWidth: 512,
+      recommendedHeight: 512,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: true,
+    },
+    {
+      usageKey: 'LOCATION_LOGO',
+      recommendedWidth: 512,
+      recommendedHeight: 512,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: true,
+    },
+    {
+      usageKey: 'LOCATION_COVER',
+      recommendedWidth: 1600,
+      recommendedHeight: 600,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: false,
+    },
+    {
+      usageKey: 'SERVICE_ICON',
+      recommendedWidth: 256,
+      recommendedHeight: 256,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: true,
+    },
+    {
+      usageKey: 'SERVICE_COVER',
+      recommendedWidth: 1200,
+      recommendedHeight: 630,
+      acceptedMimeTypes: ['image/*'],
+      helperText: null,
+      aspectRatioLocked: false,
+    },
   ];
   for (const tenant of [tenantEmaar, tenantMallGroup]) {
     for (const g of MEDIA_GUIDELINE_DEFAULTS) {

@@ -1,0 +1,1 @@
+ALTER TABLE "Movie" ADD COLUMN "ticketUrl" TEXT;

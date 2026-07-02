@@ -36,6 +36,8 @@ model User {
   updatedMovies          Movie[]          @relation("MovieUpdater")
   createdMovieSessions   MovieSession[]   @relation("MovieSessionCreator")
   updatedMovieSessions   MovieSession[]   @relation("MovieSessionUpdater")
+  createdScreeningHalls  ScreeningHall[]  @relation("ScreeningHallCreator")
+  updatedScreeningHalls  ScreeningHall[]  @relation("ScreeningHallUpdater")
   notifications          Notification[]   @relation("NotificationRecipient")
   createdPages           Page[]           @relation("PageCreator")
   updatedPages           Page[]           @relation("PageUpdater")
@@ -46,6 +48,7 @@ model User {
   createdPopups          Popup[]          @relation("PopupCreator")
   updatedPopups          Popup[]          @relation("PopupUpdater")
   refreshTokens          RefreshToken[]
+  publicApiKeys          PublicApiKey[]   @relation("ApiKeyCreator")
   createdServices        Service[]        @relation("ServiceCreator")
   updatedServices        Service[]        @relation("ServiceUpdater")
   createdSliders         Slider[]         @relation("SliderCreator")
@@ -77,16 +80,21 @@ model Tenant {
   localizedContent   LocalizedContent[]
   malls              Mall[]
   mallStores         MallStore[]
+  mallFloors         MallFloor[]
+  storeCategories    StoreCategory[]
   mediaAssets        MediaAsset[]
   mediaFolders       MediaFolder[]
   movies             Movie[]
+  movieCategories    MovieCategory[]
   movieSessions      MovieSession[]
+  movieSyncLogs      MovieSyncLog[]
   notifications      Notification[]
   pages              Page[]
   pageAttachments    PageAttachment[]
   pageBlocks         PageBlock[]
   popups             Popup[]
   roles              Role[]
+  screeningHalls     ScreeningHall[]
   searchIndexEntries SearchIndexEntry[]
   services           Service[]
   sliders            Slider[]
@@ -94,6 +102,11 @@ model Tenant {
   settings           TenantSetting[]
   mediaGuidelines    TenantMediaGuideline[]
   tenantUsers        TenantUser[]
+  mallLocales        MallLocale[]
+  publicApiKeys      PublicApiKey[]
+  allowedDomains     AllowedDomain[]
+  apiRequestLogs     ApiRequestLog[]
+  apiUsageDaily      ApiUsageDaily[]
 }
 
 model Mall {
@@ -137,6 +150,8 @@ model Mall {
   logoMedia          MediaAsset?        @relation("MallLogoMedia", fields: [logoMediaId], references: [id])
   tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   mallStores         MallStore[]
+  mallFloors         MallFloor[]
+  storeCategories    StoreCategory[]
   mediaAssets        MediaAsset[]
   mediaFolders       MediaFolder[]
   movieSessions      MovieSession[]
@@ -145,13 +160,34 @@ model Mall {
   pageAttachments    PageAttachment[]
   pageBlocks         PageBlock[]
   popups             Popup[]
+  screeningHalls     ScreeningHall[]
   searchIndexEntries SearchIndexEntry[]
   services           Service[]
   sliders            Slider[]
   userMallAccesses   UserMallAccess[]
+  mallLocales        MallLocale[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
+}
+
+/// Per-location language activation (system Locale definitions are tenant-global).
+model MallLocale {
+  id        String   @id @default(cuid())
+  tenantId  String
+  mallId    String
+  localeId  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mall   Mall   @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  locale Locale @relation(fields: [localeId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([mallId, localeId])
+  @@index([tenantId, mallId])
+  @@index([mallId, isActive])
 }
 
 model Role {
@@ -322,7 +358,9 @@ model MediaAsset {
   suggestedWidth      Int?
   usageContext        String?
   campaignSharedCovers Campaign[]              @relation("CampaignSharedCoverImage")
+  campaignSharedMobileCovers Campaign[]        @relation("CampaignSharedMobileCoverImage")
   campaignTranslationCovers CampaignTranslation[] @relation("CampaignTranslationCoverImage")
+  campaignTranslationMobileCovers CampaignTranslation[] @relation("CampaignTranslationMobileCoverImage")
   eventSharedCovers   Event[]                   @relation("EventSharedCoverImage")
   eventTranslationCovers EventTranslation[]     @relation("EventTranslationCoverImage")
   cinemaLogos         Cinema[]         @relation("CinemaLogoMedia")
@@ -342,7 +380,11 @@ model MediaAsset {
   serviceIcons        Service[]        @relation("ServiceIconMedia")
   sliderItemDesktop   SliderItem[]             @relation("SliderItemSharedImage")
   sliderItemMobile    SliderItem[]             @relation("SliderItemSharedMobileImage")
-  sliderItemTranslationImages       SliderItemTranslation[] @relation("SliderItemTranslationImage")
+  storeCategoryIcons              StoreCategory[]           @relation("StoreCategoryIcon")
+  storeCategoryCovers             StoreCategory[]           @relation("StoreCategoryCover")
+  storeCategoryTranslationIcons   StoreCategoryTranslation[] @relation("StoreCategoryTranslationIcon")
+  storeCategoryTranslationCovers  StoreCategoryTranslation[] @relation("StoreCategoryTranslationCover")
+  sliderItemTranslationImages     SliderItemTranslation[] @relation("SliderItemTranslationImage")
   sliderItemTranslationMobileImages SliderItemTranslation[] @relation("SliderItemTranslationMobileImage")
 
   @@index([tenantId, createdAt])
@@ -467,47 +509,105 @@ model SliderItemTranslation {
 }
 
 model StoreCategory {
-  id             String                @id @default(cuid())
-  name           String
-  slug           String                @unique
-  icon           String?
-  sortOrder      Int                   @default(0)
-  status         StoreCategoryStatus   @default(ACTIVE)
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-  deletedAt      DateTime?
-  globalStores   GlobalStore[]
-  mallStoreLinks MallStoreOnCategory[]
+  id                     String    @id @default(cuid())
+  tenantId               String
+  mallId                 String
+  parentCategoryId       String?
+  name                   String
+  description            String?
+  normalizedName         String
+  slug                   String
+  slugAutoGenerated      Boolean   @default(true)
+  sortOrder              Int       @default(0)
+  active                 Boolean   @default(true)
+  color                  String?
+  showInWebsite          Boolean   @default(true)
+  showInMobile           Boolean   @default(true)
+  showInKiosk            Boolean   @default(true)
+  seoTitle               String?
+  seoDescription         String?
+  sameImageForAllLocales Boolean   @default(true)
+  iconMediaId            String?
+  coverMediaId           String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  deletedAt              DateTime?
+  tenant                 Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall                   Mall      @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  parent                 StoreCategory?  @relation("StoreCategoryTree", fields: [parentCategoryId], references: [id], onDelete: SetNull)
+  children               StoreCategory[] @relation("StoreCategoryTree")
+  iconMedia              MediaAsset? @relation("StoreCategoryIcon", fields: [iconMediaId], references: [id])
+  coverMedia             MediaAsset? @relation("StoreCategoryCover", fields: [coverMediaId], references: [id])
+  mallStores             MallStore[]
+  translations           StoreCategoryTranslation[]
 
-  @@index([status])
-  @@index([sortOrder])
+  @@unique([mallId, slug])
+  @@unique([mallId, normalizedName])
+  @@index([tenantId, mallId, active])
+  @@index([parentCategoryId])
+  @@index([mallId, sortOrder])
+}
+
+model StoreCategoryTranslation {
+  id              String        @id @default(cuid())
+  storeCategoryId String
+  localeId        String
+  iconMediaId     String?
+  coverMediaId    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  storeCategory   StoreCategory @relation(fields: [storeCategoryId], references: [id], onDelete: Cascade)
+  locale          Locale        @relation(fields: [localeId], references: [id], onDelete: Cascade)
+  iconMedia       MediaAsset?   @relation("StoreCategoryTranslationIcon", fields: [iconMediaId], references: [id])
+  coverMedia      MediaAsset?   @relation("StoreCategoryTranslationCover", fields: [coverMediaId], references: [id])
+
+  @@unique([storeCategoryId, localeId])
+  @@index([localeId])
 }
 
 model GlobalStore {
-  id              String         @id @default(cuid())
-  name            String
-  slug            String         @unique
-  logoMediaId     String?
-  categoryId      String?
-  description     String?
-  phone           String?
-  email           String?
-  websiteUrl      String?
-  socialLinksJson Json?
-  status          StoreStatus    @default(ACTIVE)
-  createdBy       String
-  updatedBy       String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  deletedAt       DateTime?
-  category        StoreCategory? @relation(fields: [categoryId], references: [id])
-  createdByUser   User           @relation("GlobalStoreCreator", fields: [createdBy], references: [id])
-  logoMedia       MediaAsset?    @relation("GlobalStoreLogo", fields: [logoMediaId], references: [id])
-  updatedByUser   User?          @relation("GlobalStoreUpdater", fields: [updatedBy], references: [id])
-  mallStores      MallStore[]
+  id                String         @id @default(cuid())
+  name              String
+  normalizedName    String         @unique
+  slug              String         @unique
+  slugAutoGenerated Boolean        @default(true)
+  logoMediaId       String?
+  description       String?
+  phone             String?
+  email             String?
+  websiteUrl        String?
+  socialLinksJson   Json?
+  status            StoreStatus    @default(ACTIVE)
+  createdBy         String
+  updatedBy         String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  deletedAt         DateTime?
+  createdByUser     User           @relation("GlobalStoreCreator", fields: [createdBy], references: [id])
+  logoMedia         MediaAsset?    @relation("GlobalStoreLogo", fields: [logoMediaId], references: [id])
+  updatedByUser     User?          @relation("GlobalStoreUpdater", fields: [updatedBy], references: [id])
+  mallStores        MallStore[]
 
-  @@index([categoryId])
   @@index([status])
+}
+
+model MallFloor {
+  id         String      @id @default(cuid())
+  tenantId   String
+  mallId     String
+  name       String
+  label      String
+  sortOrder  Int         @default(0)
+  active     Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall       Mall        @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  mallStores MallStore[]
+
+  @@unique([mallId, name])
+  @@index([tenantId, mallId, active])
+  @@index([mallId, sortOrder])
 }
 
 model MallStore {
@@ -515,12 +615,15 @@ model MallStore {
   tenantId         String
   mallId           String
   globalStoreId    String
-  localName        String?
+  categoryId       String?
+  detailTitle      String?
   localDescription String?
   localLogoMediaId String?
+  floorId          String?
   floor            String?
   storeNo          String?
   phone            String?
+  whatsappPhone    String?
   email            String?
   workingHoursJson Json?
   locationJson     Json?
@@ -537,27 +640,18 @@ model MallStore {
   campaigns        Campaign[]
   createdByUser    User                  @relation("MallStoreCreator", fields: [createdBy], references: [id])
   globalStore      GlobalStore           @relation(fields: [globalStoreId], references: [id])
+  category         StoreCategory?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   localLogoMedia   MediaAsset?           @relation("MallStoreLocalLogo", fields: [localLogoMediaId], references: [id])
   mall             Mall                  @relation(fields: [mallId], references: [id], onDelete: Cascade)
   tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  floorRecord      MallFloor?            @relation(fields: [floorId], references: [id], onDelete: SetNull)
   updatedByUser    User?                 @relation("MallStoreUpdater", fields: [updatedBy], references: [id])
-  categoryLinks    MallStoreOnCategory[]
 
   @@index([tenantId, mallId])
   @@index([globalStoreId])
   @@index([tenantId, mallId, status])
-}
-
-/// Per-mall category assignment (same brand may differ by mall).
-model MallStoreOnCategory {
-  mallStoreId     String
-  storeCategoryId String
-  createdAt       DateTime      @default(now())
-  mallStore       MallStore     @relation(fields: [mallStoreId], references: [id], onDelete: Cascade)
-  storeCategory   StoreCategory @relation(fields: [storeCategoryId], references: [id], onDelete: Cascade)
-
-  @@id([mallStoreId, storeCategoryId])
-  @@index([storeCategoryId])
+  @@index([floorId])
+  @@index([categoryId])
 }
 
 model Event {
@@ -635,6 +729,7 @@ model Campaign {
   description              String?
   sameImageForAllLocales   Boolean       @default(true)
   sharedCoverImageId       String?
+  sharedMobileCoverImageId String?
   coverMediaWidthOverride  Int?
   coverMediaHeightOverride Int?
   publishStartAt           DateTime?
@@ -656,6 +751,7 @@ model Campaign {
   deletedAt                DateTime?
   channels                 Channel[]
   sharedCoverImage         MediaAsset?   @relation("CampaignSharedCoverImage", fields: [sharedCoverImageId], references: [id])
+  sharedMobileCoverImage   MediaAsset?   @relation("CampaignSharedMobileCoverImage", fields: [sharedMobileCoverImageId], references: [id])
   translations             CampaignTranslation[]
   createdByUser            User          @relation("CampaignCreator", fields: [createdBy], references: [id])
   mall                     Mall?         @relation(fields: [mallId], references: [id])
@@ -679,11 +775,13 @@ model CampaignTranslation {
   localeId     String
   title        String?
   description  String?
-  buttonText   String?
-  coverImageId String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  coverImage   MediaAsset? @relation("CampaignTranslationCoverImage", fields: [coverImageId], references: [id])
+  buttonText         String?
+  coverImageId       String?
+  mobileCoverImageId String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  coverImage         MediaAsset? @relation("CampaignTranslationCoverImage", fields: [coverImageId], references: [id])
+  mobileCoverImage   MediaAsset? @relation("CampaignTranslationMobileCoverImage", fields: [mobileCoverImageId], references: [id])
   locale       Locale     @relation(fields: [localeId], references: [id], onDelete: Cascade)
   campaign     Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
@@ -713,50 +811,152 @@ model Cinema {
   tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   updatedByUser      User?              @relation("CinemaUpdater", fields: [updatedBy], references: [id])
   movieSessions      MovieSession[]
+  screeningHalls     ScreeningHall[]  @relation("CinemaScreeningHalls")
 
   @@unique([mallId, slug])
   @@index([tenantId, mallId])
   @@index([tenantId, status])
 }
 
+model ScreeningHall {
+  id            String         @id @default(cuid())
+  tenantId      String
+  mallId        String
+  cinemaId      String?
+  name          String
+  slug          String
+  capacity      Int?
+  is3D          Boolean        @default(false)
+  isImax        Boolean        @default(false)
+  createdBy     String
+  updatedBy     String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+  cinema        Cinema?        @relation("CinemaScreeningHalls", fields: [cinemaId], references: [id], onDelete: SetNull)
+  createdByUser User           @relation("ScreeningHallCreator", fields: [createdBy], references: [id])
+  mall          Mall           @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser User?          @relation("ScreeningHallUpdater", fields: [updatedBy], references: [id])
+  movieSessions MovieSession[]
+
+  @@unique([mallId, slug])
+  @@index([tenantId, mallId])
+  @@index([tenantId, mallId, deletedAt])
+}
+
 model Movie {
-  id              String         @id @default(cuid())
-  tenantId        String
-  title           String
-  slug            String
-  originalTitle   String?
-  posterMediaId   String?
-  description     String?
-  durationMinutes Int?
-  genre           String?
-  rating          String?
-  trailerUrl      String?
-  releaseDate     DateTime?
-  status          MovieStatus    @default(ACTIVE)
-  createdBy       String
-  updatedBy       String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  deletedAt       DateTime?
-  createdByUser   User           @relation("MovieCreator", fields: [createdBy], references: [id])
-  posterMedia     MediaAsset?    @relation("MoviePosterMedia", fields: [posterMediaId], references: [id])
-  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  updatedByUser   User?          @relation("MovieUpdater", fields: [updatedBy], references: [id])
-  movieSessions   MovieSession[]
+  id                      String              @id @default(cuid())
+  tenantId                String
+  title                   String
+  slug                    String
+  originalTitle           String?
+  posterMediaId           String?
+  posterPath              String?
+  backdropPath            String?
+  description             String?
+  durationMinutes         Int?
+  genre                   String?
+  rating                  String?
+  trailerUrl              String?
+  ticketUrl               String?             @db.Text
+  releaseDate             DateTime?
+  publishStartAt          DateTime?
+  publishEndAt            DateTime?
+  sortOrder               Int                 @default(0)
+  status                  MovieStatus         @default(ACTIVE)
+  provider                MovieProviderSource @default(MANUAL)
+  tmdbId                  Int?
+  tmdbVoteAverage         Float?
+  tmdbVoteCount           Int?
+  tmdbPopularity          Float?
+  lastSyncedAt            DateTime?
+  imdbId                  String?
+  homepage                String?
+  originalLanguage        String?
+  adult                   Boolean             @default(false)
+  releaseStatus           String?
+  castJson                Json?
+  directorsJson           Json?
+  productionCompaniesJson Json?
+  productionCountriesJson Json?
+  notCurrentlyAvailable   Boolean             @default(false)
+  createdBy               String
+  updatedBy               String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  deletedAt               DateTime?
+  createdByUser           User                @relation("MovieCreator", fields: [createdBy], references: [id])
+  posterMedia             MediaAsset?         @relation("MoviePosterMedia", fields: [posterMediaId], references: [id])
+  tenant                  Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser           User?               @relation("MovieUpdater", fields: [updatedBy], references: [id])
+  categories              MovieCategoryOnMovie[]
+  movieSessions           MovieSession[]
 
   @@unique([tenantId, slug])
+  @@unique([tenantId, tmdbId])
   @@index([tenantId, status])
   @@index([tenantId, title])
+  @@index([tenantId, sortOrder])
+  @@index([tenantId, publishStartAt, publishEndAt])
+  @@index([tenantId, provider])
+  @@index([tenantId, tmdbId])
+}
+
+model MovieSyncLog {
+  id             String               @id @default(cuid())
+  tenantId       String
+  provider       MovieProviderSource
+  startedAt      DateTime             @default(now())
+  finishedAt     DateTime?
+  status         MovieSyncLogStatus   @default(RUNNING)
+  newMovies      Int                  @default(0)
+  updatedMovies  Int                  @default(0)
+  failedMovies   Int                  @default(0)
+  message        String?
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, startedAt])
+  @@index([tenantId, provider, status])
+}
+
+model MovieCategory {
+  id        String                 @id @default(cuid())
+  tenantId  String
+  name      String
+  slug      String
+  sortOrder Int                    @default(0)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  tenant    Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  movies    MovieCategoryOnMovie[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, sortOrder])
+}
+
+model MovieCategoryOnMovie {
+  movieId    String
+  categoryId String
+  assignedAt DateTime      @default(now())
+  movie      Movie         @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  category   MovieCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([movieId, categoryId])
+  @@index([categoryId])
 }
 
 model MovieSession {
   id            String             @id @default(cuid())
   tenantId      String
   mallId        String
-  cinemaId      String
+  cinemaId      String?
+  hallId        String?
   movieId       String
   hallName      String?
-  startsAt      DateTime
+  showTime      String?
+  showDate      String?
+  startsAt      DateTime?
   endsAt        DateTime?
   language      String?
   subtitle      String?
@@ -768,7 +968,8 @@ model MovieSession {
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
   deletedAt     DateTime?
-  cinema        Cinema             @relation(fields: [cinemaId], references: [id])
+  cinema        Cinema?            @relation(fields: [cinemaId], references: [id])
+  hall          ScreeningHall?     @relation(fields: [hallId], references: [id])
   createdByUser User               @relation("MovieSessionCreator", fields: [createdBy], references: [id])
   mall          Mall               @relation(fields: [mallId], references: [id], onDelete: Cascade)
   movie         Movie              @relation(fields: [movieId], references: [id])
@@ -779,6 +980,8 @@ model MovieSession {
   @@index([cinemaId, startsAt])
   @@index([movieId])
   @@index([tenantId, status])
+  @@index([tenantId, mallId, showDate])
+  @@index([hallId])
 }
 
 model Page {
@@ -886,8 +1089,10 @@ model Locale {
   tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   translations LocalizedContent[]
   sliderItemTranslations SliderItemTranslation[]
-  campaignTranslations   CampaignTranslation[]
-  eventTranslations      EventTranslation[]
+  campaignTranslations      CampaignTranslation[]
+  eventTranslations         EventTranslation[]
+  storeCategoryTranslations StoreCategoryTranslation[]
+  mallLocales               MallLocale[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -1189,11 +1394,6 @@ enum SliderLinkedEntityType {
   LOCATION
 }
 
-enum StoreCategoryStatus {
-  ACTIVE
-  PASSIVE
-}
-
 enum StoreStatus {
   ACTIVE
   PASSIVE
@@ -1217,6 +1417,18 @@ enum MovieStatus {
   ACTIVE
   PASSIVE
   ARCHIVED
+}
+
+enum MovieProviderSource {
+  TMDB
+  MANUAL
+}
+
+enum MovieSyncLogStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+  PARTIAL
 }
 
 enum MovieSessionStatus {
@@ -1270,11 +1482,13 @@ enum LocalizedEntityType {
   EVENT
   CAMPAIGN
   STORE
+  STORE_CATEGORY
   MOVIE
   CINEMA
   LOCATION
   POPUP
   SERVICE
+  MALL_FLOOR
 }
 
 enum SearchIndexEntityType {
@@ -1359,4 +1573,91 @@ enum PopupStatus {
 enum ServiceStatus {
   ACTIVE
   INACTIVE
+}
+
+// ── Developer API ─────────────────────────────────────────────────────────────
+
+enum ApiKeyStatus {
+  ACTIVE
+  INACTIVE
+  REVOKED
+}
+
+enum ApiKeyEnvironment {
+  PRODUCTION
+  STAGING
+  DEVELOPMENT
+}
+
+model PublicApiKey {
+  id          String            @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  keyHash     String            @unique
+  keyPrefix   String
+  environment ApiKeyEnvironment @default(PRODUCTION)
+  status      ApiKeyStatus      @default(ACTIVE)
+  createdById String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy   User          @relation("ApiKeyCreator", fields: [createdById], references: [id])
+  requestLogs ApiRequestLog[]
+
+  @@index([tenantId])
+  @@index([keyHash])
+  @@index([tenantId, status])
+}
+
+model AllowedDomain {
+  id        String   @id @default(cuid())
+  tenantId  String
+  domain    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, domain])
+  @@index([tenantId])
+}
+
+model ApiRequestLog {
+  id              String   @id @default(cuid())
+  tenantId        String
+  apiKeyId        String?
+  endpoint        String
+  method          String   @default("GET")
+  statusCode      Int
+  responseTimeMs  Int
+  origin          String?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  apiKey  PublicApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([apiKeyId, createdAt])
+  @@index([tenantId, statusCode])
+}
+
+model ApiUsageDaily {
+  id           String   @id @default(cuid())
+  tenantId     String
+  date         DateTime @db.Date
+  requestCount Int      @default(0)
+  successCount Int      @default(0)
+  errorCount   Int      @default(0)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, date])
+  @@index([tenantId, date])
 }
