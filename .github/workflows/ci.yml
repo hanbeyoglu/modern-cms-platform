@@ -84,6 +84,16 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # Turbo strict env mode (CI=true) does not pass job env vars to tasks.
+      # Nest ConfigModule loads ../../.env during OpenAPI generation (full app boot).
+      - name: Prepare env file for build
+        run: |
+          cat > .env <<EOF
+          DATABASE_URL=${DATABASE_URL}
+          REDIS_URL=${REDIS_URL}
+          JWT_SECRET=${JWT_SECRET}
+          EOF
+
       - name: Build
         run: pnpm build
 
