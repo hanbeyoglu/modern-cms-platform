@@ -8,6 +8,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { MulterExceptionFilter } from './common/filters/multer-exception.filter';
+import { setupSwagger } from './swagger/setup-swagger';
 
 function assertProductionSafety(config: ConfigService, logger: Logger): void {
   if (config.get<string>('NODE_ENV') !== 'production') {
@@ -83,12 +84,17 @@ async function bootstrap() {
   }
 
   app.enableShutdownHooks();
+
+  setupSwagger(app);
+
   await app.listen(port);
 
   logger.log(
     `[service=api] listening port=${port} nodeEnv=${config.get<string>('NODE_ENV') ?? 'development'} version=${version} gitSha=${gitSha} buildTime=${buildTime}`,
   );
-  logger.log('[service=api] routes: GET /health, GET /health/ready, GET /version');
+  logger.log(
+    '[service=api] docs: GET /api/docs (Swagger UI), GET /developer (Scalar), GET /openapi.json',
+  );
 }
 
 bootstrap().catch((err) => {

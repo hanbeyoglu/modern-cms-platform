@@ -1,17 +1,30 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import type { Mall, Tenant, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TtlCache } from './ttl-cache';
 
 const ALL_MALLS_ROLE_CODES = new Set(['TENANT_ADMIN', 'SUPER_ADMIN']);
+const ACCESS_CACHE_TTL_MS = 60_000;
 
 @Injectable()
 export class AccessService {
+  private readonly userCache = new TtlCache<User>();
+  private readonly tenantAccessCache = new TtlCache<true>();
+  private readonly permissionCache = new TtlCache<Set<string>>();
+
   constructor(private readonly prisma: PrismaService) {}
 
   async findActiveUserById(id: string): Promise<User | null> {
-    return this.prisma.user.findFirst({
+    const cached = this.userCache.get(id);
+    if (cached) return cached;
+
+    const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null, status: 'ACTIVE' },
     });
+    if (user) {
+      this.userCache.set(id, user, ACCESS_CACHE_TTL_MS);
+    }
+    return user;
   }
 
   async findActiveUserByEmail(email: string): Promise<User | null> {
@@ -21,11 +34,15 @@ export class AccessService {
   }
 
   async assertTenantAccess(user: User, tenantId: string): Promise<void> {
+    const cacheKey = `${user.id}:${tenantId}`;
+    if (this.tenantAccessCache.get(cacheKey)) return;
+
     if (user.isSuperAdmin) {
       const count = await this.prisma.tenant.count({ where: { id: tenantId, deletedAt: null } });
       if (count === 0) {
         throw new NotFoundException('Tenant bulunamadı');
       }
+      this.tenantAccessCache.set(cacheKey, true, ACCESS_CACHE_TTL_MS);
       return;
     }
 
@@ -36,6 +53,10 @@ export class AccessService {
     if (!tenantUser || tenantUser.tenant.deletedAt) {
       throw new UnauthorizedException('Bu tenant için erişim yok');
     }
+    if (tenantUser.tenant.status !== 'ACTIVE') {
+      throw new UnauthorizedException('Bu tenant için erişim yok');
+    }
+    this.tenantAccessCache.set(cacheKey, true, ACCESS_CACHE_TTL_MS);
   }
 
   async assertMallAccess(user: User, tenantId: string, mallId: string): Promise<Mall> {
@@ -74,9 +95,15 @@ export class AccessService {
   }
 
   async getEffectivePermissionCodes(user: User, tenantId: string): Promise<Set<string>> {
+    const cacheKey = `${user.id}:${tenantId}`;
+    const cached = this.permissionCache.get(cacheKey);
+    if (cached) return cached;
+
     if (user.isSuperAdmin) {
       const all = await this.prisma.permission.findMany({ select: { code: true } });
-      return new Set(all.map((p) => p.code));
+      const codes = new Set(all.map((p) => p.code));
+      this.permissionCache.set(cacheKey, codes, ACCESS_CACHE_TTL_MS);
+      return codes;
     }
 
     const tenantUser = await this.prisma.tenantUser.findFirst({
@@ -89,10 +116,11 @@ export class AccessService {
         },
       },
     });
-    if (!tenantUser) {
-      return new Set();
-    }
-    return new Set(tenantUser.role.rolePermissions.map((rp) => rp.permission.code));
+    const codes = tenantUser
+      ? new Set(tenantUser.role.rolePermissions.map((rp) => rp.permission.code))
+      : new Set<string>();
+    this.permissionCache.set(cacheKey, codes, ACCESS_CACHE_TTL_MS);
+    return codes;
   }
 
   async listTenantsForUser(user: User): Promise<Tenant[]> {

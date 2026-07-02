@@ -40,6 +40,6 @@ import { StorageProvider } from './storage/storage.provider';
     MediaFolderService,
     MediaGuidelinesService,
   ],
-  exports: [MediaService, MediaFolderService, MediaGuidelinesService],
+  exports: [MediaService, MediaFolderService, MediaGuidelinesService, StorageProvider],
 })
 export class MediaModule {}

@@ -8,9 +8,12 @@ import { AuditSeverity, Prisma, type TenantStatus, type User } from '@prisma/cli
 import { AuditLogService } from '../audit/audit.service';
 import { AccessService } from '../access/access.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { StorageProvider } from '../media/storage/storage.provider';
+import { provisionDefaultLocalesIfMissing } from '../locales/provision-default-locales';
 import type { CreateTenantDto } from './dto/create-tenant.dto';
 import type { UpdateTenantDto } from './dto/update-tenant.dto';
 import type { ListTenantsDto } from './dto/list-tenants.dto';
+import { DeleteTenantDto, TenantDeleteMode } from './dto/delete-tenant.dto';
 
 // Base capabilities enabled when creating a new tenant
 const DEFAULT_CAPABILITIES = [
@@ -31,6 +34,7 @@ export class TenantsService {
     private readonly prisma: PrismaService,
     private readonly access: AccessService,
     private readonly audit: AuditLogService,
+    private readonly storage: StorageProvider,
   ) {}
 
   // Legacy /tenants/my
@@ -157,6 +161,8 @@ export class TenantsService {
       });
     }
 
+    await provisionDefaultLocalesIfMissing(this.prisma, tenant.id);
+
     await this.audit.logAction({
       userId: actor.id,
       tenantId: tenant.id,
@@ -230,5 +236,288 @@ export class TenantsService {
     });
 
     return { success: true, status: updated.status };
+  }
+
+  // ── System delete ─────────────────────────────────────────────────────────
+
+  async deletePreview(actor: User, id: string) {
+    this.assertSuperAdminDelete(actor);
+    const tenant = await this.findTenantForDelete(id);
+
+    const counts = await this.countTenantResources(id);
+    const actorMemberships = await this.prisma.tenantUser.findMany({
+      where: { userId: actor.id, deletedAt: null },
+      select: { tenantId: true },
+    });
+    const isActorOnlyTenant =
+      actorMemberships.length === 1
+      && actorMemberships[0]?.tenantId === id;
+
+    return {
+      tenant: {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        status: tenant.status,
+        deletedAt: tenant.deletedAt,
+      },
+      counts,
+      isProtected: this.isProtectedTenant(tenant),
+      isActorOnlyTenant,
+      confirmHint: tenant.slug,
+    };
+  }
+
+  async delete(actor: User, id: string, dto: DeleteTenantDto) {
+    this.assertSuperAdminDelete(actor);
+    const tenant = await this.findTenantForDelete(id);
+
+    if (dto.confirmSlug.trim() !== tenant.slug) {
+      throw new BadRequestException('Onay için tenant slug eşleşmiyor');
+    }
+    if (this.isProtectedTenant(tenant)) {
+      throw new ForbiddenException('Sistem tenant silinemez');
+    }
+    if (tenant.deletedAt && dto.mode === TenantDeleteMode.SOFT) {
+      throw new BadRequestException('Tenant zaten devre dışı bırakılmış');
+    }
+
+    const warnings: string[] = [];
+    const beforeCounts = await this.countTenantResources(id);
+
+    if (dto.mode === TenantDeleteMode.SOFT) {
+      await this.softDeleteTenant(actor, tenant, beforeCounts);
+      return {
+        mode: TenantDeleteMode.SOFT,
+        tenantId: id,
+        deleted: beforeCounts,
+        deletedMediaCount: 0,
+        failedMediaDeletes: 0,
+        warnings,
+      };
+    }
+
+    const mediaResult = await this.deleteTenantMediaFromStorage(id, warnings);
+    const deleted = await this.hardDeleteTenant(actor, tenant, beforeCounts);
+
+    return {
+      mode: TenantDeleteMode.HARD,
+      tenantId: id,
+      deleted,
+      deletedMediaCount: mediaResult.deletedMediaCount,
+      failedMediaDeletes: mediaResult.failedMediaDeletes,
+      warnings,
+    };
+  }
+
+  private assertSuperAdminDelete(actor: User) {
+    if (!actor.isSuperAdmin) {
+      throw new ForbiddenException('Yalnızca Super Admin tenant silebilir');
+    }
+  }
+
+  private async findTenantForDelete(id: string) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id } });
+    if (!tenant) throw new NotFoundException('Tenant bulunamadı');
+    return tenant;
+  }
+
+  private isProtectedTenant(tenant: { slug: string; metadataJson: unknown }): boolean {
+    const protectedSlugs = (process.env.PROTECTED_TENANT_SLUGS ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (protectedSlugs.includes(tenant.slug)) return true;
+
+    const meta = tenant.metadataJson as Record<string, unknown> | null;
+    return meta?.isSystemTenant === true || meta?.protected === true;
+  }
+
+  private async countTenantResources(tenantId: string) {
+    const [
+      malls,
+      users,
+      mallStores,
+      campaigns,
+      events,
+      media,
+      movies,
+      movieSessions,
+      screeningHalls,
+      sliders,
+      popups,
+      pages,
+      services,
+      storeCategories,
+      mallFloors,
+      locales,
+      localizedContent,
+      searchIndexEntries,
+      notifications,
+      movieSyncLogs,
+      cinemas,
+      movieCategories,
+      pageBlocks,
+      pageAttachments,
+      analyticsEvents,
+      tenantSettings,
+      tenantCapabilities,
+    ] = await Promise.all([
+      this.prisma.mall.count({ where: { tenantId } }),
+      this.prisma.tenantUser.count({ where: { tenantId } }),
+      this.prisma.mallStore.count({ where: { tenantId } }),
+      this.prisma.campaign.count({ where: { tenantId } }),
+      this.prisma.event.count({ where: { tenantId } }),
+      this.prisma.mediaAsset.count({ where: { tenantId } }),
+      this.prisma.movie.count({ where: { tenantId } }),
+      this.prisma.movieSession.count({ where: { tenantId } }),
+      this.prisma.screeningHall.count({ where: { tenantId } }),
+      this.prisma.slider.count({ where: { tenantId } }),
+      this.prisma.popup.count({ where: { tenantId } }),
+      this.prisma.page.count({ where: { tenantId } }),
+      this.prisma.service.count({ where: { tenantId } }),
+      this.prisma.storeCategory.count({ where: { tenantId } }),
+      this.prisma.mallFloor.count({ where: { tenantId } }),
+      this.prisma.locale.count({ where: { tenantId } }),
+      this.prisma.localizedContent.count({ where: { tenantId } }),
+      this.prisma.searchIndexEntry.count({ where: { tenantId } }),
+      this.prisma.notification.count({ where: { tenantId } }),
+      this.prisma.movieSyncLog.count({ where: { tenantId } }),
+      this.prisma.cinema.count({ where: { tenantId } }),
+      this.prisma.movieCategory.count({ where: { tenantId } }),
+      this.prisma.pageBlock.count({ where: { tenantId } }),
+      this.prisma.pageAttachment.count({ where: { tenantId } }),
+      this.prisma.analyticsEvent.count({ where: { tenantId } }),
+      this.prisma.tenantSetting.count({ where: { tenantId } }),
+      this.prisma.tenantCapability.count({ where: { tenantId } }),
+    ]);
+
+    return {
+      malls,
+      users,
+      mallStores,
+      campaigns,
+      events,
+      media,
+      movies,
+      movieSessions,
+      screeningHalls,
+      sliders,
+      popups,
+      pages,
+      services,
+      storeCategories,
+      mallFloors,
+      locales,
+      localizedContent,
+      searchIndexEntries,
+      notifications,
+      movieSyncLogs,
+      cinemas,
+      movieCategories,
+      pageBlocks,
+      pageAttachments,
+      analyticsEvents,
+      tenantSettings,
+      tenantCapabilities,
+    };
+  }
+
+  private async softDeleteTenant(
+    actor: User,
+    tenant: { id: string; name: string; slug: string; status: TenantStatus },
+    counts: Record<string, number>,
+  ) {
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.tenant.update({
+        where: { id: tenant.id },
+        data: { status: 'ARCHIVED', deletedAt: now },
+      });
+      await tx.tenantUser.updateMany({
+        where: { tenantId: tenant.id, deletedAt: null },
+        data: { isActive: false, deletedAt: now },
+      });
+    });
+
+    const memberUserIds = await this.prisma.tenantUser.findMany({
+      where: { tenantId: tenant.id },
+      select: { userId: true },
+    });
+    if (memberUserIds.length > 0) {
+      await this.prisma.refreshToken.updateMany({
+        where: {
+          userId: { in: memberUserIds.map((m) => m.userId) },
+          revokedAt: null,
+        },
+        data: { revokedAt: now },
+      });
+    }
+
+    await this.audit.logAction({
+      userId: actor.id,
+      tenantId: tenant.id,
+      action: 'tenant:delete',
+      entityType: 'Tenant',
+      entityId: tenant.id,
+      entityName: tenant.name,
+      severity: AuditSeverity.CRITICAL,
+      before: { status: tenant.status, slug: tenant.slug, counts },
+      after: { mode: TenantDeleteMode.SOFT, status: 'ARCHIVED', deletedAt: now.toISOString() },
+    });
+  }
+
+  private async deleteTenantMediaFromStorage(tenantId: string, warnings: string[]) {
+    const assets = await this.prisma.mediaAsset.findMany({
+      where: { tenantId },
+      select: { storageKey: true },
+    });
+    const keys = [...new Set(assets.map((a) => a.storageKey).filter(Boolean))];
+    let deletedMediaCount = 0;
+    let failedMediaDeletes = 0;
+
+    for (const key of keys) {
+      try {
+        await this.storage.delete(key);
+        deletedMediaCount += 1;
+      } catch (err) {
+        failedMediaDeletes += 1;
+        warnings.push(`R2 silme başarısız: ${key}`);
+        console.error(`Tenant media delete failed for key ${key}:`, err);
+      }
+    }
+
+    return { deletedMediaCount, failedMediaDeletes };
+  }
+
+  private async hardDeleteTenant(
+    actor: User,
+    tenant: { id: string; name: string; slug: string; status: TenantStatus },
+    counts: Record<string, number>,
+  ) {
+    await this.prisma.$transaction(async (tx) => {
+      // Explicit cleanup for join/child tables that may block cascade
+      await tx.searchIndexEntry.deleteMany({ where: { tenantId: tenant.id } });
+      await tx.analyticsEvent.deleteMany({ where: { tenantId: tenant.id } });
+      await tx.notification.deleteMany({ where: { tenantId: tenant.id } });
+      await tx.movieSession.deleteMany({ where: { tenantId: tenant.id } });
+      await tx.pageAttachment.deleteMany({ where: { tenantId: tenant.id } });
+      await tx.pageBlock.deleteMany({ where: { tenantId: tenant.id } });
+      await tx.localizedContent.deleteMany({ where: { tenantId: tenant.id } });
+      await tx.tenant.delete({ where: { id: tenant.id } });
+    });
+
+    await this.audit.logAction({
+      userId: actor.id,
+      action: 'tenant:delete',
+      entityType: 'Tenant',
+      entityId: tenant.id,
+      entityName: tenant.name,
+      severity: AuditSeverity.CRITICAL,
+      before: { status: tenant.status, slug: tenant.slug, counts },
+      after: { mode: TenantDeleteMode.HARD, deleted: true },
+    });
+
+    return counts;
   }
 }
