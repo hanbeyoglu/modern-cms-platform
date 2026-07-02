@@ -9,3 +9,4 @@ build
 coverage
 *.tsbuildinfo
 packages/config/dist
+apps/api/openapi

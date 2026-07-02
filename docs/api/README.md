@@ -1,20 +1,30 @@
 # API dokümantasyonu
 
-Bu aşamada yalnızca sağlık uç noktası vardır:
+OpenAPI 3.1 spesifikasyonu NestJS controller dekoratörlerinden otomatik üretilir.
 
-- `GET /health` — süreç ve veritabanı bağlantısı için temel durum.
+## Developer Portal
 
-İleride:
+| URL | Açıklama |
+|-----|----------|
+| `/developer` | Scalar Developer Portal (frontend ekipleri için) |
+| `/api/docs` | Swagger UI |
+| `/openapi.json` | Ham OpenAPI JSON |
 
-- OpenAPI şeması ve sürümlenmiş public/admin uçları burada veya otomatik üretimle belgelenebilir.
+Ayrıntılar: [DEVELOPER_PORTAL.md](../DEVELOPER_PORTAL.md)
 
-## Yerel smoke (özet)
+## Build artifact
 
-1. `docker compose up -d postgres redis` (proje compose dosyanıza göre)
+`pnpm build` sonrası `apps/api/openapi/openapi.json` dosyası üretilir.
+
+## Yerel smoke
+
+1. `docker compose up -d postgres redis`
 2. `pnpm --filter @modern-cms/api build`
 3. `pnpm --filter @modern-cms/api start`
 4. `curl -sS http://localhost:4000/health`
+5. `curl -sS http://localhost:4000/openapi.json | head`
+6. Tarayıcı: http://localhost:4000/developer
 
-Nest DI doğrulaması (DB gerekli, derlenmiş çıktı): `pnpm --filter @modern-cms/api build` ardından `pnpm --filter @modern-cms/api smoke:di` veya `smoke:di:dist` (ikisi de `node dist/smoke-di.js`). `tsx` ile `src/smoke-di.ts` çalıştırmayın — decorator metadata güvenilir değildir. Prisma seed için `tsx` kullanımı `package.json` içinde kalır.
+Nest DI doğrulaması: `pnpm --filter @modern-cms/api smoke:di:dist`
 
-Detaylı modül incelemesi, curl script ve sınırlamalar: [SPRINT7_5.md](../SPRINT7_5.md).
+Public API rehberi: [PUBLIC_API_GUIDE.md](../PUBLIC_API_GUIDE.md)

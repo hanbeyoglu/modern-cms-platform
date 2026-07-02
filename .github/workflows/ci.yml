@@ -87,6 +87,22 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Validate OpenAPI spec
+        run: |
+          test -f apps/api/openapi/openapi.json
+          test -f apps/api/openapi/openapi.en.json
+          test -f apps/api/openapi/openapi.ru.json
+          node -e "
+          const fs=require('fs');
+          for (const f of ['openapi.json','openapi.en.json','openapi.ru.json']) {
+            const s=JSON.parse(fs.readFileSync('apps/api/openapi/'+f,'utf8'));
+            if(!s.openapi?.startsWith('3.')) process.exit(1);
+            if(Object.keys(s.paths||{}).length===0) process.exit(1);
+            if(!s.info['x-portal-locale']) process.exit(1);
+          }
+          console.log('OpenAPI i18n OK: tr/en/ru');
+          "
+
       - name: API build (Nest DI smoke prerequisite)
         run: pnpm --filter @modern-cms/api build
 

@@ -7,7 +7,7 @@
     },
     "build": {
       "dependsOn": ["@modern-cms/api#db:generate", "^build"],
-      "outputs": ["dist/**", "build/**"]
+      "outputs": ["dist/**", "build/**", "openapi/**"]
     },
     "dev": {
       "cache": false,

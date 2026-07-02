@@ -25,6 +25,22 @@ Bağımsız web, mobil veya kiosk arayüzü geliştiren ekipler için:
 - [docs/FRONTEND_HANDOFF.md](docs/FRONTEND_HANDOFF.md) — Kısa teslim checklist’i
 - [`@modern-cms/public-sdk`](packages/public-sdk/) — TypeScript istemci
 
+## Developer Portal
+
+API dokümantasyonu NestJS OpenAPI spesifikasyonundan otomatik üretilir. OpenAPI tek kaynak (single source of truth) — elle düzenleme yapılmaz.
+
+| URL | Açıklama |
+|-----|----------|
+| `/developer` | Scalar Developer Portal — frontend geliştiriciler için ana dokümantasyon (arama, playground, kod örnekleri) |
+| `/api/docs` | Swagger UI — interaktif OpenAPI gezgini |
+| `/openapi.json` | Ham OpenAPI 3.1 JSON — **Türkçe** (varsayılan) |
+| `/openapi.en.json` | OpenAPI 3.1 — **English** |
+| `/openapi.ru.json` | OpenAPI 3.1 — **Русский** |
+
+Yerelde (varsayılan port): http://localhost:4000/developer
+
+Ayrıntılar: [docs/DEVELOPER_PORTAL.md](docs/DEVELOPER_PORTAL.md)
+
 ## Sprint 1 (kimlik ve tenant temeli)
 
 Ayrıntılar için: [docs/SPRINT1.md](docs/SPRINT1.md)
@@ -51,6 +67,12 @@ Ardından:
 
 ```bash
 pnpm dev
+```
+
+Bu komut API, admin ve worker süreçlerini birlikte başlatır. Sadece worker çalıştırmak için:
+
+```bash
+pnpm dev:worker
 ```
 
 ## Diğer komutlar
