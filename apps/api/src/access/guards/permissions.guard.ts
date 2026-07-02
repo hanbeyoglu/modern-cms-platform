@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import type { User } from '@prisma/client';
 import { AccessService } from '../access.service';
-import { IS_PUBLIC_KEY, PERMISSIONS_KEY } from '../../common/metadata-keys';
+import { ANY_PERMISSIONS_KEY, IS_PUBLIC_KEY, PERMISSIONS_KEY } from '../../common/metadata-keys';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -25,7 +25,11 @@ export class PermissionsGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (!required || required.length === 0) {
+    const anyRequired = this.reflector.getAllAndOverride<string[]>(ANY_PERMISSIONS_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if ((!required || required.length === 0) && (!anyRequired || anyRequired.length === 0)) {
       return true;
     }
 
@@ -45,11 +49,22 @@ export class PermissionsGuard implements CanActivate {
     }
 
     const effective = await this.access.getEffectivePermissionCodes(user, tenantId);
-    for (const code of required) {
-      if (!effective.has(code)) {
-        throw new ForbiddenException(`Eksik yetki: ${code}`);
+
+    if (required && required.length > 0) {
+      for (const code of required) {
+        if (!effective.has(code)) {
+          throw new ForbiddenException(`Eksik yetki: ${code}`);
+        }
       }
     }
+
+    if (anyRequired && anyRequired.length > 0) {
+      const hasAny = anyRequired.some((code) => effective.has(code));
+      if (!hasAny) {
+        throw new ForbiddenException(`Eksik yetki (en az biri gerekli): ${anyRequired.join(', ')}`);
+      }
+    }
+
     return true;
   }
 }

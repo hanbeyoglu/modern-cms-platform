@@ -19,6 +19,8 @@ import type {
 export interface CmsClientConfig {
   /** Base URL of the CMS API (e.g. 'https://api.example.com') */
   baseUrl: string;
+  /** Public API key — sent as x-api-key header on every request */
+  apiKey: string;
   /** Tenant identifier — sent as x-tenant-id header on every request */
   tenantId: string;
   /** Mall/location identifier — sent as x-mall-id header when provided */
@@ -86,6 +88,7 @@ export interface SearchOpts extends PaginatedListOpts {
  * @example
  * const cms = new CmsPublicClient({
  *   baseUrl: 'https://api.example.com',
+ *   apiKey: 'pk_live_••••••••••••••••••••••••••••••••',
  *   tenantId: 'ten_abc123',
  *   mallId: 'mal_xyz456',
  *   defaultLocale: 'tr',
@@ -95,7 +98,7 @@ export interface SearchOpts extends PaginatedListOpts {
  * const events = await cms.getEvents({ locale: 'en', limit: 10 });
  */
 export class CmsPublicClient {
-  private readonly config: Required<Pick<CmsClientConfig, 'baseUrl' | 'tenantId'>> &
+  private readonly config: Required<Pick<CmsClientConfig, 'baseUrl' | 'apiKey' | 'tenantId'>> &
     Pick<CmsClientConfig, 'mallId' | 'defaultLocale' | 'fetchImpl'>;
 
   constructor(config: CmsClientConfig) {
@@ -265,6 +268,7 @@ export class CmsPublicClient {
     }
 
     const headers: Record<string, string> = {
+      'x-api-key': this.config.apiKey,
       'x-tenant-id': this.config.tenantId,
       Accept: 'application/json',
     };

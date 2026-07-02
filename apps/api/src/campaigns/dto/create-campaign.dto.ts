@@ -42,6 +42,10 @@ export class CreateCampaignDto {
   sharedCoverImageId?: string;
 
   @IsOptional()
+  @IsString()
+  sharedMobileCoverImageId?: string;
+
+  @IsOptional()
   @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))
   @IsInt()
   @Min(1)

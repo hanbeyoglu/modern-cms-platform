@@ -256,7 +256,10 @@ export class SearchIndexerService {
   async syncMallStore(mallStoreId: string): Promise<void> {
     const row = await this.prisma.mallStore.findFirst({
       where: { id: mallStoreId },
-      include: { globalStore: true },
+      include: {
+        globalStore: true,
+        category: { select: { name: true, description: true } },
+      },
     });
     if (!row || row.deletedAt || !row.globalStore || row.globalStore.deletedAt) {
       await this.remove('MALL_STORE', mallStoreId);
@@ -268,10 +271,12 @@ export class SearchIndexerService {
       gs.name,
       gs.slug,
       gs.description,
-      row.localName,
+      row.detailTitle,
       row.localDescription,
       row.floor,
       row.storeNo,
+      row.category?.name,
+      row.category?.description,
       gs.phone,
       gs.email,
       row.phone,
@@ -281,7 +286,7 @@ export class SearchIndexerService {
     await this.upsertRow('MALL_STORE', row.id, {
       tenantId: row.tenantId,
       mallId: row.mallId,
-      title: row.localName?.trim() ? row.localName : gs.name,
+      title: gs.name,
       status: row.status,
       slug: gs.slug,
       document,
@@ -291,7 +296,10 @@ export class SearchIndexerService {
   }
 
   async syncMovie(movieId: string): Promise<void> {
-    const row = await this.prisma.movie.findFirst({ where: { id: movieId } });
+    const row = await this.prisma.movie.findFirst({
+      where: { id: movieId },
+      include: { categories: { include: { category: true } } },
+    });
     if (!row || row.deletedAt) {
       await this.remove('MOVIE', movieId);
       return;
@@ -303,6 +311,7 @@ export class SearchIndexerService {
       row.originalTitle,
       row.description,
       row.genre,
+      row.categories.map((item) => item.category.name).join(' '),
       row.rating,
       row.trailerUrl,
       loc,
@@ -420,6 +429,8 @@ export class SearchIndexerService {
       LOCATION: async () => { /* Location search sync reserved for future sprint */ },
       POPUP: () => this.syncPopup(entityId),
       SERVICE: () => this.syncService(entityId),
+      STORE_CATEGORY: async () => { /* categories indexed via mall stores */ },
+      MALL_FLOOR: async () => { /* floors indexed via mall stores */ },
     };
     const fn = map[entityType];
     if (!fn) return;

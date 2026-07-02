@@ -28,7 +28,7 @@ export type SchedulingDb = {
   popup: SchedulingDelegate;
 };
 
-/** Slider / Event / Campaign / Popup use `startAt` / `endAt`. Page uses `publishAt` / `unpublishAt`. */
+/** Slider / Popup use `startAt` / `endAt`. Event / Campaign use `publishStartAt` / `publishEndAt`. Page uses `publishAt` / `unpublishAt`. */
 export type ScheduledEntityKind = 'slider' | 'event' | 'campaign' | 'page' | 'popup';
 
 export type ScheduleTransition = {
@@ -106,11 +106,11 @@ export async function runContentSchedulingTick(
     where: {
       deletedAt: null,
       status: SCHEDULED,
-      startAt: { not: null, lte: now },
+      publishStartAt: { not: null, lte: now },
     },
     select: { id: true, tenantId: true, mallId: true },
     take: batchSize,
-    orderBy: { startAt: 'asc' },
+    orderBy: { publishStartAt: 'asc' },
   });
   for (const row of eventPub) {
     const r = await prisma.event.updateMany({
@@ -118,7 +118,7 @@ export async function runContentSchedulingTick(
         id: row.id,
         status: SCHEDULED,
         deletedAt: null,
-        startAt: { not: null, lte: now },
+        publishStartAt: { not: null, lte: now },
       },
       data: { status: PUBLISHED, publishedAt: now },
     });
@@ -139,11 +139,11 @@ export async function runContentSchedulingTick(
     where: {
       deletedAt: null,
       status: SCHEDULED,
-      startAt: { not: null, lte: now },
+      publishStartAt: { not: null, lte: now },
     },
     select: { id: true, tenantId: true, mallId: true },
     take: batchSize,
-    orderBy: { startAt: 'asc' },
+    orderBy: { publishStartAt: 'asc' },
   });
   for (const row of campaignPub) {
     const r = await prisma.campaign.updateMany({
@@ -151,7 +151,7 @@ export async function runContentSchedulingTick(
         id: row.id,
         status: SCHEDULED,
         deletedAt: null,
-        startAt: { not: null, lte: now },
+        publishStartAt: { not: null, lte: now },
       },
       data: { status: PUBLISHED, publishedAt: now },
     });
@@ -240,11 +240,11 @@ export async function runContentSchedulingTick(
     where: {
       deletedAt: null,
       status: PUBLISHED,
-      endAt: { not: null, lte: now },
+      publishEndAt: { not: null, lte: now },
     },
     select: { id: true, tenantId: true, mallId: true },
     take: batchSize,
-    orderBy: { endAt: 'asc' },
+    orderBy: { publishEndAt: 'asc' },
   });
   for (const row of eventArch) {
     const r = await prisma.event.updateMany({
@@ -252,7 +252,7 @@ export async function runContentSchedulingTick(
         id: row.id,
         status: PUBLISHED,
         deletedAt: null,
-        endAt: { not: null, lte: now },
+        publishEndAt: { not: null, lte: now },
       },
       data: { status: ARCHIVED },
     });
@@ -273,11 +273,11 @@ export async function runContentSchedulingTick(
     where: {
       deletedAt: null,
       status: PUBLISHED,
-      endAt: { not: null, lte: now },
+      publishEndAt: { not: null, lte: now },
     },
     select: { id: true, tenantId: true, mallId: true },
     take: batchSize,
-    orderBy: { endAt: 'asc' },
+    orderBy: { publishEndAt: 'asc' },
   });
   for (const row of campaignArch) {
     const r = await prisma.campaign.updateMany({
@@ -285,7 +285,7 @@ export async function runContentSchedulingTick(
         id: row.id,
         status: PUBLISHED,
         deletedAt: null,
-        endAt: { not: null, lte: now },
+        publishEndAt: { not: null, lte: now },
       },
       data: { status: ARCHIVED },
     });

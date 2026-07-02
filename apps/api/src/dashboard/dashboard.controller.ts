@@ -1,4 +1,5 @@
 import { BadRequestException, Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { MallAccessGuard } from '../access/guards/mall-access.guard';
 import { PermissionsGuard } from '../access/guards/permissions.guard';
@@ -7,7 +8,11 @@ import { RequireMallContext } from '../common/decorators/require-mall.decorator'
 import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { RequireTenantContext } from '../common/decorators/require-tenant.decorator';
 import { DashboardService } from './dashboard.service';
+import { SWAGGER_TAGS } from '../swagger/swagger.constants';
+import { ApiAdminContext, ApiAdminOperation } from '../swagger/swagger.decorators';
 
+@ApiTags(SWAGGER_TAGS.DASHBOARD)
+@ApiAdminContext()
 @Controller('dashboard')
 @RequireTenantContext()
 @RequireMallContext()
@@ -17,6 +22,16 @@ export class DashboardController {
 
   @Get('summary')
   @RequirePermission('content:read')
+  @ApiAdminOperation({ summary: 'dashboard.get.summary',
+    permissions: ['content:read'],
+    related: [
+      SWAGGER_TAGS.CAMPAIGNS,
+      SWAGGER_TAGS.EVENTS,
+      SWAGGER_TAGS.PAGES,
+      SWAGGER_TAGS.POPUPS,
+    ],
+  })
+  @ApiResponse({ status: 200, description: 'dashboard.response.200' })
   summary(@Req() req: Request) {
     if (!req.tenantId) {
       throw new BadRequestException('x-tenant-id başlığı gerekli');

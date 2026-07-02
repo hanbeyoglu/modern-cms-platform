@@ -22,6 +22,10 @@ import type {
 } from './public-response.types';
 import type { PaginatedItems } from './public-pagination.util';
 import {
+  parseStoreSocialLinks,
+  type StoreSocialLink,
+} from '../common/types/store-social-link';
+import {
   resolveSliderItemMedia,
   resolveSliderItemText,
   type SliderItemTranslationRow,
@@ -31,6 +35,10 @@ import {
   pickLocalizedField,
   type ContentTranslationRow,
 } from '../common/utils/content-cover-media.util.js';
+import {
+  resolveCampaignMedia,
+  type CampaignTranslationMediaRow,
+} from '../campaigns/campaign-media.util.js';
 
 // ── Shared Prisma select shapes ──────────────────────────────────────────────
 
@@ -63,15 +71,17 @@ const EVENT_PUBLIC_INCLUDE = {
 
 const CAMPAIGN_PUBLIC_INCLUDE = {
   sharedCoverImage: { select: MEDIA_SELECT },
+  sharedMobileCoverImage: { select: MEDIA_SELECT },
   translations: {
     include: {
       coverImage: { select: MEDIA_SELECT },
+      mobileCoverImage: { select: MEDIA_SELECT },
     },
   },
   store: {
     select: {
       id: true,
-      localName: true,
+      detailTitle: true,
       globalStore: { select: { name: true, slug: true } },
     },
   },
@@ -397,6 +407,7 @@ export class PublicContentService {
     page?: number;
     limit?: number;
     localeId?: string;
+    defaultLocaleId?: string | null;
   }): Promise<PaginatedItems<PublicStore>> {
     const page = opts.page ?? 1;
     const limit = opts.limit ?? 50;
@@ -409,11 +420,7 @@ export class PublicContentService {
       status: 'ACTIVE',
       ...(opts.featuredOnly ? { isFeatured: true } : {}),
       ...(opts.categoryId
-        ? {
-            categoryLinks: {
-              some: { storeCategoryId: opts.categoryId, storeCategory: { deletedAt: null } },
-            },
-          }
+        ? { categoryId: opts.categoryId, category: { is: { deletedAt: null, active: true } } }
         : {}),
       globalStore: {
         is: {
@@ -436,11 +443,18 @@ export class PublicContentService {
       this.prisma.mallStore.findMany({
         where,
         include: {
-          categoryLinks: {
+          floorRecord: true,
+          category: {
             include: {
-              storeCategory: { select: { id: true, name: true, slug: true } },
+              iconMedia: { select: MEDIA_SELECT },
+              coverMedia: { select: MEDIA_SELECT },
+              translations: {
+                include: {
+                  iconMedia: { select: MEDIA_SELECT },
+                  coverMedia: { select: MEDIA_SELECT },
+                },
+              },
             },
-            orderBy: { storeCategory: { sortOrder: 'asc' } },
           },
           globalStore: {
             include: {
@@ -454,17 +468,21 @@ export class PublicContentService {
       }),
     ]);
 
-    const stores = rows.map(mapStore);
+    const stores = rows.map((row) =>
+      mapStore(row, opts.localeId ?? null, opts.defaultLocaleId ?? null),
+    );
     if (!opts.localeId || stores.length === 0) return { items: stores, total };
 
-    const tMap = await this.resolver.getTranslationsForEntities(
-      opts.tenantId,
-      opts.localeId,
-      'STORE',
-      stores.map((s) => s.id),
-    );
+    const storeIds = stores.map((s) => s.id);
+    const categoryIds = [...new Set(stores.map((s) => s.category?.id).filter(Boolean) as string[])];
+    const [storeTMap, categoryTMap] = await Promise.all([
+      this.resolver.getTranslationsForEntities(opts.tenantId, opts.localeId, 'STORE', storeIds),
+      categoryIds.length > 0
+        ? this.resolver.getTranslationsForEntities(opts.tenantId, opts.localeId, 'STORE_CATEGORY', categoryIds)
+        : Promise.resolve({} as EntityTranslationMap),
+    ]);
     return {
-      items: stores.map((s) => this.applyFromMap(s, tMap, s.id, ['name', 'description'])),
+      items: stores.map((s) => this.applyStoreLocale(s, storeTMap, categoryTMap, s.id)),
       total,
     };
   }
@@ -474,6 +492,7 @@ export class PublicContentService {
     mallId: string;
     slug: string;
     localeId?: string;
+    defaultLocaleId?: string | null;
   }): Promise<PublicStore | null> {
     const row = await this.prisma.mallStore.findFirst({
       where: {
@@ -484,11 +503,18 @@ export class PublicContentService {
         globalStore: { is: { slug: opts.slug, deletedAt: null, status: 'ACTIVE' } },
       },
       include: {
-        categoryLinks: {
+        floorRecord: true,
+        category: {
           include: {
-            storeCategory: { select: { id: true, name: true, slug: true } },
+            iconMedia: { select: MEDIA_SELECT },
+            coverMedia: { select: MEDIA_SELECT },
+            translations: {
+              include: {
+                iconMedia: { select: MEDIA_SELECT },
+                coverMedia: { select: MEDIA_SELECT },
+              },
+            },
           },
-          orderBy: { storeCategory: { sortOrder: 'asc' } },
         },
         globalStore: {
           include: {
@@ -499,16 +525,17 @@ export class PublicContentService {
     });
     if (!row) return null;
 
-    const store = mapStore(row);
+    const store = mapStore(row, opts.localeId ?? null, opts.defaultLocaleId ?? null);
     if (!opts.localeId) return store;
 
-    const tMap = await this.resolver.getTranslationsForEntities(
-      opts.tenantId,
-      opts.localeId,
-      'STORE',
-      [store.id],
-    );
-    return this.applyFromMap(store, tMap, store.id, ['name', 'description']);
+    const categoryIds = store.category ? [store.category.id] : [];
+    const [storeTMap, categoryTMap] = await Promise.all([
+      this.resolver.getTranslationsForEntities(opts.tenantId, opts.localeId, 'STORE', [store.id]),
+      categoryIds.length > 0
+        ? this.resolver.getTranslationsForEntities(opts.tenantId, opts.localeId, 'STORE_CATEGORY', categoryIds)
+        : Promise.resolve({} as EntityTranslationMap),
+    ]);
+    return this.applyStoreLocale(store, storeTMap, categoryTMap, store.id);
   }
 
   // ── Pages ────────────────────────────────────────────────────────────────
@@ -630,6 +657,7 @@ export class PublicContentService {
       dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
     }
 
+    const now = new Date();
     const rows = await this.prisma.movieSession.findMany({
       where: {
         tenantId: opts.tenantId,
@@ -637,16 +665,37 @@ export class PublicContentService {
         deletedAt: null,
         status: 'SCHEDULED',
         cinema: { deletedAt: null, status: 'ACTIVE' },
-        movie: { deletedAt: null, status: 'ACTIVE' },
+        movie: {
+          deletedAt: null,
+          status: 'ACTIVE',
+          AND: [
+            { OR: [{ publishStartAt: null }, { publishStartAt: { lte: now } }] },
+            { OR: [{ publishEndAt: null }, { publishEndAt: { gte: now } }] },
+          ],
+        },
         ...(opts.cinemaId ? { cinemaId: opts.cinemaId } : {}),
         ...(opts.movieId ? { movieId: opts.movieId } : {}),
         ...(dayStart && dayEnd ? { startsAt: { gte: dayStart, lt: dayEnd } } : {}),
       },
       include: {
         cinema: { select: { id: true, name: true, slug: true } },
-        movie: { select: { id: true, title: true, slug: true, durationMinutes: true } },
+        movie: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            durationMinutes: true,
+            releaseDate: true,
+            ticketUrl: true,
+            posterMedia: { select: MEDIA_SELECT },
+            categories: {
+              include: { category: true },
+              orderBy: { category: { sortOrder: 'asc' } },
+            },
+          },
+        },
       },
-      orderBy: { startsAt: 'asc' },
+      orderBy: [{ startsAt: 'asc' }, { showDate: 'asc' }, { showTime: 'asc' }],
       take: opts.limit ?? 50,
     });
 
@@ -869,6 +918,54 @@ export class PublicContentService {
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────
+
+  private applyStoreTranslations(store: PublicStore, map: EntityTranslationMap, entityId: string): PublicStore {
+    const t = map[entityId];
+    if (!t) return store;
+    const detailTitle =
+      t.detailTitle !== undefined
+        ? t.detailTitle || null
+        : t.displayTitle !== undefined
+          ? t.displayTitle || null
+          : store.detailTitle;
+    const description =
+      t.localDescription !== undefined ? t.localDescription || null : store.description;
+    const seoTitle = detailTitle ?? store.name;
+    return {
+      ...store,
+      detailTitle,
+      displayTitle: detailTitle,
+      description,
+      seo: buildSeo({
+        title: seoTitle,
+        description: description ?? store.seo.description,
+        image: store.seo.image,
+        keywords: store.seo.keywords,
+        locale: store.seo.locale,
+      }),
+    };
+  }
+
+  private applyStoreLocale(
+    store: PublicStore,
+    storeMap: EntityTranslationMap,
+    categoryMap: EntityTranslationMap,
+    entityId: string,
+  ): PublicStore {
+    let result = this.applyStoreTranslations(store, storeMap, entityId);
+    if (!result.category) return result;
+    const t = categoryMap[result.category.id];
+    if (!t) return result;
+    const name = t.name !== undefined ? String(t.name) : result.category.name;
+    const description =
+      t.description !== undefined ? (t.description ? String(t.description) : null) : result.category.description;
+    const category = { ...result.category, name, description };
+    return {
+      ...result,
+      category,
+      categories: [{ id: category.id, name: category.name, slug: category.slug }],
+    };
+  }
 
   private applyFromMap<T extends object>(
     obj: T,
@@ -1343,6 +1440,7 @@ function mapCampaign(
     description: string | null;
     sameImageForAllLocales: boolean;
     sharedCoverImage: RichMediaRow;
+    sharedMobileCoverImage: RichMediaRow;
     coverMediaWidthOverride?: number | null;
     coverMediaHeightOverride?: number | null;
     publishStartAt: Date | null;
@@ -1361,10 +1459,11 @@ function mapCampaign(
       description: string | null;
       buttonText: string | null;
       coverImage: RichMediaRow;
+      mobileCoverImage: RichMediaRow;
     }>;
     store: {
       id: string;
-      localName: string | null;
+      detailTitle: string | null;
       globalStore: { name: string; slug: string };
     } | null;
   },
@@ -1377,6 +1476,15 @@ function mapCampaign(
     description: t.description,
     buttonText: t.buttonText,
     coverImage: toCoverMediaRow(t.coverImage),
+  }));
+
+  const mediaTranslationRows: CampaignTranslationMediaRow[] = c.translations.map((t) => ({
+    localeId: t.localeId,
+    title: t.title,
+    description: t.description,
+    buttonText: t.buttonText,
+    coverImage: toCoverMediaRow(t.coverImage),
+    mobileCoverImage: toCoverMediaRow(t.mobileCoverImage),
   }));
 
   const resolvedText =
@@ -1392,12 +1500,13 @@ function mapCampaign(
           buttonText: c.buttonText,
         };
 
-  const coverRow = resolveContentCoverImage({
+  const { desktop: coverRow, mobile: mobileCoverRow } = resolveCampaignMedia({
     sameImageForAllLocales: c.sameImageForAllLocales,
     sharedCoverImage: toCoverMediaRow(c.sharedCoverImage),
+    sharedMobileCoverImage: toCoverMediaRow(c.sharedMobileCoverImage),
     localeId: localeId ?? defaultLocaleId ?? '',
     defaultLocaleId,
-    translations: translationRows,
+    translations: mediaTranslationRows,
   });
 
   const image = toMediaAsset(
@@ -1417,6 +1526,23 @@ function mapCampaign(
     },
   );
 
+  const mobileImage = toMediaAsset(
+    mobileCoverRow
+      ? {
+          id: mobileCoverRow.id,
+          publicUrl: mobileCoverRow.publicUrl,
+          mimeType: mobileCoverRow.mimeType,
+          altText: mobileCoverRow.originalName,
+          width: mobileCoverRow.width,
+          height: mobileCoverRow.height,
+        }
+      : null,
+    {
+      width: c.coverMediaWidthOverride,
+      height: c.coverMediaHeightOverride,
+    },
+  );
+
   const campaignStartAt = toDate(c.campaignStartAt);
   const campaignEndAt = toDate(c.campaignEndAt);
 
@@ -1427,6 +1553,7 @@ function mapCampaign(
     shortDescription: c.shortDescription,
     description: resolvedText.description ?? c.description,
     image,
+    mobileImage,
     coverMedia: image,
     publishStartAt: toDate(c.publishStartAt),
     publishEndAt: toDate(c.publishEndAt),
@@ -1443,7 +1570,7 @@ function mapCampaign(
     store: c.store
       ? {
           id: c.store.id,
-          name: c.store.localName ?? c.store.globalStore.name,
+          name: c.store.globalStore.name,
           slug: c.store.globalStore.slug,
         }
       : null,
@@ -1535,49 +1662,83 @@ function mapPage(
   };
 }
 
-function mapStore(r: {
-  id: string;
-  mallId: string;
-  localName: string | null;
-  localDescription: string | null;
-  floor: string | null;
-  storeNo: string | null;
-  phone: string | null;
-  email: string | null;
-  workingHoursJson: Prisma.JsonValue;
-  locationJson: Prisma.JsonValue;
-  isFeatured: boolean;
-  isSoon: boolean;
-  searchTags: string[];
-  sortOrder: number;
-  categoryLinks: { storeCategory: { id: string; name: string; slug: string } }[];
-  globalStore: {
+function mapStore(
+  r: {
     id: string;
-    name: string;
-    slug: string;
-    description: string | null;
+    mallId: string;
+    detailTitle: string | null;
+    localDescription: string | null;
+    floor: string | null;
+    floorId: string | null;
+    floorRecord: { id: string; name: string; label: string } | null;
+    storeNo: string | null;
     phone: string | null;
+    whatsappPhone: string | null;
     email: string | null;
-    websiteUrl: string | null;
-    logoMedia: RichMediaRow;
-  };
-}): PublicStore {
-  const resolvedName = r.localName ?? r.globalStore.name;
+    workingHoursJson: Prisma.JsonValue;
+    locationJson: Prisma.JsonValue;
+    isFeatured: boolean;
+    isSoon: boolean;
+    searchTags: string[];
+    sortOrder: number;
+    category: {
+      id: string;
+      name: string;
+      slug: string;
+      description: string | null;
+      color: string | null;
+      sameImageForAllLocales: boolean;
+      iconMedia: RichMediaRow;
+      coverMedia: RichMediaRow;
+      translations: {
+        localeId: string;
+        iconMedia: RichMediaRow;
+        coverMedia: RichMediaRow;
+      }[];
+    } | null;
+    globalStore: {
+      id: string;
+      name: string;
+      slug: string;
+      description: string | null;
+      phone: string | null;
+      email: string | null;
+      websiteUrl: string | null;
+      socialLinksJson: Prisma.JsonValue;
+      logoMedia: RichMediaRow;
+    };
+  },
+  localeId: string | null,
+  defaultLocaleId: string | null,
+): PublicStore {
+  const detailTitle = r.detailTitle;
+  const name = r.globalStore.name;
   const resolvedDesc = r.localDescription ?? r.globalStore.description;
   const logo = toMediaAsset(r.globalStore.logoMedia);
-  const categories = r.categoryLinks.map((link) => link.storeCategory);
-  const phone = r.globalStore.phone ?? r.phone;
-  const email = r.globalStore.email ?? r.email;
+  const category = mapStoreCategory(r.category, localeId, defaultLocaleId);
+  const phone = r.phone ?? r.globalStore.phone;
+  const email = r.email ?? r.globalStore.email;
+  const socialLinks: StoreSocialLink[] = parseStoreSocialLinks(r.globalStore.socialLinksJson);
+  const floor = r.floorRecord
+    ? { id: r.floorRecord.id, name: r.floorRecord.name, label: r.floorRecord.label }
+    : r.floor
+      ? { id: r.floorId ?? r.floor, name: r.floor, label: r.floor }
+      : null;
 
   return {
     id: r.id,
     mallId: r.mallId,
-    name: resolvedName,
+    name,
+    detailTitle,
+    displayTitle: detailTitle,
     description: resolvedDesc,
-    floor: r.floor,
+    floor,
+    floorLabel: floor?.label ?? r.floor,
     storeNo: r.storeNo,
     phone,
+    whatsappPhone: r.whatsappPhone,
     email,
+    workingHours: r.workingHoursJson,
     workingHoursJson: r.workingHoursJson,
     locationJson: r.locationJson,
     isFeatured: r.isFeatured,
@@ -1594,14 +1755,53 @@ function mapStore(r: {
       email: r.globalStore.email,
       websiteUrl: r.globalStore.websiteUrl,
       logo,
+      socialLinks,
     },
-    categories,
-    category: categories[0] ?? null,
+    categories: category ? [{ id: category.id, name: category.name, slug: category.slug }] : [],
+    category,
     seo: buildSeo({
-      title: resolvedName,
+      title: detailTitle ?? name,
       description: resolvedDesc,
       image: logo?.url ?? null,
     }),
+  };
+}
+
+function mapStoreCategory(
+  cat: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    color: string | null;
+    sameImageForAllLocales: boolean;
+    iconMedia: RichMediaRow;
+    coverMedia: RichMediaRow;
+    translations: {
+      localeId: string;
+      iconMedia: RichMediaRow;
+      coverMedia: RichMediaRow;
+    }[];
+  } | null,
+  localeId: string | null,
+  defaultLocaleId: string | null,
+): PublicStore['category'] {
+  if (!cat) return null;
+  const localeRow =
+    localeId != null
+      ? (cat.translations.find((t) => t.localeId === localeId) ??
+        (defaultLocaleId ? cat.translations.find((t) => t.localeId === defaultLocaleId) : undefined))
+      : undefined;
+  const iconSource = cat.sameImageForAllLocales ? cat.iconMedia : (localeRow?.iconMedia ?? cat.iconMedia);
+  const coverSource = cat.sameImageForAllLocales ? cat.coverMedia : (localeRow?.coverMedia ?? cat.coverMedia);
+  return {
+    id: cat.id,
+    slug: cat.slug,
+    name: cat.name,
+    description: cat.description,
+    color: cat.color,
+    icon: toMediaAsset(iconSource),
+    cover: toMediaAsset(coverSource),
   };
 }
 
@@ -1623,10 +1823,19 @@ function mapCinema(c: {
 
 function mapMovieSession(s: {
   id: string;
-  cinema: { id: string; name: string; slug: string };
-  movie: { id: string; title: string; slug: string; durationMinutes: number | null };
+  cinema: { id: string; name: string; slug: string } | null;
+  movie: {
+    id: string;
+    title: string;
+    slug: string;
+    durationMinutes: number | null;
+    releaseDate: Date | null;
+    ticketUrl: string | null;
+    posterMedia: RichMediaRow;
+    categories: Array<{ category: { id: string; name: string; slug: string } }>;
+  };
   hallName: string | null;
-  startsAt: Date;
+  startsAt: Date | null;
   endsAt: Date | null;
   language: string | null;
   subtitle: string | null;
@@ -1635,10 +1844,19 @@ function mapMovieSession(s: {
 }): PublicMovieSession {
   return {
     id: s.id,
-    cinema: s.cinema,
-    movie: s.movie,
+    cinema: s.cinema ?? { id: '', name: '', slug: '' },
+    movie: {
+      id: s.movie.id,
+      title: s.movie.title,
+      slug: s.movie.slug,
+      durationMinutes: s.movie.durationMinutes,
+      releaseDate: s.movie.releaseDate ? s.movie.releaseDate.toISOString() : null,
+      ticketUrl: s.movie.ticketUrl,
+      poster: toMediaAsset(s.movie.posterMedia),
+      categories: s.movie.categories.map((item) => item.category),
+    },
     hallName: s.hallName,
-    startsAt: s.startsAt.toISOString(),
+    startsAt: s.startsAt ? s.startsAt.toISOString() : '',
     endsAt: s.endsAt ? s.endsAt.toISOString() : null,
     language: s.language,
     subtitle: s.subtitle,

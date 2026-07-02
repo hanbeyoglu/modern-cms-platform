@@ -24,6 +24,7 @@ export type {
   CmsSupportedLocale,
   CmsLocationInfo,
   CmsSiteConfig,
+  CmsSiteLanguage,
   CmsSearchHit,
   CmsSearchResponse,
   CmsSearchPaginatedEnvelope,

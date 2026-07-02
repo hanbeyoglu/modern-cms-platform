@@ -5,6 +5,7 @@ declare global {
       mallId?: string;
       correlationId?: string;
       requestId?: string;
+      publicApiKeyId?: string;
     }
   }
 }

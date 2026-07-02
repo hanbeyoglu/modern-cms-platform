@@ -86,6 +86,7 @@ export class DashboardService {
   }
 
   private async recentActivity(tenantId: string, mallId?: string): Promise<DashboardTimelineItem[]> {
+    // Content-based activity feed (not audit logs). Used when AUDIT_ENABLED=false.
     const mallFilter = mallId !== undefined ? { mallId } : {};
     const tenantMallFilter = { tenantId, ...mallFilter, deletedAt: null };
     const [campaigns, events, sliders, popups, pages, media, services, stores] = await Promise.all([
@@ -135,7 +136,7 @@ export class DashboardService {
         where: { tenantId, ...mallFilter, deletedAt: null },
         select: {
           id: true,
-          localName: true,
+          detailTitle: true,
           status: true,
           updatedAt: true,
           globalStore: { select: { name: true } },
@@ -154,7 +155,7 @@ export class DashboardService {
       ...media.map((item) => this.activityItem('media', item.id, item.originalName, item.status, item.updatedAt, '/media')),
       ...services.map((item) => this.activityItem('service', item.id, item.name, item.status, item.updatedAt, '/services')),
       ...stores.map((item) =>
-        this.activityItem('store', item.id, item.localName ?? item.globalStore.name, item.status, item.updatedAt, '/mall-stores'),
+        this.activityItem('store', item.id, item.globalStore.name, item.status, item.updatedAt, '/mall-stores'),
       ),
     ]
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())

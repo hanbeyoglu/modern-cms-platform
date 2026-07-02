@@ -32,11 +32,12 @@ export const SLIDER_PLACEMENT_TYPES = [
   'CUSTOM',
 ] as const;
 export const SLIDER_LINKED_ENTITY_TYPES = ['CAMPAIGN', 'EVENT', 'STORE', 'LOCATION'] as const;
-export const STORE_CATEGORY_STATUSES = ['ACTIVE', 'PASSIVE'] as const;
 export const STORE_STATUSES = ['ACTIVE', 'PASSIVE', 'ARCHIVED'] as const;
 export const CONTENT_STATUSES = ['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'] as const;
 export const CINEMA_STATUSES = ['ACTIVE', 'PASSIVE', 'ARCHIVED'] as const;
 export const MOVIE_STATUSES = ['ACTIVE', 'PASSIVE', 'ARCHIVED'] as const;
+export const MOVIE_PROVIDER_SOURCES = ['TMDB', 'MANUAL'] as const;
+export const MOVIE_SYNC_LOG_STATUSES = ['RUNNING', 'SUCCESS', 'FAILED', 'PARTIAL'] as const;
 export const MOVIE_SESSION_STATUSES = ['SCHEDULED', 'CANCELLED', 'ARCHIVED'] as const;
 export const CINEMA_PROVIDER_TYPES = ['MANUAL', 'API', 'XML_FEED'] as const;
 export const PAGE_STATUSES = ['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'] as const;
@@ -72,6 +73,8 @@ export const LOCALIZED_ENTITY_TYPES = [
   'LOCATION',
   'POPUP',
   'SERVICE',
+  'STORE_CATEGORY',
+  'MALL_FLOOR',
 ] as const;
 export const ANALYTICS_ENTITY_TYPES = [
   'PAGE',

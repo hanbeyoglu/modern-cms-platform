@@ -6,7 +6,10 @@ import {
   NotFoundException,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiQuery, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { PublicApiKeyGuard } from './guards/public-api-key.guard';
 import { Public } from '../common/decorators/public.decorator';
 import { PublicCacheService } from './cache/public-cache.service';
 import { PublicContentService } from './public-content.service';
@@ -24,6 +27,27 @@ import {
 } from './public-response.types';
 import { parsePagination, parseLimit } from './public-pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
+import { MallLocalesService } from '../mall-locales/mall-locales.service';
+import { SWAGGER_TAGS } from '../swagger/swagger.constants';
+import {
+  ApiChannelQuery,
+  ApiLocaleQuery,
+  ApiPaginationQuery,
+  ApiPublicContext,
+  ApiPublicOperation,
+  ApiSlugParam,
+  ApiUuidParam,
+} from '../swagger/swagger.decorators';
+import {
+  PublicCampaignsPaginatedDto,
+  PublicEventsPaginatedDto,
+  PublicMediaGuidelinesEnvelopeDto,
+  PublicPaginatedEnvelopeDto,
+  PublicEnvelopeDto,
+  PublicSearchEnvelopeDto,
+  PublicSiteConfigEnvelopeDto,
+  PublicStoresPaginatedDto,
+} from '../swagger/dto/public-swagger.dto';
 
 // Cache TTLs in seconds
 const TTL = {
@@ -66,6 +90,10 @@ function paginatedEnvelop<T>(
 }
 
 @Public()
+@UseGuards(PublicApiKeyGuard)
+@ApiTags(SWAGGER_TAGS.PUBLIC)
+@ApiSecurity('apiKey')
+@ApiPublicContext()
 @Controller('public')
 export class PublicController {
   constructor(
@@ -75,11 +103,19 @@ export class PublicController {
     private readonly publicSearch: PublicSearchService,
     private readonly mediaGuidelines: MediaGuidelinesService,
     private readonly prisma: PrismaService,
+    private readonly mallLocales: MallLocalesService,
   ) {}
 
   // ── Site Config ───────────────────────────────────────────────────────────
 
   @Get('site-config')
+  @ApiPublicOperation({ summary: 'public.siteConfig.summary',
+    description:
+      'Returns tenant/mall identity, supported locales, RTL flag, and optional mall location details (address, coordinates, working hours). Used on app bootstrap.',
+    related: [SWAGGER_TAGS.LOCALES, SWAGGER_TAGS.MALLS],
+  })
+  @ApiLocaleQuery()
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicSiteConfigEnvelopeDto })
   async getSiteConfig(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -92,11 +128,10 @@ export class PublicController {
     const cached = await this.cache.get<PublicEnvelope<PublicSiteConfig>>(cacheKey);
     if (cached) return cached;
 
-    const supportedLocalesRows = await this.prisma.locale.findMany({
-      where: { tenantId: context.tenantId, isActive: true },
-      orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
-      select: { code: true, name: true, nativeName: true, rtl: true },
-    });
+    const supportedLocalesRows = await this.mallLocales.getActiveLocalesForMall(
+      context.tenantId,
+      context.mallId,
+    );
 
     let location: PublicSiteConfig['location'] = null;
     if (context.mallId) {
@@ -158,6 +193,11 @@ export class PublicController {
         name: l.nativeName,
         rtl: l.rtl,
       })),
+      languages: supportedLocalesRows.map((l) => ({
+        code: l.code,
+        default: l.isDefault,
+        rtl: l.rtl,
+      })),
       defaultLocale: context.defaultLocale?.code ?? null,
       activeLocale: context.locale?.code ?? context.defaultLocale?.code ?? null,
       rtl: context.locale?.rtl ?? false,
@@ -169,6 +209,13 @@ export class PublicController {
   }
 
   @Get('media-guidelines')
+  @ApiPublicOperation({ summary: 'public.mediaGuidelines.summary',
+    description:
+      'Returns recommended dimensions, accepted MIME types, and helper text for each media usage preset (e.g. campaign cover, slider desktop).',
+    related: [SWAGGER_TAGS.MEDIA],
+  })
+  @ApiLocaleQuery()
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicMediaGuidelinesEnvelopeDto })
   async getMediaGuidelines(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -201,6 +248,13 @@ export class PublicController {
   // ── Home ──────────────────────────────────────────────────────────────────
 
   @Get('home')
+  @ApiPublicOperation({ summary: 'public.home.summary',
+    description:
+      'Returns a curated bundle for the home screen: hero sliders, featured stores, upcoming events, active campaigns, and today\'s movie sessions.',
+    related: [SWAGGER_TAGS.SLIDERS, SWAGGER_TAGS.STORES, SWAGGER_TAGS.EVENTS, SWAGGER_TAGS.CAMPAIGNS],
+  })
+  @ApiLocaleQuery()
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicEnvelopeDto })
   async getHome(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -229,6 +283,17 @@ export class PublicController {
   // ── Sliders ───────────────────────────────────────────────────────────────
 
   @Get('sliders')
+  @ApiPublicOperation({ summary: 'public.sliders.summary',
+    description:
+      'Returns slider groups with items for hero/banner placements. Filter by placement, linked entity, channel, or target device.',
+    related: [SWAGGER_TAGS.SLIDERS, SWAGGER_TAGS.MEDIA],
+  })
+  @ApiLocaleQuery()
+  @ApiChannelQuery()
+  @ApiQuery({ name: 'placement', required: false, description: 'Slider placement key (e.g. HOME_HERO).' })
+  @ApiQuery({ name: 'entityId', required: false, description: 'Linked entity UUID to scope sliders.' })
+  @ApiQuery({ name: 'targetDevice', required: false, description: 'Target device filter: ALL, DESKTOP, MOBILE.' })
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicEnvelopeDto })
   async getSliders(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -265,6 +330,15 @@ export class PublicController {
   // ── Events ────────────────────────────────────────────────────────────────
 
   @Get('events')
+  @ApiPublicOperation({ summary: 'public.events.summary',
+    description: 'Paginated list of published events. Filter by category slug or free-text search.',
+    related: [SWAGGER_TAGS.EVENTS],
+  })
+  @ApiLocaleQuery()
+  @ApiPaginationQuery(20, 50)
+  @ApiQuery({ name: 'category', required: false, description: 'Event category slug filter.' })
+  @ApiQuery({ name: 'search', required: false, description: 'Free-text search across title and description.' })
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicEventsPaginatedDto })
   async getEvents(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -299,6 +373,13 @@ export class PublicController {
   }
 
   @Get('events/:slug')
+  @ApiPublicOperation({ summary: 'public.event.getBySlug.summary',
+    description: 'Returns full event detail including SEO metadata, cover media, and schedule.',
+    related: [SWAGGER_TAGS.EVENTS],
+  })
+  @ApiLocaleQuery()
+  @ApiSlugParam('slug', 'Event URL slug')
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicEnvelopeDto })
   async getEventBySlug(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -330,6 +411,15 @@ export class PublicController {
   // ── Campaigns ─────────────────────────────────────────────────────────────
 
   @Get('campaigns')
+  @ApiPublicOperation({ summary: 'public.campaigns.summary',
+    description: 'Paginated list of published campaigns. Optionally filter by store or search term.',
+    related: [SWAGGER_TAGS.CAMPAIGNS, SWAGGER_TAGS.STORES],
+  })
+  @ApiLocaleQuery()
+  @ApiPaginationQuery(20, 50)
+  @ApiQuery({ name: 'storeId', required: false, description: 'Filter campaigns linked to a store UUID.' })
+  @ApiQuery({ name: 'search', required: false, description: 'Free-text search across title and description.' })
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicCampaignsPaginatedDto })
   async getCampaigns(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -364,6 +454,13 @@ export class PublicController {
   }
 
   @Get('campaigns/:slug')
+  @ApiPublicOperation({ summary: 'public.campaign.getBySlug.summary',
+    description: 'Returns full campaign detail including terms, coupon code, linked store, and SEO metadata.',
+    related: [SWAGGER_TAGS.CAMPAIGNS],
+  })
+  @ApiLocaleQuery()
+  @ApiSlugParam('slug', 'Campaign URL slug')
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicEnvelopeDto })
   async getCampaignBySlug(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -395,6 +492,17 @@ export class PublicController {
   // ── Stores ────────────────────────────────────────────────────────────────
 
   @Get('stores')
+  @ApiPublicOperation({ summary: 'public.stores.summary',
+    description: 'Paginated directory of stores assigned to the current mall. Supports category, search, and featured filters.',
+    mallRequired: true,
+    related: [SWAGGER_TAGS.STORES, SWAGGER_TAGS.STORE_CATEGORIES],
+  })
+  @ApiLocaleQuery()
+  @ApiPaginationQuery(50, 100)
+  @ApiQuery({ name: 'categoryId', required: false, description: 'Store category UUID filter.' })
+  @ApiQuery({ name: 'search', required: false, description: 'Free-text search across name, tags, and description.' })
+  @ApiQuery({ name: 'featuredOnly', required: false, description: 'Set to `true` to return only featured stores.', schema: { type: 'boolean' } })
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicStoresPaginatedDto })
   async getStores(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -427,6 +535,7 @@ export class PublicController {
       page,
       limit,
       localeId: context.locale?.id,
+      defaultLocaleId: context.defaultLocale?.id ?? null,
     });
     const result = paginatedEnvelop(items, total, page, limit, context);
     await this.cache.set(cacheKey, result, TTL.list);
@@ -434,6 +543,14 @@ export class PublicController {
   }
 
   @Get('stores/:slug')
+  @ApiPublicOperation({ summary: 'public.store.getBySlug.summary',
+    description: 'Returns full store profile including logo, category, working hours, location map data, and SEO metadata.',
+    mallRequired: true,
+    related: [SWAGGER_TAGS.STORES],
+  })
+  @ApiLocaleQuery()
+  @ApiSlugParam('slug', 'Store URL slug')
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicEnvelopeDto })
   async getStoreBySlug(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -456,6 +573,7 @@ export class PublicController {
       mallId: context.mallId,
       slug,
       localeId: context.locale?.id,
+      defaultLocaleId: context.defaultLocale?.id ?? null,
     });
     if (!data) throw new NotFoundException('Store not found');
 
@@ -467,6 +585,13 @@ export class PublicController {
   // ── Pages ─────────────────────────────────────────────────────────────────
 
   @Get('pages/:slug')
+  @ApiPublicOperation({ summary: 'public.page.getBySlug.summary',
+    description: 'Returns page content, blocks, attachments, and SEO metadata. Supports HTML, PDF, and document-list render modes.',
+    related: [SWAGGER_TAGS.PAGES, SWAGGER_TAGS.PAGE_BLOCKS],
+  })
+  @ApiLocaleQuery()
+  @ApiSlugParam('slug', 'Page URL slug')
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicEnvelopeDto })
   async getPageBySlug(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -498,6 +623,13 @@ export class PublicController {
   // ── Cinema ────────────────────────────────────────────────────────────────
 
   @Get('cinema')
+  @ApiPublicOperation({ summary: 'public.cinemas.summary',
+    description: 'Returns cinema operators configured for the current mall.',
+    mallRequired: true,
+    related: [SWAGGER_TAGS.CINEMAS, SWAGGER_TAGS.MOVIE_SESSIONS],
+  })
+  @ApiLocaleQuery()
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicEnvelopeDto })
   async getCinemas(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -526,6 +658,17 @@ export class PublicController {
   // ── Movie Sessions ────────────────────────────────────────────────────────
 
   @Get('movie-sessions')
+  @ApiPublicOperation({ summary: 'public.movieSessions.summary',
+    description: 'Returns scheduled movie sessions for the mall. Filter by date (YYYY-MM-DD), cinema, or movie.',
+    mallRequired: true,
+    related: [SWAGGER_TAGS.MOVIE_SESSIONS, SWAGGER_TAGS.MOVIES],
+  })
+  @ApiLocaleQuery()
+  @ApiQuery({ name: 'date', required: false, description: 'Session date in YYYY-MM-DD format (defaults to today).' })
+  @ApiQuery({ name: 'cinemaId', required: false, description: 'Filter by cinema UUID.' })
+  @ApiQuery({ name: 'movieId', required: false, description: 'Filter by movie UUID.' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Max sessions to return (default 50, max 200).', schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 } })
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicEnvelopeDto })
   async getMovieSessions(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -561,11 +704,17 @@ export class PublicController {
     return result;
   }
 
-  // ── Search ────────────────────────────────────────────────────────────────
-
   // ── Popups ─────────────────────────────────────────────────────────────────
 
   @Get('popups')
+  @ApiPublicOperation({ summary: 'public.popups.summary',
+    description: 'Returns modal/popup content filtered by delivery channel (WEB, MOBILE, KIOSK, DIGITAL_SIGNAGE).',
+    related: [SWAGGER_TAGS.POPUPS],
+  })
+  @ApiLocaleQuery()
+  @ApiChannelQuery()
+  @ApiPaginationQuery(20, 50)
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicPaginatedEnvelopeDto })
   async getPopups(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -599,6 +748,15 @@ export class PublicController {
   // ── Location Services ──────────────────────────────────────────────────────
 
   @Get('services')
+  @ApiPublicOperation({ summary: 'public.services.summary',
+    description: 'Paginated directory of location services (amenities, facilities) within the current mall.',
+    mallRequired: true,
+    related: [SWAGGER_TAGS.SERVICES],
+  })
+  @ApiLocaleQuery()
+  @ApiPaginationQuery(50, 100)
+  @ApiQuery({ name: 'search', required: false, description: 'Free-text search across name, tags, and description.' })
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicPaginatedEnvelopeDto })
   async getLocationServices(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -633,6 +791,13 @@ export class PublicController {
   }
 
   @Get('services/:id')
+  @ApiPublicOperation({ summary: 'public.service.getById.summary',
+    description: 'Returns full location service detail including icon, cover media, contact info, and coordinates.',
+    related: [SWAGGER_TAGS.SERVICES],
+  })
+  @ApiLocaleQuery()
+  @ApiUuidParam('id', 'common.param.uuid')
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicEnvelopeDto })
   async getServiceById(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,
@@ -661,6 +826,21 @@ export class PublicController {
   // ── Search ─────────────────────────────────────────────────────────────────
 
   @Get('search')
+  @ApiPublicOperation({ summary: 'public.search.summary',
+    description:
+      'Full-text search across pages, events, campaigns, stores, movies, and cinemas. Results are ranked and paginated.',
+    related: [SWAGGER_TAGS.SEARCH],
+  })
+  @ApiLocaleQuery()
+  @ApiPaginationQuery(12, 50)
+  @ApiQuery({ name: 'q', required: false, description: 'Search query (max 120 characters).' })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    description: 'Restrict results to a content type.',
+    schema: { type: 'string', enum: ['PAGE', 'EVENT', 'CAMPAIGN', 'MALL_STORE', 'MOVIE', 'CINEMA'] },
+  })
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicSearchEnvelopeDto })
   async search(
     @Headers('x-tenant-id') tenantId: string | undefined,
     @Headers('x-mall-id') mallId: string | undefined,

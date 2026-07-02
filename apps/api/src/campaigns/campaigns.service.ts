@@ -32,10 +32,12 @@ const MEDIA_SELECT = {
 
 const CAMPAIGN_INCLUDE = {
   sharedCoverImage: { select: MEDIA_SELECT },
+  sharedMobileCoverImage: { select: MEDIA_SELECT },
   translations: {
     include: {
       locale: { select: { id: true, code: true } },
       coverImage: { select: MEDIA_SELECT },
+      mobileCoverImage: { select: MEDIA_SELECT },
     },
   },
   store: {
@@ -43,7 +45,7 @@ const CAMPAIGN_INCLUDE = {
       id: true,
       mallId: true,
       tenantId: true,
-      localName: true,
+      detailTitle: true,
       globalStore: { select: { name: true, slug: true } },
     },
   },
@@ -129,6 +131,7 @@ export class CampaignsService {
       mallId: effectiveMallId,
       sameImageForAllLocales,
       sharedCoverImageId: dto.sharedCoverImageId,
+      sharedMobileCoverImageId: dto.sharedMobileCoverImageId,
       translations: dto.translations,
     });
 
@@ -160,6 +163,7 @@ export class CampaignsService {
         description: dto.description ?? null,
         sameImageForAllLocales,
         sharedCoverImageId: dto.sharedCoverImageId ?? null,
+        sharedMobileCoverImageId: dto.sharedMobileCoverImageId ?? null,
         coverMediaWidthOverride: dto.coverMediaWidthOverride ?? null,
         coverMediaHeightOverride: dto.coverMediaHeightOverride ?? null,
         publishStartAt: publishSchedule.publishStartAt,
@@ -218,6 +222,10 @@ export class CampaignsService {
     const sameImageForAllLocales = dto.sameImageForAllLocales ?? existing.sameImageForAllLocales;
     const nextSharedCover =
       dto.sharedCoverImageId !== undefined ? dto.sharedCoverImageId : existing.sharedCoverImageId;
+    const nextSharedMobileCover =
+      dto.sharedMobileCoverImageId !== undefined
+        ? dto.sharedMobileCoverImageId
+        : existing.sharedMobileCoverImageId;
 
     const publishSchedule = resolveContentPublishSchedule({
       status: nextStatus,
@@ -242,6 +250,9 @@ export class CampaignsService {
     if (dto.sharedCoverImageId) {
       await this.assertCoverMediaInScope(tenantId, nextMallId, dto.sharedCoverImageId);
     }
+    if (dto.sharedMobileCoverImageId) {
+      await this.assertCoverMediaInScope(tenantId, nextMallId, dto.sharedMobileCoverImageId);
+    }
 
     if (dto.storeId !== undefined && dto.storeId) {
       await this.assertMallStoreInScope(tenantId, nextMallId, dto.storeId);
@@ -252,6 +263,7 @@ export class CampaignsService {
       mallId: nextMallId,
       sameImageForAllLocales,
       sharedCoverImageId: nextSharedCover,
+      sharedMobileCoverImageId: nextSharedMobileCover,
       translations: dto.translations,
       campaignId: id,
       skipWhenDraft: nextStatus !== 'PUBLISHED',
@@ -301,6 +313,9 @@ export class CampaignsService {
         ...(dto.description !== undefined && { description: dto.description || null }),
         ...(dto.sameImageForAllLocales !== undefined && { sameImageForAllLocales }),
         ...(dto.sharedCoverImageId !== undefined && { sharedCoverImageId: dto.sharedCoverImageId || null }),
+        ...(dto.sharedMobileCoverImageId !== undefined && {
+          sharedMobileCoverImageId: dto.sharedMobileCoverImageId || null,
+        }),
         ...(dto.coverMediaWidthOverride !== undefined && {
           coverMediaWidthOverride: dto.coverMediaWidthOverride,
         }),
@@ -599,13 +614,22 @@ export class CampaignsService {
     translations: CampaignTranslationDto[],
   ): Promise<void> {
     for (const tr of translations) {
-      if (tr.coverImageId) {
+      if (tr.coverImageId || tr.mobileCoverImageId) {
         const campaign = await this.prisma.campaign.findUnique({
           where: { id: campaignId },
           select: { tenantId: true, mallId: true },
         });
         if (campaign) {
-          await this.assertCoverMediaInScope(campaign.tenantId, campaign.mallId, tr.coverImageId);
+          if (tr.coverImageId) {
+            await this.assertCoverMediaInScope(campaign.tenantId, campaign.mallId, tr.coverImageId);
+          }
+          if (tr.mobileCoverImageId) {
+            await this.assertCoverMediaInScope(
+              campaign.tenantId,
+              campaign.mallId,
+              tr.mobileCoverImageId,
+            );
+          }
         }
       }
       await this.prisma.campaignTranslation.upsert({
@@ -619,12 +643,14 @@ export class CampaignsService {
           description: tr.description ?? null,
           buttonText: tr.buttonText ?? null,
           coverImageId: tr.coverImageId ?? null,
+          mobileCoverImageId: tr.mobileCoverImageId ?? null,
         },
         update: {
           title: tr.title ?? null,
           description: tr.description ?? null,
           buttonText: tr.buttonText ?? null,
           coverImageId: tr.coverImageId ?? null,
+          mobileCoverImageId: tr.mobileCoverImageId ?? null,
         },
       });
     }
@@ -635,6 +661,7 @@ export class CampaignsService {
     mallId: string | null | undefined;
     sameImageForAllLocales: boolean;
     sharedCoverImageId?: string | null;
+    sharedMobileCoverImageId?: string | null;
     translations?: CampaignTranslationDto[];
     campaignId?: string;
     skipWhenDraft?: boolean;
@@ -645,13 +672,23 @@ export class CampaignsService {
       if (opts.sharedCoverImageId) {
         await this.assertCoverMediaInScope(opts.tenantId, opts.mallId ?? null, opts.sharedCoverImageId);
       }
+      if (opts.sharedMobileCoverImageId) {
+        await this.assertCoverMediaInScope(
+          opts.tenantId,
+          opts.mallId ?? null,
+          opts.sharedMobileCoverImageId,
+        );
+      }
       return;
     }
 
-    if (opts.translations?.some((t) => t.coverImageId)) {
+    if (opts.translations?.length) {
       for (const tr of opts.translations) {
         if (tr.coverImageId) {
           await this.assertCoverMediaInScope(opts.tenantId, opts.mallId ?? null, tr.coverImageId);
+        }
+        if (tr.mobileCoverImageId) {
+          await this.assertCoverMediaInScope(opts.tenantId, opts.mallId ?? null, tr.mobileCoverImageId);
         }
       }
     }

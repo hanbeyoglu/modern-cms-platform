@@ -158,6 +158,8 @@ export interface CmsCampaign {
   description: string | null;
   /** Locale-resolved cover image */
   image: CmsMediaAsset | null;
+  /** Locale-resolved mobile cover image */
+  mobileImage: CmsMediaAsset | null;
   /** @deprecated Use image */
   coverMedia: CmsMediaAsset | null;
   publishStartAt: string | null;
@@ -213,16 +215,45 @@ export interface CmsPage {
   seo: CmsSeoMeta;
 }
 
+export interface CmsStoreFloor {
+  id: string;
+  name: string;
+  label: string;
+}
+
+export interface CmsStoreCategory {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  icon: CmsMediaAsset | null;
+  cover: CmsMediaAsset | null;
+}
+
+export interface CmsStoreSocialLink {
+  platform: string;
+  url: string;
+}
+
 export interface CmsStore {
   id: string;
   mallId: string;
   name: string;
+  detailTitle: string | null;
+  /** @deprecated Use detailTitle */
+  displayTitle?: string | null;
   description: string | null;
-  floor: string | null;
+  floor: CmsStoreFloor | null;
+  /** @deprecated Use floor.label */
+  floorLabel?: string | null;
   storeNo: string | null;
   phone: string | null;
+  whatsappPhone: string | null;
   email: string | null;
-  workingHoursJson: unknown;
+  workingHours: unknown;
+  /** @deprecated Use workingHours */
+  workingHoursJson?: unknown;
   locationJson: unknown;
   isFeatured: boolean;
   isSoon: boolean;
@@ -238,10 +269,11 @@ export interface CmsStore {
     email: string | null;
     websiteUrl: string | null;
     logo: CmsMediaAsset | null;
+    socialLinks: CmsStoreSocialLink[];
   };
+  /** @deprecated Use category */
   categories: { id: string; name: string; slug: string }[];
-  /** @deprecated Use categories[0] */
-  category: { id: string; name: string; slug: string } | null;
+  category: CmsStoreCategory | null;
   seo: CmsSeoMeta;
 }
 
@@ -256,7 +288,16 @@ export interface CmsCinema {
 export interface CmsMovieSession {
   id: string;
   cinema: { id: string; name: string; slug: string };
-  movie: { id: string; title: string; slug: string; durationMinutes: number | null };
+  movie: {
+    id: string;
+    title: string;
+    slug: string;
+    durationMinutes: number | null;
+    releaseDate: string | null;
+    ticketUrl: string | null;
+    poster: CmsMediaAsset | null;
+    categories: { id: string; name: string; slug: string }[];
+  };
   hallName: string | null;
   startsAt: string;
   endsAt: string | null;
@@ -343,6 +384,12 @@ export interface CmsLocationInfo {
   socialLinks: unknown;
 }
 
+export interface CmsSiteLanguage {
+  code: string;
+  default: boolean;
+  rtl: boolean;
+}
+
 export interface CmsSiteConfig {
   tenantId: string;
   tenantName: string;
@@ -352,6 +399,8 @@ export interface CmsSiteConfig {
   mallSlug: string | null;
   location: CmsLocationInfo | null;
   supportedLocales: CmsSupportedLocale[];
+  /** Active languages for the current location (when x-mall-id is set). */
+  languages: CmsSiteLanguage[];
   defaultLocale: string | null;
   activeLocale: string | null;
   rtl: boolean;

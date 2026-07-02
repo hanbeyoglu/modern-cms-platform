@@ -6,8 +6,8 @@ export const SCHEDULER_REGISTRY: Record<
   { publishField: string; unpublishField: string; statusEnum: string }
 > = {
   slider: { publishField: 'startAt', unpublishField: 'endAt', statusEnum: 'SliderStatus' },
-  event: { publishField: 'startAt', unpublishField: 'endAt', statusEnum: 'ContentStatus' },
-  campaign: { publishField: 'startAt', unpublishField: 'endAt', statusEnum: 'ContentStatus' },
+  event: { publishField: 'publishStartAt', unpublishField: 'publishEndAt', statusEnum: 'ContentStatus' },
+  campaign: { publishField: 'publishStartAt', unpublishField: 'publishEndAt', statusEnum: 'ContentStatus' },
   page: { publishField: 'publishAt', unpublishField: 'unpublishAt', statusEnum: 'PageStatus' },
   popup: { publishField: 'startAt', unpublishField: 'endAt', statusEnum: 'PopupStatus' },
 };

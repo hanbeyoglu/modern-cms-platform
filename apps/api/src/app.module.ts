@@ -13,12 +13,15 @@ import { SlidersModule } from './sliders/sliders.module';
 import { StoreCategoriesModule } from './store-categories/store-categories.module';
 import { GlobalStoresModule } from './global-stores/global-stores.module';
 import { MallStoresModule } from './mall-stores/mall-stores.module';
+import { MallFloorsModule } from './mall-floors/mall-floors.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { EventsModule } from './events/events.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { CinemasModule } from './cinemas/cinemas.module';
 import { MoviesModule } from './movies/movies.module';
+import { MovieProvidersModule } from './movie-providers/movie-providers.module';
 import { MovieSessionsModule } from './movie-sessions/movie-sessions.module';
+import { ScreeningHallsModule } from './screening-halls/screening-halls.module';
 import { PagesModule } from './pages/pages.module';
 import { PageBlocksModule } from './page-blocks/page-blocks.module';
 import { AnalyticsModule } from './analytics/analytics.module';
@@ -37,6 +40,7 @@ import { VersionModule } from './version/version.module';
 import { PopupsModule } from './popups/popups.module';
 import { LocationServicesModule } from './services/services.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { DeveloperApiModule } from './developer-api/developer-api.module';
 
 @Module({
   imports: [
@@ -55,11 +59,14 @@ import { DashboardModule } from './dashboard/dashboard.module';
     StoreCategoriesModule,
     GlobalStoresModule,
     MallStoresModule,
+    MallFloorsModule,
     EventsModule,
     CampaignsModule,
     CinemasModule,
     MoviesModule,
+    MovieProvidersModule,
     MovieSessionsModule,
+    ScreeningHallsModule,
     PagesModule,
     PageBlocksModule,
     AnalyticsModule,
@@ -79,6 +86,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     PopupsModule,
     LocationServicesModule,
     DashboardModule,
+    DeveloperApiModule,
   ],
 })
 export class AppModule implements NestModule {

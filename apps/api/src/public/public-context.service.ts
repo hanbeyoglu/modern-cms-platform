@@ -54,7 +54,7 @@ export class PublicContextService {
     }
 
     // Resolve locale: requested code → active locale or fall back to tenant default
-    const resolved = await this.resolver.resolveLocale(tenant.id, localeCode);
+    const resolved = await this.resolver.resolveLocale(tenant.id, localeCode, mall?.id);
 
     // Fetch default locale only when the resolved locale is not already the default
     const defaultLocale =

@@ -42,6 +42,10 @@ export class UpdateCampaignDto {
   sharedCoverImageId?: string | null;
 
   @IsOptional()
+  @IsString()
+  sharedMobileCoverImageId?: string | null;
+
+  @IsOptional()
   @Transform(({ value }: { value: unknown }) => (value === null ? null : Number(value)))
   @IsInt()
   @Min(1)

@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuditSeverity, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { isAuditEnabled } from '../common/utils/audit-enabled.util';
 import { ListAuditLogsDto } from './dto/list-audit-logs.dto';
 
 export interface AuditLogPayload {
@@ -26,10 +28,20 @@ export interface AuditLogPayload {
 @Injectable()
 export class AuditLogService {
   private readonly logger = new Logger(AuditLogService.name);
+  private readonly enabled: boolean;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    config: ConfigService,
+  ) {
+    this.enabled = isAuditEnabled(config);
+  }
 
   async logAction(payload: AuditLogPayload): Promise<void> {
+    // Audit logging is temporarily disabled for MVP/demo deployments.
+    // Enterprise customers can enable it through AUDIT_ENABLED.
+    if (!this.enabled) return;
+
     const {
       userId, tenantId, mallId, action, entityType, entityId, entityName,
       severity, source, success, correlationId, requestId,

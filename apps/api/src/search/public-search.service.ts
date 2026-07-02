@@ -213,6 +213,10 @@ export class PublicSearchService {
               tenantId,
               deletedAt: null,
               status: 'ACTIVE',
+              AND: [
+                { OR: [{ publishStartAt: null }, { publishStartAt: { lte: now } }] },
+                { OR: [{ publishEndAt: null }, { publishEndAt: { gte: now } }] },
+              ],
             },
             select: { id: true },
           })
@@ -378,16 +382,16 @@ export class PublicSearchService {
             )
         : Promise.resolve(),
 
-      // Movies — description, no poster relation resolved here
+      // Movies — description + poster
       byType.get('MOVIE')?.length
         ? this.prisma.movie
             .findMany({
               where: { id: { in: byType.get('MOVIE') }, tenantId, deletedAt: null },
-              select: { id: true, description: true },
+              select: { id: true, description: true, posterMedia: { select: { publicUrl: true } } },
             })
             .then((rows) =>
               rows.forEach((r) =>
-                detail.set(r.id, { description: r.description, imageUrl: null }),
+                detail.set(r.id, { description: r.description, imageUrl: r.posterMedia?.publicUrl ?? null }),
               ),
             )
         : Promise.resolve(),

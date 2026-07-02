@@ -84,6 +84,24 @@ export class PublicCacheService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Atomically increment a counter and set TTL on first write.
+   * Used for sliding-window rate limiting. Returns the new count.
+   * Falls back to 0 (allow) when Redis is unavailable.
+   */
+  async increment(key: string, ttlSeconds: number): Promise<number> {
+    if (!this.client || !this.available) return 0;
+    try {
+      const count = await this.client.incr(key);
+      if (count === 1) {
+        await this.client.expire(key, ttlSeconds);
+      }
+      return count;
+    } catch {
+      return 0;
+    }
+  }
+
   // ── Invalidation helpers ─────────────────────────────────────────────────
 
   async invalidateTenant(tenantId: string): Promise<void> {

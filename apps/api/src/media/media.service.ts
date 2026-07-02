@@ -299,8 +299,10 @@ export class MediaService {
       mallStoreLogos,
       eventCovers,
       campaignCovers,
+      campaignMobileCovers,
       eventTranslationCovers,
       campaignTranslationCovers,
+      campaignTranslationMobileCovers,
       cinemaLogos,
       moviePosters,
       mallLogos,
@@ -381,6 +383,10 @@ export class MediaService {
         where: { sharedCoverImageId: id, tenantId, deletedAt: null },
         select: { id: true, title: true, slug: true },
       }),
+      this.prisma.campaign.findMany({
+        where: { sharedMobileCoverImageId: id, tenantId, deletedAt: null },
+        select: { id: true, title: true, slug: true },
+      }),
       this.prisma.eventTranslation.findMany({
         where: {
           coverImageId: id,
@@ -394,6 +400,16 @@ export class MediaService {
       this.prisma.campaignTranslation.findMany({
         where: {
           coverImageId: id,
+          campaign: { tenantId, deletedAt: null },
+        },
+        select: {
+          campaignId: true,
+          campaign: { select: { title: true, slug: true } },
+        },
+      }),
+      this.prisma.campaignTranslation.findMany({
+        where: {
+          mobileCoverImageId: id,
           campaign: { tenantId, deletedAt: null },
         },
         select: {
@@ -476,6 +492,15 @@ export class MediaService {
     for (const c of campaignCovers) {
       usages.push({ entityType: 'campaign', entityId: c.id, entityName: c.title, field: 'sharedCoverImage', route: `/campaigns/${c.slug}` });
     }
+    for (const c of campaignMobileCovers) {
+      usages.push({
+        entityType: 'campaign',
+        entityId: c.id,
+        entityName: c.title,
+        field: 'sharedMobileCoverImage',
+        route: `/campaigns/${c.slug}`,
+      });
+    }
     for (const t of eventTranslationCovers) {
       usages.push({
         entityType: 'event',
@@ -491,6 +516,15 @@ export class MediaService {
         entityId: t.campaignId,
         entityName: t.campaign.title,
         field: 'translationCoverImage',
+        route: `/campaigns/${t.campaign.slug}`,
+      });
+    }
+    for (const t of campaignTranslationMobileCovers) {
+      usages.push({
+        entityType: 'campaign',
+        entityId: t.campaignId,
+        entityName: t.campaign.title,
+        field: 'translationMobileCoverImage',
         route: `/campaigns/${t.campaign.slug}`,
       });
     }

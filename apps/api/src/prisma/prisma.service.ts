@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { resolveApiDatabaseUrl } from './database-url';
 
 function maskDatabaseUrl(url: string | undefined): string {
   if (!url) return '(unset)';
@@ -15,6 +16,11 @@ function maskDatabaseUrl(url: string | undefined): string {
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
+
+  constructor() {
+    const url = resolveApiDatabaseUrl(process.env.DATABASE_URL);
+    super(url ? { datasources: { db: { url } } } : undefined);
+  }
 
   async onModuleInit(): Promise<void> {
     await this.$connect();

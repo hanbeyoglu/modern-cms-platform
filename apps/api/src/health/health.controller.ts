@@ -1,18 +1,23 @@
 import { Controller, Get, HttpCode, Logger, Res } from '@nestjs/common';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { Public } from '../common/decorators/public.decorator';
 import { HealthService } from './health.service';
+import { SWAGGER_TAGS } from '../swagger/swagger.constants';
+import { ApiKeyOperation } from '../swagger/swagger.decorators';
 
+@ApiTags(SWAGGER_TAGS.HEALTH)
 @Controller('health')
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);
 
   constructor(private readonly health: HealthService) {}
 
-  /** Liveness + dependency snapshot (HTTP 200; use `status` field for orchestration logic). */
   @Public()
   @Get()
   @HttpCode(200)
+  @ApiKeyOperation('health.health.summary')
+  @ApiResponse({ status: 200, description: 'health.response.200' })
   async getHealth() {
     const snapshot = await this.health.getSnapshot();
     if (snapshot.status === 'down') {
@@ -23,9 +28,11 @@ export class HealthController {
     return snapshot;
   }
 
-  /** Readiness: 503 unless database (and Redis when configured) are up. */
   @Public()
   @Get('ready')
+  @ApiKeyOperation('health.ready.summary')
+  @ApiResponse({ status: 200, description: 'health.response.200' })
+  @ApiResponse({ status: 503, description: 'health.response.503' })
   async getReady(@Res({ passthrough: true }) res: Response) {
     const { ok, snapshot } = await this.health.isReady();
     if (!ok) {

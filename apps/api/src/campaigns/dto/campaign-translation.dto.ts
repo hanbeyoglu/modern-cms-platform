@@ -20,6 +20,10 @@ export class CampaignTranslationDto {
   @IsOptional()
   @IsString()
   coverImageId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  mobileCoverImageId?: string | null;
 }
 
 export class CampaignTranslationsPayload {

@@ -184,6 +184,8 @@ export interface PublicCampaign {
   description: string | null;
   /** Locale-resolved cover image */
   image: PublicMediaAsset | null;
+  /** Locale-resolved mobile cover image */
+  mobileImage: PublicMediaAsset | null;
   /** @deprecated Use image */
   coverMedia: PublicMediaAsset | null;
   publishStartAt: string | null;
@@ -239,16 +241,45 @@ export interface PublicPage {
   seo: PublicSeoMeta;
 }
 
+export interface PublicStoreFloor {
+  id: string;
+  name: string;
+  label: string;
+}
+
+export interface PublicStoreCategory {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  icon: PublicMediaAsset | null;
+  cover: PublicMediaAsset | null;
+}
+
+export interface PublicStoreSocialLink {
+  platform: string;
+  url: string;
+}
+
 export interface PublicStore {
   id: string;
   mallId: string;
   name: string;
+  detailTitle: string | null;
+  /** @deprecated Use detailTitle */
+  displayTitle?: string | null;
   description: string | null;
-  floor: string | null;
+  floor: PublicStoreFloor | null;
+  /** @deprecated Use floor.label */
+  floorLabel?: string | null;
   storeNo: string | null;
   phone: string | null;
+  whatsappPhone: string | null;
   email: string | null;
-  workingHoursJson: unknown;
+  workingHours: unknown;
+  /** @deprecated Use workingHours */
+  workingHoursJson?: unknown;
   locationJson: unknown;
   isFeatured: boolean;
   isSoon: boolean;
@@ -264,11 +295,11 @@ export interface PublicStore {
     email: string | null;
     websiteUrl: string | null;
     logo: PublicMediaAsset | null;
+    socialLinks: PublicStoreSocialLink[];
   };
-  /** Mall-specific categories (preferred). */
+  /** @deprecated Use category; kept for backward compatibility. */
   categories: { id: string; name: string; slug: string }[];
-  /** @deprecated Use categories[0]; kept for backward compatibility. */
-  category: { id: string; name: string; slug: string } | null;
+  category: PublicStoreCategory | null;
   seo: PublicSeoMeta;
 }
 
@@ -283,7 +314,16 @@ export interface PublicCinema {
 export interface PublicMovieSession {
   id: string;
   cinema: { id: string; name: string; slug: string };
-  movie: { id: string; title: string; slug: string; durationMinutes: number | null };
+  movie: {
+    id: string;
+    title: string;
+    slug: string;
+    durationMinutes: number | null;
+    releaseDate: string | null;
+    ticketUrl: string | null;
+    poster: PublicMediaAsset | null;
+    categories: { id: string; name: string; slug: string }[];
+  };
   hallName: string | null;
   startsAt: string;
   endsAt: string | null;
@@ -370,6 +410,12 @@ export interface PublicSiteSupportedLocale {
   rtl: boolean;
 }
 
+export interface PublicSiteLanguage {
+  code: string;
+  default: boolean;
+  rtl: boolean;
+}
+
 export interface PublicSiteConfig {
   tenantId: string;
   tenantName: string;
@@ -380,6 +426,8 @@ export interface PublicSiteConfig {
   location: PublicLocationInfo | null;
   /** Enabled tenant locales for public language switchers. */
   supportedLocales: PublicSiteSupportedLocale[];
+  /** Active languages for the current location (mall-scoped when x-mall-id is set). */
+  languages: PublicSiteLanguage[];
   defaultLocale: string | null;
   activeLocale: string | null;
   rtl: boolean;

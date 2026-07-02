@@ -7,11 +7,14 @@ import { PublicCacheService } from './cache/public-cache.service';
 import { PublicContentService } from './public-content.service';
 import { PublicContextService } from './public-context.service';
 import { PublicController } from './public.controller';
+import { MallLocalesModule } from '../mall-locales/mall-locales.module';
+import { DeveloperApiModule } from '../developer-api/developer-api.module';
+import { PublicApiKeyGuard } from './guards/public-api-key.guard';
 
 @Module({
-  imports: [PrismaModule, TranslationResolverModule, SearchModule, MediaModule],
+  imports: [PrismaModule, TranslationResolverModule, MallLocalesModule, SearchModule, MediaModule, DeveloperApiModule],
   controllers: [PublicController],
-  providers: [PublicContextService, PublicContentService, PublicCacheService],
+  providers: [PublicContextService, PublicContentService, PublicCacheService, PublicApiKeyGuard],
   exports: [PublicCacheService],
 })
 export class PublicModule {}

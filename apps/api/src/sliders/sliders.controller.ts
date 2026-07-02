@@ -11,6 +11,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import type { User } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -28,7 +29,15 @@ import { ReorderSlidersDto } from './dto/reorder-sliders.dto';
 import { CreateSliderItemDto } from './dto/create-slider-item.dto';
 import { UpdateSliderItemDto } from './dto/update-slider-item.dto';
 import { ReorderSliderItemsDto } from './dto/reorder-slider-items.dto';
+import { SWAGGER_TAGS } from '../swagger/swagger.constants';
+import {
+  ApiAdminContext,
+  ApiAdminOperation,
+  ApiUuidParam,
+} from '../swagger/swagger.decorators';
 
+@ApiTags(SWAGGER_TAGS.SLIDERS)
+@ApiAdminContext()
 @Controller('sliders')
 @RequireTenantContext()
 @RequireMallContext()
@@ -38,12 +47,19 @@ export class SlidersController {
 
   @Get()
   @RequirePermission('slider:read')
+  @ApiAdminOperation({ summary: 'slider.list.summary',
+    permissions: ['slider:read'],
+    related: [SWAGGER_TAGS.MEDIA, SWAGGER_TAGS.CAMPAIGNS],
+  })
+  @ApiResponse({ status: 200, description: 'slider.response.200' })
   list(@Req() req: Request, @Query() query: ListSlidersDto) {
     return this.sliders.list(req.tenantId!, req.mallId, query);
   }
 
   @Patch('reorder')
   @RequirePermission('slider:reorder')
+  @ApiAdminOperation({ summary: 'slider.reorder.summary', permissions: ['slider:reorder'] })
+  @ApiResponse({ status: 200, description: 'slider.response.200' })
   reorder(
     @Body() dto: ReorderSlidersDto,
     @CurrentUser() user: User,
@@ -54,12 +70,23 @@ export class SlidersController {
 
   @Get(':id')
   @RequirePermission('slider:read')
+  @ApiUuidParam('id', 'common.param.uuid')
+  @ApiAdminOperation({ summary: 'slider.get.summary',
+    permissions: ['slider:read'],
+    related: [SWAGGER_TAGS.MEDIA],
+  })
+  @ApiResponse({ status: 200, description: 'slider.response.200' })
   findOne(@Param('id') id: string, @Req() req: Request) {
     return this.sliders.findOne(id, req.tenantId!);
   }
 
   @Post()
   @RequirePermission('slider:create')
+  @ApiAdminOperation({ summary: 'slider.create.summary',
+    permissions: ['slider:create'],
+    related: [SWAGGER_TAGS.MEDIA, SWAGGER_TAGS.CAMPAIGNS],
+  })
+  @ApiResponse({ status: 201, description: 'slider.response.201' })
   create(
     @Body() dto: CreateSliderDto,
     @CurrentUser() user: User,
@@ -70,6 +97,9 @@ export class SlidersController {
 
   @Patch(':id')
   @RequirePermission('slider:update')
+  @ApiUuidParam('id', 'common.param.uuid')
+  @ApiAdminOperation({ summary: 'slider.update.summary', permissions: ['slider:update'] })
+  @ApiResponse({ status: 200, description: 'slider.response.200' })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateSliderDto,
@@ -82,6 +112,9 @@ export class SlidersController {
   @Delete(':id')
   @HttpCode(204)
   @RequirePermission('slider:delete')
+  @ApiUuidParam('id', 'common.param.uuid')
+  @ApiAdminOperation({ summary: 'slider.delete.summary', permissions: ['slider:delete'] })
+  @ApiResponse({ status: 204, description: 'slider.response.204' })
   async remove(
     @Param('id') id: string,
     @CurrentUser() user: User,
@@ -92,6 +125,12 @@ export class SlidersController {
 
   @Post(':id/publish')
   @RequirePermission('slider:publish')
+  @ApiUuidParam('id', 'common.param.uuid')
+  @ApiAdminOperation({ summary: 'slider.publish.summary',
+    permissions: ['slider:publish'],
+    related: [SWAGGER_TAGS.PUBLIC],
+  })
+  @ApiResponse({ status: 200, description: 'slider.response.200' })
   publish(
     @Param('id') id: string,
     @CurrentUser() user: User,
@@ -102,6 +141,9 @@ export class SlidersController {
 
   @Post(':id/archive')
   @RequirePermission('slider:update')
+  @ApiUuidParam('id', 'common.param.uuid')
+  @ApiAdminOperation({ summary: 'slider.archive.summary', permissions: ['slider:update'] })
+  @ApiResponse({ status: 200, description: 'slider.response.200' })
   archive(
     @Param('id') id: string,
     @CurrentUser() user: User,
@@ -112,12 +154,24 @@ export class SlidersController {
 
   @Get(':id/items')
   @RequirePermission('slider:read')
+  @ApiUuidParam('id', 'common.param.uuid')
+  @ApiAdminOperation({ summary: 'slider.list.summary',
+    permissions: ['slider:read'],
+    related: [SWAGGER_TAGS.MEDIA],
+  })
+  @ApiResponse({ status: 200, description: 'slider.response.200' })
   listItems(@Param('id') id: string, @Req() req: Request) {
     return this.sliders.listItems(id, req.tenantId!);
   }
 
   @Post(':id/items')
   @RequirePermission('slider:update')
+  @ApiUuidParam('id', 'common.param.uuid')
+  @ApiAdminOperation({ summary: 'slider.create.summary',
+    permissions: ['slider:update'],
+    related: [SWAGGER_TAGS.MEDIA, SWAGGER_TAGS.CAMPAIGNS],
+  })
+  @ApiResponse({ status: 201, description: 'slider.response.201' })
   createItem(
     @Param('id') id: string,
     @Body() dto: CreateSliderItemDto,
@@ -129,6 +183,9 @@ export class SlidersController {
 
   @Patch(':id/items/reorder')
   @RequirePermission('slider:reorder')
+  @ApiUuidParam('id', 'common.param.uuid')
+  @ApiAdminOperation({ summary: 'slider.reorder.summary', permissions: ['slider:reorder'] })
+  @ApiResponse({ status: 200, description: 'slider.response.200' })
   reorderItems(
     @Param('id') id: string,
     @Body() dto: ReorderSliderItemsDto,
@@ -140,6 +197,10 @@ export class SlidersController {
 
   @Patch(':id/items/:itemId')
   @RequirePermission('slider:update')
+  @ApiUuidParam('id', 'common.param.uuid')
+  @ApiUuidParam('itemId', 'common.param.uuid')
+  @ApiAdminOperation({ summary: 'slider.update.summary', permissions: ['slider:update'] })
+  @ApiResponse({ status: 200, description: 'slider.response.200' })
   updateItem(
     @Param('id') id: string,
     @Param('itemId') itemId: string,
@@ -153,6 +214,10 @@ export class SlidersController {
   @Delete(':id/items/:itemId')
   @HttpCode(204)
   @RequirePermission('slider:update')
+  @ApiUuidParam('id', 'common.param.uuid')
+  @ApiUuidParam('itemId', 'common.param.uuid')
+  @ApiAdminOperation({ summary: 'slider.delete.summary', permissions: ['slider:update'] })
+  @ApiResponse({ status: 204, description: 'slider.response.204' })
   async removeItem(
     @Param('id') id: string,
     @Param('itemId') itemId: string,
