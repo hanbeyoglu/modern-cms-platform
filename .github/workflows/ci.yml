@@ -41,6 +41,7 @@ jobs:
       DATABASE_URL: postgresql://cms:cms@localhost:5432/cms?schema=public
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci-jwt-secret-must-be-at-least-32-chars-long
+      JWT_REFRESH_SECRET: ci-jwt-refresh-secret-must-be-at-least-32-chars-long
 
     steps:
       - uses: actions/checkout@v4
@@ -65,7 +66,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
 
@@ -92,6 +93,7 @@ jobs:
           DATABASE_URL=${DATABASE_URL}
           REDIS_URL=${REDIS_URL}
           JWT_SECRET=${JWT_SECRET}
+          JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
           EOF
 
       - name: Build
