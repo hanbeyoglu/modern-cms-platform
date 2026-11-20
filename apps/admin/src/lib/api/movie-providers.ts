@@ -24,6 +24,10 @@ export type MovieProvidersSettingsResponse = {
   movieProviders: { tmdb: TmdbProviderSettings };
 };
 
+export type UpdateTmdbProviderSettings = Partial<Pick<TmdbProviderSettings,
+  'readAccessToken' | 'language' | 'region' | 'posterSize' | 'syncEnabled' | 'cronTime'
+>>;
+
 export type TmdbListItem = {
   tmdbId: number;
   title: string;
@@ -65,13 +69,14 @@ export function apiMovieProvidersSettingsGet(
 export function apiMovieProvidersSettingsUpdateTmdb(
   token: string,
   tenantId: string,
-  data: Partial<TmdbProviderSettings>,
+  data: UpdateTmdbProviderSettings,
 ): Promise<MovieProvidersSettingsResponse> {
+  const { readAccessToken, language, region, posterSize, syncEnabled, cronTime } = data;
   return request('/movie-providers/settings/tmdb', {
     method: 'PATCH',
     token,
     tenantId,
-    body: JSON.stringify(data),
+    body: JSON.stringify({ readAccessToken, language, region, posterSize, syncEnabled, cronTime }),
   });
 }
 

@@ -26,8 +26,14 @@ import {
 } from '@modern-cms/movie-providers';
 
 const repoRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '../../..');
-loadEnv({ path: resolve(repoRoot, '.env') });
-loadEnv({ path: resolve(repoRoot, '.env.local') });
+// Match the API ConfigModule's file precedence. Both processes must use the
+// same database; shell-provided values still take priority over these files.
+loadEnv({ path: [
+  resolve(repoRoot, 'apps/api/.env'),
+  resolve(repoRoot, 'apps/api/.env.local'),
+  resolve(repoRoot, '.env'),
+  resolve(repoRoot, '.env.local'),
+] });
 
 const databaseUrl = process.env.DATABASE_URL;
 const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379';
