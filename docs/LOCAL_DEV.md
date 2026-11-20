@@ -74,6 +74,14 @@ pnpm build
 
 ## Ortam değişkenleri
 
+`CORS_ORIGINS` virgülle ayrılmış origin listesi alır. Yalın `localhost` girdisi,
+`http://localhost:5173`, `http://localhost:5174` ve HTTPS dahil tüm localhost
+portlarını kabul eder; `localhost.example.com` veya `127.0.0.1` bu girdiye dahil değildir.
+Tam origin girdileri şema ve port dahil tam eşleşir:
+`CORS_ORIGINS=localhost,https://modern-cms.hanbeyoglu.com`.
+Yapılandırma değişince API'yi yeniden başlatın. Bu ayar, public API'nin tenant
+bazındaki izinli domain kontrolünden ayrıdır; oraya da gerektiğinde `localhost` eklenir.
+
 API ve worker için `apps/api/.env`, `apps/worker/.env` gibi dosyalar kullanılabilir. Örnek değerler için repodaki `.env.example` dosyalarına bakın (varsa).
 
 Postgres (compose varsayılanı):

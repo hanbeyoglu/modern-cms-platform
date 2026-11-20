@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { parseCorsOrigins } from './common/cors-origins';
 import { join } from 'node:path';
 import { mkdirSync, existsSync } from 'node:fs';
 import { Logger, ValidationPipe } from '@nestjs/common';
@@ -85,10 +86,7 @@ async function bootstrap() {
   const corsOrigins = config.get<string>('CORS_ORIGINS', '');
   if (corsOrigins.trim().length > 0) {
     app.enableCors({
-      origin: corsOrigins
-        .split(',')
-        .map((o) => o.trim())
-        .filter(Boolean),
+      origin: parseCorsOrigins(corsOrigins),
     });
   } else {
     app.enableCors({ origin: true });
