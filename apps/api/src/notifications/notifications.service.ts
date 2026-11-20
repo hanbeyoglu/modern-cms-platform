@@ -1,45 +1,37 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { Notification, Prisma, User } from '@prisma/client';
-import { NotificationSeverity, NotificationType } from '@prisma/client';
+import {
+  createNotificationDeduped,
+  isTechnicalNotificationWhere,
+  type NotificationCreateInput,
+} from '@modern-cms/notifications';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccessService } from '../access/access.service';
 import { ListNotificationsDto } from './dto/list-notifications.dto';
 
-export type CreateNotificationInput = {
-  tenantId?: string | null;
-  mallId?: string | null;
-  userId?: string | null;
-  type: NotificationType;
-  severity: NotificationSeverity;
-  title: string;
-  message: string;
-  entityType?: string | null;
-  entityId?: string | null;
-  metadataJson?: Prisma.InputJsonValue | null;
-};
+export type CreateNotificationInput = NotificationCreateInput;
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessService,
   ) {}
 
-  async createNotification(input: CreateNotificationInput): Promise<Notification> {
-    return this.prisma.notification.create({
-      data: {
-        tenantId: input.tenantId ?? null,
-        mallId: input.mallId ?? null,
-        userId: input.userId ?? null,
-        type: input.type,
-        severity: input.severity,
-        title: input.title,
-        message: input.message,
-        entityType: input.entityType ?? null,
-        entityId: input.entityId ?? null,
-        metadataJson: input.metadataJson ?? undefined,
-      },
-    });
+  async createNotification(input: CreateNotificationInput): Promise<Notification | null> {
+    const created = await createNotificationDeduped(this.prisma, input);
+    if (!created) {
+      this.logger.debug(
+        `Skipped duplicate notification title="${input.title}" userId=${input.userId ?? 'null'}`,
+      );
+    }
+    return created;
+  }
+
+  private technicalExclusion(): Prisma.NotificationWhereInput {
+    return { NOT: isTechnicalNotificationWhere() };
   }
 
   private async visibilityOr(
@@ -49,39 +41,31 @@ export class NotificationsService {
   ): Promise<Prisma.NotificationWhereInput[]> {
     const malls = await this.access.listMallsForUser(user, tenantId);
     const mallIds = malls.map((m) => m.id);
+    const excludeTechnical = this.technicalExclusion();
 
     const or: Prisma.NotificationWhereInput[] = [
       {
         userId: user.id,
         OR: [{ tenantId: null }, { tenantId }],
+        ...excludeTechnical,
       },
       {
         tenantId: null,
         mallId: null,
         userId: null,
-        NOT: {
-          metadataJson: { path: ['workerFailure'], equals: true },
-        },
+        ...excludeTechnical,
       },
-      { tenantId, mallId: null, userId: null },
+      { tenantId, mallId: null, userId: null, ...excludeTechnical },
     ];
 
     if (requestMallId) {
-      or.push({ tenantId, mallId: requestMallId, userId: null });
+      or.push({ tenantId, mallId: requestMallId, userId: null, ...excludeTechnical });
     } else {
       or.push({
         tenantId,
         userId: null,
         mallId: { in: mallIds },
-      });
-    }
-
-    if (user.isSuperAdmin) {
-      or.push({
-        tenantId: null,
-        mallId: null,
-        userId: null,
-        metadataJson: { path: ['workerFailure'], equals: true },
+        ...excludeTechnical,
       });
     }
 

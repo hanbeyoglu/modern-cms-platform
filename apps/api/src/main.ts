@@ -17,6 +17,7 @@ function assertProductionSafety(config: ConfigService, logger: Logger): void {
   const databaseUrl = config.get<string>('DATABASE_URL')?.trim();
   const redisUrl = config.get<string>('REDIS_URL')?.trim();
   const jwtSecret = config.get<string>('JWT_SECRET')?.trim();
+  const jwtRefreshSecret = config.get<string>('JWT_REFRESH_SECRET')?.trim();
   if (!databaseUrl) {
     logger.error('DATABASE_URL is required in production. Aborting startup.');
     process.exit(1);
@@ -31,6 +32,16 @@ function assertProductionSafety(config: ConfigService, logger: Logger): void {
   }
   if (jwtSecret.length < 32) {
     logger.error('JWT_SECRET must be at least 32 characters in production. Aborting startup.');
+    process.exit(1);
+  }
+  if (!jwtRefreshSecret) {
+    logger.error('JWT_REFRESH_SECRET is required in production. Aborting startup.');
+    process.exit(1);
+  }
+  if (jwtRefreshSecret.length < 32) {
+    logger.error(
+      'JWT_REFRESH_SECRET must be at least 32 characters in production. Aborting startup.',
+    );
     process.exit(1);
   }
 }

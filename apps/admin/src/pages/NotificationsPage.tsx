@@ -40,6 +40,14 @@ const TYPE_LABEL: Record<NotificationType, string> = {
   SECURITY: 'Güvenlik',
 };
 
+/** Operational notification types shown in filters (excludes legacy technical SYSTEM errors). */
+const TYPE_FILTER_OPTIONS: NotificationType[] = [
+  'CONTENT',
+  'SCHEDULING',
+  'ANALYTICS',
+  'SECURITY',
+];
+
 export function NotificationsPage() {
   const { accessToken, activeTenantId, activeMallId } = useAuth();
   const { can } = usePermission();
@@ -174,7 +182,7 @@ export function NotificationsPage() {
                 style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid #e5e7eb', minWidth: 140 }}
               >
                 <option value="">Tümü</option>
-                {(Object.keys(TYPE_LABEL) as NotificationType[]).map((k) => (
+                {(TYPE_FILTER_OPTIONS).map((k) => (
                   <option key={k} value={k}>
                     {TYPE_LABEL[k]}
                   </option>

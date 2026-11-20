@@ -7,11 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { User } from '@prisma/client';
-import {
-  AnalyticsEntityType,
-  AnalyticsEventType,
-  Prisma,
-} from '@prisma/client';
+import { AnalyticsEntityType, AnalyticsEventType, Prisma } from '@prisma/client';
 import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccessService } from '../access/access.service';
@@ -47,6 +43,7 @@ export class AnalyticsService {
     return (
       this.config.get<string>('ANALYTICS_IP_SALT') ??
       this.config.get<string>('JWT_SECRET') ??
+      this.config.get<string>('JWT_REFRESH_SECRET') ??
       'analytics-ip-salt-fallback'
     );
   }
@@ -76,8 +73,7 @@ export class AnalyticsService {
       mallId = mall.id;
     }
 
-    const ua =
-      (typeof req.headers['user-agent'] === 'string' && req.headers['user-agent']) || null;
+    const ua = (typeof req.headers['user-agent'] === 'string' && req.headers['user-agent']) || null;
     const ipHash = hashIp(clientIp(req), this.ipSalt());
 
     const row = await this.prisma.analyticsEvent.create({
@@ -198,8 +194,7 @@ export class AnalyticsService {
       _count: { _all: true },
     });
 
-    const by = (t: AnalyticsEventType) =>
-      rows.find((r) => r.eventType === t)?._count._all ?? 0;
+    const by = (t: AnalyticsEventType) => rows.find((r) => r.eventType === t)?._count._all ?? 0;
 
     const totalEvents = rows.reduce((s, r) => s + r._count._all, 0);
 

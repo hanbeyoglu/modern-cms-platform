@@ -8,6 +8,7 @@ import {
   runContentSchedulingTick,
   type ScheduleTransition,
 } from '@modern-cms/content-scheduling';
+import { createNotificationDeduped } from '@modern-cms/notifications';
 import {
   MOVIE_SYNC_QUEUE_NAME,
   MOVIE_IMPORT_QUEUE_NAME,
@@ -93,6 +94,21 @@ async function invalidatePublicBranch(
   }
 }
 
+function logWorkerError(
+  scope: string,
+  err: unknown,
+  context: { job: string; entity?: string },
+): void {
+  const message = err instanceof Error ? err.message : String(err);
+  const stack = err instanceof Error ? err.stack : undefined;
+  console.error(`[service=worker] [op=${scope}]`, {
+    job: context.job,
+    entity: context.entity,
+    message,
+    stack,
+  });
+}
+
 async function writeSystemAudit(prisma: PrismaClient, t: ScheduleTransition): Promise<void> {
   const action = `${t.kind}:auto-${t.action === 'publish' ? 'publish' : 'archive'}`;
   const metadata: Record<string, unknown> = {
@@ -131,42 +147,28 @@ async function writeSchedulingNotification(prisma: PrismaClient, t: ScheduleTran
     ? `Kayıt zamanlamaya göre yayımlandı (${t.previousStatus} → ${t.nextStatus}).`
     : `Kayıt zamanlamaya göre arşivlendi (${t.previousStatus} → ${t.nextStatus}).`;
   try {
-    await prisma.notification.create({
-      data: {
-        tenantId: t.tenantId,
-        mallId: t.mallId,
-        userId: null,
-        type: 'SCHEDULING',
-        severity: 'SUCCESS',
-        title,
-        message,
-        entityType: t.kind,
-        entityId: t.id,
-        metadataJson: { transition: t } as never,
-      },
+    const created = await createNotificationDeduped(prisma, {
+      tenantId: t.tenantId,
+      mallId: t.mallId,
+      userId: null,
+      type: 'SCHEDULING',
+      severity: 'SUCCESS',
+      title,
+      message,
+      entityType: t.kind,
+      entityId: t.id,
+      metadataJson: { transition: t } as never,
     });
+    if (!created) {
+      console.log(
+        `[service=worker] skipped duplicate scheduling notification entity=${t.kind}:${t.id} title="${title}"`,
+      );
+    }
   } catch (err) {
-    console.error('[service=worker] notification create failed', err);
-  }
-}
-
-async function writeSchedulingFailureNotification(prisma: PrismaClient, err: unknown): Promise<void> {
-  const message = err instanceof Error ? err.message : String(err);
-  try {
-    await prisma.notification.create({
-      data: {
-        tenantId: null,
-        mallId: null,
-        userId: null,
-        type: 'SYSTEM',
-        severity: 'ERROR',
-        title: 'Zamanlama işi başarısız',
-        message: message.slice(0, 2000),
-        metadataJson: { workerFailure: true } as never,
-      },
+    logWorkerError('notification.create', err, {
+      job: 'content-scheduling-tick',
+      entity: `${t.kind}:${t.id}`,
     });
-  } catch (e) {
-    console.error('[service=worker] failure notification create failed', e);
   }
 }
 
@@ -409,8 +411,10 @@ async function main(): Promise<void> {
         console.log(`[service=worker] movieSync cron enqueued tenant=${tenant.id}`);
       }
     } catch (err) {
-      console.error('[service=worker] scheduling tick failed', err);
-      await writeSchedulingFailureNotification(prisma, err);
+      logWorkerError('scheduling.tick', err, {
+        job: 'content-scheduling-tick',
+        entity: 'content-scheduling',
+      });
     } finally {
       await writeHeartbeat(redis).catch(() => undefined);
     }

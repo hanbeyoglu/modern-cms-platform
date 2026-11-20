@@ -20,6 +20,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),
+        refreshSecret: config.getOrThrow<string>('JWT_REFRESH_SECRET'),
       }),
     }),
     AccessModule,
@@ -27,11 +28,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     CapabilitiesModule,
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
-  ],
+  providers: [AuthService, JwtStrategy, { provide: APP_GUARD, useClass: JwtAuthGuard }],
   exports: [AuthService],
 })
 export class AuthModule {}

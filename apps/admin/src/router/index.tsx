@@ -4,8 +4,7 @@ import { DashboardLayout } from '../layouts/DashboardLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { PermissionGate } from './PermissionGate';
 import { LoginPage } from '../pages/LoginPage';
-import { SelectTenantPage } from '../pages/SelectTenantPage';
-import { SelectLocationPage } from '../pages/SelectLocationPage';
+import { WorkspacePage } from '../pages/WorkspacePage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { MediaPage } from '../pages/MediaPage';
 import { MediaGuidelinesPage } from '../pages/MediaGuidelinesPage';
@@ -62,8 +61,8 @@ export const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
-      { path: '/select-tenant', element: <SelectTenantPage /> },
-      { path: '/select-location', element: <SelectLocationPage /> },
+      { path: '/select-tenant', element: <WorkspacePage /> },
+      { path: '/select-location', element: <WorkspacePage /> },
       {
         element: <DashboardLayout />,
         children: [
