@@ -288,7 +288,7 @@ export function EventsPage() {
         setLocaleDrafts({});
       }
     })();
-  }, [showForm, editing?.id, accessToken, tenantId, mallId]);
+  }, [showForm, editing, accessToken, tenantId, mallId]);
 
   useEffect(() => {
     if (!showForm || (!i18nDirty && !eventFormDirty)) return;

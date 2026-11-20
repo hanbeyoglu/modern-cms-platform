@@ -82,6 +82,7 @@ pnpm dev:worker
 pnpm build
 pnpm lint
 pnpm typecheck
+pnpm test
 pnpm format
 pnpm clean
 pnpm db:migrate

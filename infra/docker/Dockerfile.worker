@@ -15,6 +15,14 @@ RUN pnpm --filter @modern-cms/worker deploy --prod /deploy \
   && rm -rf /deploy/src \
   && find /deploy -name "*.tsbuildinfo" -delete
 
+# pnpm deploy reinstalls @prisma/client without a generated engine; copy from the build tree.
+RUN set -eux; \
+  SRC="$(find /app/node_modules/.pnpm -path '*/node_modules/.prisma/client/index.js' -size +100k | head -1 | xargs dirname)"; \
+  DST="$(find /deploy/node_modules/.pnpm -path '*/node_modules/.prisma/client' -type d | head -1)"; \
+  test -n "${SRC}" && test -n "${DST}"; \
+  rm -rf "${DST}"; \
+  cp -a "${SRC}" "${DST}"
+
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 
@@ -38,6 +46,6 @@ COPY --from=build --chown=worker:nodejs /deploy /app
 USER worker
 
 HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
-  CMD node -e "const Redis=require('ioredis');const u=process.env.REDIS_URL||'redis://localhost:6379';const r=new Redis(u,{maxRetriesPerRequest:1,connectTimeout:3000});r.get('worker:heartbeat').then(v=>r.quit().then(()=>process.exit(v?0:1))).catch(()=>process.exit(1)))"
+  CMD node -e "const Redis=require('ioredis');const u=process.env.REDIS_URL||'redis://localhost:6379';const r=new Redis(u,{maxRetriesPerRequest:1,connectTimeout:3000});r.get('worker:heartbeat').then(v=>r.quit().then(()=>process.exit(v?0:1))).catch(()=>process.exit(1))"
 
 CMD ["node", "dist/index.js"]

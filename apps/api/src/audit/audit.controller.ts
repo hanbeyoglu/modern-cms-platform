@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Headers,
   Param,
   Query,
   Res,
@@ -12,6 +13,8 @@ import type { Response } from 'express';
 import type { User } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RequirePermission } from '../common/decorators/require-permission.decorator';
+import { RequireTenantContext } from '../common/decorators/require-tenant.decorator';
+import { TenantAccessGuard } from '../access/guards/tenant-access.guard';
 import { PermissionsGuard } from '../access/guards/permissions.guard';
 import { AuditLogService } from './audit.service';
 import { ListAuditLogsDto } from './dto/list-audit-logs.dto';
@@ -25,7 +28,8 @@ import {
 @ApiTags(SWAGGER_TAGS.AUDIT)
 @ApiBearerAuth('JWT')
 @Controller('audit-logs')
-@UseGuards(PermissionsGuard)
+@RequireTenantContext()
+@UseGuards(TenantAccessGuard, PermissionsGuard)
 export class AuditController {
   constructor(private readonly audit: AuditLogService) {}
 
@@ -40,8 +44,9 @@ export class AuditController {
   list(
     @CurrentUser() actor: User & { isSuperAdmin: boolean; memberships?: Array<{ tenantId: string }> },
     @Query() query: ListAuditLogsDto,
+    @Headers('x-tenant-id') contextTenantId?: string,
   ) {
-    const scopedTenantId = actor.isSuperAdmin ? undefined : this.getActorTenantId(actor, query.tenantId);
+    const scopedTenantId = actor.isSuperAdmin ? undefined : contextTenantId;
     return this.audit.list(actor, query, scopedTenantId);
   }
 
@@ -58,8 +63,9 @@ export class AuditController {
     @CurrentUser() actor: User & { isSuperAdmin: boolean },
     @Query('tenantId') tenantId?: string,
     @Query('limit') limit?: string,
+    @Headers('x-tenant-id') contextTenantId?: string,
   ) {
-    const scopedTenantId = actor.isSuperAdmin ? tenantId : undefined;
+    const scopedTenantId = actor.isSuperAdmin ? tenantId : contextTenantId;
     return this.audit.recentActivity(scopedTenantId, limit ? parseInt(limit, 10) : 10);
   }
 
@@ -76,8 +82,9 @@ export class AuditController {
     @CurrentUser() actor: User & { isSuperAdmin: boolean },
     @Query('tenantId') tenantId?: string,
     @Query('limit') limit?: string,
+    @Headers('x-tenant-id') contextTenantId?: string,
   ) {
-    const scopedTenantId = actor.isSuperAdmin ? tenantId : undefined;
+    const scopedTenantId = actor.isSuperAdmin ? tenantId : contextTenantId;
     return this.audit.securityEvents(scopedTenantId, limit ? parseInt(limit, 10) : 10);
   }
 
@@ -92,8 +99,9 @@ export class AuditController {
     @CurrentUser() actor: User & { isSuperAdmin: boolean },
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
+    @Headers('x-tenant-id') contextTenantId?: string,
   ) {
-    return this.audit.timeline(entityType, entityId, actor, actor.isSuperAdmin ? undefined : undefined);
+    return this.audit.timeline(entityType, entityId, actor, actor.isSuperAdmin ? undefined : contextTenantId);
   }
 
   @Get('export')
@@ -108,8 +116,9 @@ export class AuditController {
     @CurrentUser() actor: User & { isSuperAdmin: boolean },
     @Query() query: ListAuditLogsDto,
     @Res() res: Response,
+    @Headers('x-tenant-id') contextTenantId?: string,
   ) {
-    const scopedTenantId = actor.isSuperAdmin ? undefined : this.getActorTenantId(actor, query.tenantId);
+    const scopedTenantId = actor.isSuperAdmin ? undefined : contextTenantId;
     const format = query.format ?? 'json';
 
     if (format === 'csv') {
@@ -135,16 +144,11 @@ export class AuditController {
   async findOne(
     @CurrentUser() actor: User & { isSuperAdmin: boolean },
     @Param('id') id: string,
+    @Headers('x-tenant-id') contextTenantId?: string,
   ) {
-    const log = await this.audit.findOne(id, actor, actor.isSuperAdmin ? undefined : undefined);
+    const log = await this.audit.findOne(id, actor, actor.isSuperAdmin ? undefined : contextTenantId);
     if (!log) throw new NotFoundException('Audit log not found');
     return log;
   }
 
-  private getActorTenantId(actor: User & { memberships?: Array<{ tenantId: string }> }, queriedTenantId?: string): string | null {
-    if (queriedTenantId && actor.memberships?.some((m) => m.tenantId === queriedTenantId)) {
-      return queriedTenantId;
-    }
-    return actor.memberships?.[0]?.tenantId ?? null;
-  }
 }

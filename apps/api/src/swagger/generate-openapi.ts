@@ -1,6 +1,6 @@
 /**
  * Generates localized openapi JSON files at build time.
- * Requires DATABASE_URL (Prisma connects on module init).
+ * Runs without database credentials or connections.
  * Sets APP_MODE=swagger to skip Redis, BullMQ, and other runtime infrastructure.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -25,6 +25,8 @@ async function main(): Promise<void> {
   const logger = new Logger('OpenApiGenerate');
 
   process.env.APP_MODE = 'swagger';
+  // Build-only placeholder: this process never signs or serves runtime tokens.
+  process.env.JWT_SECRET ??= 'openapi-build-only-secret-never-use-at-runtime';
 
   validateLocaleParity();
 

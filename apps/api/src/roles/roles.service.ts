@@ -56,8 +56,8 @@ export class RolesService {
     private readonly audit: AuditLogService,
   ) {}
 
-  async list(actor: User, tenantId?: string) {
-    const scopedTenantId = actor.isSuperAdmin ? tenantId : await this.resolveTenantId(actor);
+  async list(actor: User, tenantId?: string, contextTenantId?: string) {
+    const scopedTenantId = actor.isSuperAdmin ? tenantId : await this.resolveTenantId(actor, contextTenantId);
 
     const roles = await this.prisma.role.findMany({
       where: {
@@ -82,7 +82,7 @@ export class RolesService {
     };
   }
 
-  async findOne(actor: User, roleId: string) {
+  async findOne(actor: User, roleId: string, contextTenantId?: string) {
     const role = await this.prisma.role.findFirst({
       where: { id: roleId },
       include: {
@@ -93,15 +93,15 @@ export class RolesService {
     if (!role) throw new NotFoundException('Rol bulunamadı');
 
     if (!actor.isSuperAdmin && role.tenantId) {
-      const actorTenantId = await this.resolveTenantId(actor);
+      const actorTenantId = await this.resolveTenantId(actor, contextTenantId);
       if (role.tenantId !== actorTenantId) throw new ForbiddenException('Bu role erişim yok');
     }
 
     return this.formatRole(role);
   }
 
-  async create(actor: User, dto: CreateRoleDto) {
-    const tenantId = actor.isSuperAdmin ? null : await this.resolveTenantId(actor);
+  async create(actor: User, dto: CreateRoleDto, contextTenantId?: string) {
+    const tenantId = actor.isSuperAdmin ? null : await this.resolveTenantId(actor, contextTenantId);
 
     const codeBase = dto.name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
     const uniqueSuffix = Date.now().toString(36);
@@ -139,12 +139,12 @@ export class RolesService {
       after: { name: role.name, tenantId },
     });
 
-    return this.findOne(actor, role.id);
+    return this.findOne(actor, role.id, contextTenantId);
   }
 
-  async update(actor: User, roleId: string, dto: UpdateRoleDto) {
-    const role = await this.findOne(actor, roleId);
-    await this.assertCanManageRole(actor, role);
+  async update(actor: User, roleId: string, dto: UpdateRoleDto, contextTenantId?: string) {
+    const role = await this.findOne(actor, roleId, contextTenantId);
+    await this.assertCanManageRole(actor, role, contextTenantId);
 
     if (Object.prototype.hasOwnProperty.call(dto, 'code')) {
       throw new BadRequestException('Rol kodu değiştirilemez');
@@ -173,12 +173,12 @@ export class RolesService {
       after: { ...dto },
     });
 
-    return this.findOne(actor, roleId);
+    return this.findOne(actor, roleId, contextTenantId);
   }
 
-  async updatePermissions(actor: User, roleId: string, dto: UpdateRolePermissionsDto) {
-    const role = await this.findOne(actor, roleId);
-    await this.assertCanManageRole(actor, role);
+  async updatePermissions(actor: User, roleId: string, dto: UpdateRolePermissionsDto, contextTenantId?: string) {
+    const role = await this.findOne(actor, roleId, contextTenantId);
+    await this.assertCanManageRole(actor, role, contextTenantId);
 
     const perms = await this.prisma.permission.findMany({
       where: { id: { in: dto.permissionIds } },
@@ -201,12 +201,12 @@ export class RolesService {
       after: { permissionIds: dto.permissionIds, permissionCount: perms.length },
     });
 
-    return this.findOne(actor, roleId);
+    return this.findOne(actor, roleId, contextTenantId);
   }
 
-  async clone(actor: User, roleId: string, dto: CloneRoleDto) {
-    const source = await this.findOne(actor, roleId);
-    const tenantId = actor.isSuperAdmin ? source.tenantId : await this.resolveTenantId(actor);
+  async clone(actor: User, roleId: string, dto: CloneRoleDto, contextTenantId?: string) {
+    const source = await this.findOne(actor, roleId, contextTenantId);
+    const tenantId = actor.isSuperAdmin ? source.tenantId : await this.resolveTenantId(actor, contextTenantId);
 
     const codeBase = dto.name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
     const uniqueSuffix = Date.now().toString(36);
@@ -244,12 +244,12 @@ export class RolesService {
       after: { sourceRoleId: roleId, name: dto.name },
     });
 
-    return this.findOne(actor, cloned.id);
+    return this.findOne(actor, cloned.id, contextTenantId);
   }
 
-  async remove(actor: User, roleId: string) {
-    const role = await this.findOne(actor, roleId);
-    await this.assertCanManageRole(actor, role);
+  async remove(actor: User, roleId: string, contextTenantId?: string) {
+    const role = await this.findOne(actor, roleId, contextTenantId);
+    await this.assertCanManageRole(actor, role, contextTenantId);
 
     if (role.code === SUPER_ADMIN_ROLE_CODE) {
       throw new BadRequestException('SUPER_ADMIN rolü silinemez');
@@ -294,9 +294,10 @@ export class RolesService {
     return { permissions: all, groups: grouped };
   }
 
-  private async resolveTenantId(actor: User): Promise<string> {
+  private async resolveTenantId(actor: User, contextTenantId?: string): Promise<string> {
+    if (!contextTenantId) throw new ForbiddenException('x-tenant-id başlığı gerekli');
     const tu = await this.prisma.tenantUser.findFirst({
-      where: { userId: actor.id, deletedAt: null },
+      where: { userId: actor.id, tenantId: contextTenantId, deletedAt: null, isActive: true, role: { isActive: true }, tenant: { deletedAt: null, status: 'ACTIVE' } },
       orderBy: { createdAt: 'asc' },
     });
     if (!tu) throw new ForbiddenException('Tenant üyeliği bulunamadı');
@@ -306,13 +307,14 @@ export class RolesService {
   private async assertCanManageRole(
     actor: User,
     role: { tenantId: string | null; isSystem: boolean },
+    contextTenantId?: string,
   ) {
     if (actor.isSuperAdmin) return;
     if (role.isSystem || !role.tenantId) {
       throw new ForbiddenException('Sistem rollerini yalnızca Super Admin düzenleyebilir');
     }
 
-    const actorTenantId = await this.resolveTenantId(actor);
+    const actorTenantId = await this.resolveTenantId(actor, contextTenantId);
     if (role.tenantId !== actorTenantId) {
       throw new ForbiddenException('Bu rol yalnızca kendi tenantı içinde düzenlenebilir');
     }

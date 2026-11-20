@@ -1,4 +1,4 @@
-import { IsBoolean, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class UpdateGeneralSettingsDto {
   @IsOptional()
@@ -38,6 +38,6 @@ export class UpdateSecuritySettingsDto {
   maintenanceMode?: boolean;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['default', 'medium', 'strong'])
   passwordPolicy?: string;
 }

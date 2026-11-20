@@ -164,7 +164,7 @@ function ApiKeysTab({ token, tenantId, canEdit }: { token: string; tenantId: str
   };
 
   const handleRegenerate = async (keyId: string, name: string) => {
-    if (!confirm(`"${name}" key\'ini yenilemek istediğinizden emin misiniz? Mevcut key geçersiz olacak.`)) return;
+    if (!confirm(`"${name}" key'ini yenilemek istediğinizden emin misiniz? Mevcut key geçersiz olacak.`)) return;
     try {
       const result = await apiDevKeyRegenerate(token, tenantId, keyId);
       setRawKey(result.rawKey);
@@ -182,7 +182,7 @@ function ApiKeysTab({ token, tenantId, canEdit }: { token: string; tenantId: str
   };
 
   const handleDelete = async (keyId: string, name: string) => {
-    if (!confirm(`"${name}" key\'ini silmek istediğinizden emin misiniz?`)) return;
+    if (!confirm(`"${name}" key'ini silmek istediğinizden emin misiniz?`)) return;
     try {
       await apiDevKeyDelete(token, tenantId, keyId);
       toast.success('API Key silindi');

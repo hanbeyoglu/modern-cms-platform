@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuditSeverity, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -82,6 +82,7 @@ export class AuditLogService {
   }
 
   async list(actor: { isSuperAdmin: boolean; id: string }, query: ListAuditLogsDto, scopedTenantId?: string | null) {
+    if (!actor.isSuperAdmin && !scopedTenantId) throw new ForbiddenException('Tenant bağlamı gerekli');
     const {
       page = 1, limit = 50,
       tenantId, mallId, actorId, resource, action,
@@ -147,6 +148,7 @@ export class AuditLogService {
   }
 
   async findOne(id: string, actor: { isSuperAdmin: boolean }, scopedTenantId?: string | null) {
+    if (!actor.isSuperAdmin && !scopedTenantId) throw new ForbiddenException('Tenant bağlamı gerekli');
     const log = await this.prisma.auditLog.findUnique({
       where: { id },
       include: {
@@ -166,6 +168,7 @@ export class AuditLogService {
   }
 
   async timeline(entityType: string, entityId: string, actor: { isSuperAdmin: boolean }, scopedTenantId?: string | null) {
+    if (!actor.isSuperAdmin && !scopedTenantId) throw new ForbiddenException('Tenant bağlamı gerekli');
     const where: Prisma.AuditLogWhereInput = {
       resource: entityType,
       resourceId: entityId,
@@ -192,9 +195,9 @@ export class AuditLogService {
     const rows = data.items.map((log) => [
       log.id,
       log.createdAt.toISOString(),
-      (log as any).actor ? `${(log as any).actor.email}` : log.actorUserId ?? '',
-      (log as any).tenant ? `${(log as any).tenant.name}` : log.tenantId ?? '',
-      (log as any).mall ? `${(log as any).mall.name}` : log.mallId ?? '',
+      log.actor?.email ?? log.actorUserId ?? '',
+      log.tenant?.name ?? log.tenantId ?? '',
+      log.mall?.name ?? log.mallId ?? '',
       log.action,
       log.resource,
       log.resourceId ?? '',

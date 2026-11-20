@@ -55,7 +55,7 @@ export function SettingsSecurityPage() {
 
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4, color: '#374151' }}>
-                Oturum Zaman Aşımı (dakika)
+                Oturum Yenileme Zaman Aşımı (dakika)
               </label>
               <input
                 type="number"
@@ -70,7 +70,7 @@ export function SettingsSecurityPage() {
 
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4, color: '#374151' }}>
-                Şifre Politikası (placeholder)
+                Şifre Politikası
               </label>
               <select
                 value={form.passwordPolicy}
@@ -85,8 +85,7 @@ export function SettingsSecurityPage() {
             </div>
 
             {([
-              ['allowPublicRegistration', 'Halka açık kayıt izni (placeholder)'],
-              ['maintenanceMode', 'Bakım modu (placeholder)'],
+              ['maintenanceMode', 'Ziyaretçiye açık içerikleri bakım moduna al'],
             ] as const).map(([key, label]) => (
               <div key={key} style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
@@ -110,6 +109,7 @@ export function SettingsSecurityPage() {
               </div>
             ))}
 
+            <p style={{ fontSize: 12, color: '#6b7280' }}>Oturum süresi yeni girişlerde ve yenilemelerde uygulanır. Birden fazla tenant üyeliğinde en sıkı şifre ve oturum politikası kullanılır. CMS hesapları yönetici tarafından oluşturulur.</p>
             {canEdit && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 20 }}>
                 <button

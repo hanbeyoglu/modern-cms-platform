@@ -19,7 +19,8 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
-    "demo:seed": "tsx prisma/demo-seed.ts"
+    "demo:seed": "tsx prisma/demo-seed.ts",
+    "test": "node --test test/*.test.cjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

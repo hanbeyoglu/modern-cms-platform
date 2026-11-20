@@ -952,7 +952,7 @@ export class PublicContentService {
     categoryMap: EntityTranslationMap,
     entityId: string,
   ): PublicStore {
-    let result = this.applyStoreTranslations(store, storeMap, entityId);
+    const result = this.applyStoreTranslations(store, storeMap, entityId);
     if (!result.category) return result;
     const t = categoryMap[result.category.id];
     if (!t) return result;

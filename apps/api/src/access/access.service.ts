@@ -47,7 +47,7 @@ export class AccessService {
     }
 
     const tenantUser = await this.prisma.tenantUser.findFirst({
-      where: { userId: user.id, tenantId, deletedAt: null },
+      where: { userId: user.id, tenantId, deletedAt: null, isActive: true, role: { isActive: true }, tenant: { deletedAt: null, status: 'ACTIVE' } },
       include: { tenant: true },
     });
     if (!tenantUser || tenantUser.tenant.deletedAt) {
@@ -74,7 +74,7 @@ export class AccessService {
     await this.assertTenantAccess(user, tenantId);
 
     const tenantUser = await this.prisma.tenantUser.findFirst({
-      where: { userId: user.id, tenantId, deletedAt: null },
+      where: { userId: user.id, tenantId, deletedAt: null, isActive: true, role: { isActive: true }, tenant: { deletedAt: null, status: 'ACTIVE' } },
       include: { role: true },
     });
     if (!tenantUser) {
@@ -107,7 +107,7 @@ export class AccessService {
     }
 
     const tenantUser = await this.prisma.tenantUser.findFirst({
-      where: { userId: user.id, tenantId, deletedAt: null },
+      where: { userId: user.id, tenantId, deletedAt: null, isActive: true, role: { isActive: true }, tenant: { deletedAt: null, status: 'ACTIVE' } },
       include: {
         role: {
           include: {
@@ -128,7 +128,7 @@ export class AccessService {
       return this.prisma.tenant.findMany({ where: { deletedAt: null }, orderBy: { name: 'asc' } });
     }
     const links = await this.prisma.tenantUser.findMany({
-      where: { userId: user.id, deletedAt: null },
+      where: { userId: user.id, deletedAt: null, isActive: true, role: { isActive: true }, tenant: { deletedAt: null, status: 'ACTIVE' } },
       include: { tenant: true },
     });
     return links.map((l) => l.tenant).filter((t) => !t.deletedAt);
@@ -156,7 +156,7 @@ export class AccessService {
     await this.assertTenantAccess(user, tenantId);
 
     const tenantUser = await this.prisma.tenantUser.findFirst({
-      where: { userId: user.id, tenantId, deletedAt: null },
+      where: { userId: user.id, tenantId, deletedAt: null, isActive: true, role: { isActive: true }, tenant: { deletedAt: null, status: 'ACTIVE' } },
       include: { role: true },
     });
     if (!tenantUser) {

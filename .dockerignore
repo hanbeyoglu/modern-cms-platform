@@ -1,0 +1,12 @@
+.git
+**/node_modules
+**/dist
+**/.turbo
+**/coverage
+**/*.log
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env*.example
+**/storage
+apps/api/openapi

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -17,6 +18,7 @@ import { PermissionsGuard } from '../access/guards/permissions.guard';
 import { UsersService } from './users.service';
 import { ListUsersDto } from './dto/list-users.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateUserDto, UpdateUserStatusDto } from './dto/update-user.dto';
 import { CreateMembershipDto, UpdateMembershipDto } from './dto/membership.dto';
 import { SWAGGER_TAGS } from '../swagger/swagger.constants';
@@ -36,8 +38,10 @@ export class UsersController {
     related: [SWAGGER_TAGS.ROLES, SWAGGER_TAGS.TENANTS],
   })
   @ApiResponse({ status: 200, description: 'user.response.200' })
-  list(@CurrentUser() actor: User, @Query() query: ListUsersDto) {
-    return this.users.list(actor, query);
+  list(@CurrentUser() actor: User, @Query() query: ListUsersDto,
+    @Headers('x-tenant-id') contextTenantId?: string,
+  ) {
+    return this.users.list(actor, query, contextTenantId);
   }
 
   @Get(':id')
@@ -48,8 +52,10 @@ export class UsersController {
     related: [SWAGGER_TAGS.ROLES],
   })
   @ApiResponse({ status: 200, description: 'user.response.200' })
-  findOne(@CurrentUser() actor: User, @Param('id') id: string) {
-    return this.users.findOne(actor, id);
+  findOne(@CurrentUser() actor: User, @Param('id') id: string,
+    @Headers('x-tenant-id') contextTenantId?: string,
+  ) {
+    return this.users.findOne(actor, id, contextTenantId);
   }
 
   @Post()
@@ -59,8 +65,10 @@ export class UsersController {
     related: [SWAGGER_TAGS.ROLES, SWAGGER_TAGS.TENANTS],
   })
   @ApiResponse({ status: 201, description: 'user.response.201' })
-  create(@CurrentUser() actor: User, @Body() dto: CreateUserDto) {
-    return this.users.create(actor, dto);
+  create(@CurrentUser() actor: User, @Body() dto: CreateUserDto,
+    @Headers('x-tenant-id') contextTenantId?: string,
+  ) {
+    return this.users.create(actor, dto, contextTenantId);
   }
 
   @Patch(':id')
@@ -68,8 +76,10 @@ export class UsersController {
   @ApiUuidParam('id', 'common.param.uuid')
   @ApiAdminOperation({ summary: 'user.update.summary', permissions: ['user:update'] })
   @ApiResponse({ status: 200, description: 'user.response.200' })
-  update(@CurrentUser() actor: User, @Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.users.update(actor, id, dto);
+  update(@CurrentUser() actor: User, @Param('id') id: string, @Body() dto: UpdateUserDto,
+    @Headers('x-tenant-id') contextTenantId?: string,
+  ) {
+    return this.users.update(actor, id, dto, contextTenantId);
   }
 
   @Patch(':id/status')
@@ -81,8 +91,9 @@ export class UsersController {
     @CurrentUser() actor: User,
     @Param('id') id: string,
     @Body() dto: UpdateUserStatusDto,
+    @Headers('x-tenant-id') contextTenantId?: string,
   ) {
-    return this.users.updateStatus(actor, id, dto);
+    return this.users.updateStatus(actor, id, dto, contextTenantId);
   }
 
   @Post(':id/memberships')
@@ -97,8 +108,9 @@ export class UsersController {
     @CurrentUser() actor: User,
     @Param('id') id: string,
     @Body() dto: CreateMembershipDto,
+    @Headers('x-tenant-id') contextTenantId?: string,
   ) {
-    return this.users.addMembership(actor, id, dto);
+    return this.users.addMembership(actor, id, dto, contextTenantId);
   }
 
   @Patch(':id/memberships/:membershipId')
@@ -115,8 +127,9 @@ export class UsersController {
     @Param('id') id: string,
     @Param('membershipId') membershipId: string,
     @Body() dto: UpdateMembershipDto,
+    @Headers('x-tenant-id') contextTenantId?: string,
   ) {
-    return this.users.updateMembership(actor, id, membershipId, dto);
+    return this.users.updateMembership(actor, id, membershipId, dto, contextTenantId);
   }
 
   @Delete(':id/memberships/:membershipId')
@@ -129,8 +142,9 @@ export class UsersController {
     @CurrentUser() actor: User,
     @Param('id') id: string,
     @Param('membershipId') membershipId: string,
+    @Headers('x-tenant-id') contextTenantId?: string,
   ) {
-    return this.users.removeMembership(actor, id, membershipId);
+    return this.users.removeMembership(actor, id, membershipId, contextTenantId);
   }
 
   @Post(':id/reset-password')
@@ -138,7 +152,9 @@ export class UsersController {
   @ApiUuidParam('id', 'common.param.uuid')
   @ApiAdminOperation({ summary: 'user.reset.user.password.summary', permissions: ['user:update'] })
   @ApiResponse({ status: 200, description: 'user.response.200' })
-  resetPassword(@CurrentUser() actor: User, @Param('id') id: string) {
-    return this.users.resetPassword(actor, id);
+  resetPassword(@CurrentUser() actor: User, @Param('id') id: string, @Body() dto: ResetPasswordDto,
+    @Headers('x-tenant-id') contextTenantId?: string,
+  ) {
+    return this.users.resetPassword(actor, id, dto, contextTenantId);
   }
 }

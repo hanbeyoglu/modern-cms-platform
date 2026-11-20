@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
@@ -55,16 +55,16 @@ export function TenantDetailPage() {
   const [showDelete, setShowDelete] = useState(false);
   const [deleteResult, setDeleteResult] = useState<TenantDeleteResult | null>(null);
 
-  const reload = () => {
+  const reload = useCallback(() => {
     if (!accessToken || !id) return;
     setLoading(true);
     apiTenantGet(accessToken, id)
       .then((t) => { setTenant(t); setEditForm({ name: t.name, legalName: t.legalName ?? '', contactEmail: t.contactEmail ?? '', contactPhone: t.contactPhone ?? '', websiteUrl: t.websiteUrl ?? '', billingEmail: t.billingEmail ?? '' }); })
       .catch((e: Error) => toast.error(e.message))
       .finally(() => setLoading(false));
-  };
+  }, [accessToken, id]);
 
-  useEffect(() => { reload(); }, [accessToken, id]);
+  useEffect(() => { reload(); }, [reload]);
 
   const handleSave = async () => {
     if (!accessToken || !id) return;

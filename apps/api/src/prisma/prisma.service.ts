@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { shouldInitializeInfrastructure } from '../common/app-mode';
 import { resolveApiDatabaseUrl } from './database-url';
 
 function maskDatabaseUrl(url: string | undefined): string {
@@ -23,6 +24,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit(): Promise<void> {
+    if (!shouldInitializeInfrastructure('database')) return;
     await this.$connect();
     this.logger.log(`Database connected (${maskDatabaseUrl(process.env.DATABASE_URL)})`);
   }

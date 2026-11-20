@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
@@ -33,8 +33,11 @@ export function UserDetailPage() {
   const [showAddMembership, setShowAddMembership] = useState(false);
   const [membershipForm, setMembershipForm] = useState({ tenantId: '', roleId: '', mallIds: [] as string[] });
   const [saving, setSaving] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
 
-  const reload = () => {
+  const reload = useCallback(() => {
     if (!accessToken || !id) return;
     setLoading(true);
     Promise.all([
@@ -44,9 +47,9 @@ export function UserDetailPage() {
       .then(([u, r]) => { setUser(u); setRoles(r.roles); })
       .catch((e: Error) => toast.error(e.message))
       .finally(() => setLoading(false));
-  };
+  }, [accessToken, id]);
 
-  useEffect(() => { reload(); }, [accessToken, id]);
+  useEffect(() => { reload(); }, [reload]);
 
   const handleStatusToggle = async () => {
     if (!accessToken || !user) return;
@@ -92,10 +95,18 @@ export function UserDetailPage() {
 
   const handleResetPassword = async () => {
     if (!accessToken || !user) return;
+    if (newPassword.length < 8 || newPassword.length > 72) {
+      toast.error('Şifre 8–72 karakter arasında olmalıdır');
+      return;
+    }
+    setResettingPassword(true);
     try {
-      await apiUserResetPassword(accessToken, user.id);
-      toast.success('Şifre sıfırlama isteği oluşturuldu');
+      const result = await apiUserResetPassword(accessToken, user.id, newPassword);
+      toast.success(result.message);
+      setNewPassword('');
+      setShowPasswordReset(false);
     } catch (e) { toast.error((e as Error).message); }
+    finally { setResettingPassword(false); }
   };
 
   if (loading) return <PageContainer><div style={{ color: '#6b7280', fontSize: 13 }}>Yükleniyor…</div></PageContainer>;
@@ -143,7 +154,7 @@ export function UserDetailPage() {
                 {user.status === 'ACTIVE' ? 'Devre Dışı Bırak' : 'Etkinleştir'}
               </button>
               <button
-                onClick={handleResetPassword}
+                onClick={() => setShowPasswordReset(true)}
                 style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 12, cursor: 'pointer', background: '#fff' }}
               >
                 Şifre Sıfırla
@@ -152,6 +163,16 @@ export function UserDetailPage() {
           )}
         </div>
       </div>
+
+      {showPasswordReset && can('user:update') && (
+        <form onSubmit={(e) => { e.preventDefault(); void handleResetPassword(); }} style={{ marginBottom: 20 }}>
+          <label htmlFor="reset-password">Yeni şifre</label>
+          <input id="reset-password" type="password" autoComplete="new-password" minLength={8} maxLength={72} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={resettingPassword} />
+          <p>Yeni şifreyi kullanıcıya güvenli bir kanaldan iletin. Mevcut oturumların yenilenmesi engellenir.</p>
+          <button type="submit" disabled={resettingPassword}>{resettingPassword ? 'Kaydediliyor…' : 'Şifreyi değiştir'}</button>
+          <button type="button" disabled={resettingPassword} onClick={() => { setShowPasswordReset(false); setNewPassword(''); }}>Vazgeç</button>
+        </form>
+      )}
 
       {/* Memberships */}
       <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 20 }}>

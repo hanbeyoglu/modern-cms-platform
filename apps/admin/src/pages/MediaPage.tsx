@@ -76,7 +76,7 @@ function AssetDrawer({
     setMoveFolderId(asset.folderId ?? '');
     setUsages(null);
     setTab('details');
-  }, [asset.id]);
+  }, [asset.id, asset.altText, asset.caption, asset.description, asset.tags, asset.focalPointX, asset.focalPointY, asset.folderId]);
 
   async function handleSave() {
     setSaving(true);

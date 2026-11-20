@@ -276,7 +276,7 @@ export function AuditLogDetailPage() {
       {meta && (
         <JsonBlock
           data={(() => {
-            const { before: _b, after: _a, ip: _ip, userAgent: _ua, ...rest } = meta;
+            const rest = Object.fromEntries(Object.entries(meta).filter(([key]) => !['before', 'after', 'ip', 'userAgent'].includes(key)));
             return Object.keys(rest).length > 0 ? rest : undefined;
           })()}
           label="Ek Metadata"

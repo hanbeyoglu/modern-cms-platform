@@ -26,6 +26,19 @@ Frontend'de route gate ve navigasyon filtreleri bulunur; API yetkilendirmesi ayr
 `apps/admin/src/router/PermissionGate.tsx`, `apps/admin/src/navigation/config.ts`.
 Rol ayrıntıları: [izin matrisi](ROLE_PERMISSION_MATRIX.md).
 
+## Oturum ve güvenlik ayarları
+
+JWT erişim token'ları `JWT_ACCESS_TTL` süresiyle sınırlıdır. Panel, geçerli yenileme
+token'ı varsa erişim token'ını yeniler; eşzamanlı istekler tek yenileme isteğini paylaşır.
+Yenileme token'ı bir kez tüketilir ve her yenilemede döndürülür.
+Tenant güvenlik ayarlarındaki oturum yenileme süresi, yeni giriş ve yenilemelerde uygulanır.
+Birden fazla tenant üyeliğinde en kısa süre ve en sıkı şifre politikası kullanılır.
+
+Yönetici şifre sıfırlamada yeni şifreyi belirler; şifre hash olarak saklanır ve
+kullanıcının yenileme token'ları iptal edilir. Mevcut erişim token'ları kendi sürelerinin
+sonuna kadar geçerli kalabilir. Halka açık CMS hesabı oluşturma desteklenmez.
+Bakım modu, tenant'ın public içerik uçlarına 503 döndürür; yönetim paneli açık kalır.
+
 ## İçerik ve yayınlama
 
 Etkinlikler, kampanyalar, slider grupları, sayfalar, popuplar ve hizmetler ayrı modüllerdir.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from './ui/EmptyState';
 import { LoadingState } from './ui/LoadingState';
@@ -59,10 +59,10 @@ export function MallFloorsSection({
   const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
 
   const showForm = formOpen ?? internalFormOpen;
-  const setShowForm = (open: boolean) => {
+  const setShowForm = useCallback((open: boolean) => {
     onFormOpenChange?.(open);
     if (formOpen === undefined) setInternalFormOpen(open);
-  };
+  }, [onFormOpenChange, formOpen]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -76,13 +76,16 @@ export function MallFloorsSection({
     }
   }, [accessToken, tenantId, mallId]);
 
+  const previousMallId = useRef<string | null>(null);
   useEffect(() => {
+    if (previousMallId.current === mallId) return;
+    previousMallId.current = mallId;
     setName('');
     setLabel('');
     setEditingId(null);
     setLocaleDrafts({});
     setShowForm(false);
-  }, [mallId]);
+  }, [mallId, setShowForm]);
 
   useEffect(() => {
     void load();

@@ -269,7 +269,7 @@ export function MallStoresPage() {
         setLocaleDrafts({});
       }
     })();
-  }, [showAssign, editing?.id, accessToken, tenantId]);
+  }, [showAssign, editing, accessToken, tenantId, mallId]);
 
   const flushMallStoreTranslations = useCallback(
     async (storeId: string) => {

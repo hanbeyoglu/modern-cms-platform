@@ -149,7 +149,7 @@ export function GlobalStoresPage() {
         setLocaleDrafts({});
       }
     })();
-  }, [showForm, editing?.id, accessToken, tenantId]);
+  }, [showForm, editing, accessToken, tenantId]);
 
   const flushGlobalStoreTranslations = useCallback(
     async (storeId: string) => {

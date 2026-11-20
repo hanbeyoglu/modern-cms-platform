@@ -88,7 +88,7 @@ pnpm restore:postgres -- backups/postgres/<dosya>.sql.gz
 ## Medya (`storage/`)
 
 - **Yerel disk:** API `STORAGE_ROOT` (varsayılan `storage/`) altındaki dosyalar DB kayıtlarıyla ilişkilidir. Yedek: veritabanı ile birlikte bu dizinin kopyalanması (rsync, volume anlık görüntüsü).
-- **İleride S3 / Cloudflare R2:** Bucket yaşam döngüsü veya replikasyon; DB yedeği URL’leri korur, nesne içeriği ayrı yedeklenmelidir.
+- **Cloudflare R2:** Bucket yaşam döngüsü veya replikasyon; DB yedeği URL’leri korur, nesne içeriği ayrı yedeklenmelidir.
 - **CDN:** Admin SPA ve API `/uploads` önünde CDN kullanılıyorsa purge / TTL stratejisi tanımlayın.
 
 ## Operasyonel uyarılar (özet)
@@ -129,3 +129,11 @@ Her iki workflow’da **concurrency** vardır: aynı dal/ref için yeni commit g
 - `JWT_SECRET` üretimde en az **32** karakter (API başlangıcında doğrulanır).
 - Postgres ve Redis’i internete **açmayın** (`docker-compose.prod.yml` iç ağda `expose` kullanır).
 - `.env.production` dosyasını asla repoya eklemeyin.
+
+## Üretim ortamı ve medya
+
+`.env.production.example` yalnızca örnek değerler içerir; gerçek anahtarları `.env.production`
+dosyasında saklayın. Bu dosya Git ve Docker build bağlamından dışlanır.
+Compose, R2 ve TMDB ayarlarını API'ye aktarır. R2 kullanılmıyorsa yerel medya
+`modern-cms-media-data` volume'unda saklanır; bu volume'u da yedekleyin.
+OpenAPI üretimi veritabanı, Redis veya gerçek JWT anahtarı gerektirmez.

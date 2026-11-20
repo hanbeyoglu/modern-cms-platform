@@ -20,7 +20,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),
-        refreshSecret: config.getOrThrow<string>('JWT_REFRESH_SECRET'),
       }),
     }),
     AccessModule,

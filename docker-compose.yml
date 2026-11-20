@@ -113,7 +113,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "const Redis=require('ioredis');const u=process.env.REDIS_URL;const r=new Redis(u,{maxRetriesPerRequest:1,connectTimeout:3000});r.get('worker:heartbeat').then(v=>r.quit().then(()=>process.exit(v?0:1))).catch(()=>process.exit(1)))",
+          "const Redis=require('ioredis');const u=process.env.REDIS_URL;const r=new Redis(u,{maxRetriesPerRequest:1,connectTimeout:3000});r.get('worker:heartbeat').then(v=>r.quit().then(()=>process.exit(v?0:1))).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 10s

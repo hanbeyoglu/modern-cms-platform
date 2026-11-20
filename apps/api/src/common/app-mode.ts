@@ -8,6 +8,7 @@
 export type AppMode = 'default' | 'swagger';
 
 export type InfrastructureKind =
+  | 'database'
   | 'redis'
   | 'bullmq'
   | 'scheduler'
@@ -31,5 +32,6 @@ export function isSwaggerMode(): boolean {
 
 /** Whether the given infrastructure client should be initialized at boot. */
 export function shouldInitializeInfrastructure(_kind: InfrastructureKind): boolean {
+  void _kind;
   return !isSwaggerMode();
 }

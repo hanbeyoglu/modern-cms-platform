@@ -82,6 +82,9 @@ jobs:
       - name: Prisma migrate deploy
         run: pnpm --filter @modern-cms/api exec prisma migrate deploy
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -98,6 +101,11 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Regression tests
+        run: |
+          pnpm --filter @modern-cms/api test
+          pnpm --filter @modern-cms/admin test
 
       - name: Validate OpenAPI spec
         run: |

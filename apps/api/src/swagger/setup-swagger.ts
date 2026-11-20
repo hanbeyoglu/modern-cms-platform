@@ -26,7 +26,7 @@ export const DEVELOPER_PORTAL_PATH = '/developer';
 
 let cachedBaseDocument: OpenAPIObject | null = null;
 let cachedLocalized: Partial<Record<PortalLocale, OpenAPIObject>> = {};
-let cachedDeveloperLocalized: Partial<Record<PortalLocale, OpenAPIObject>> = {};
+const cachedDeveloperLocalized: Partial<Record<PortalLocale, OpenAPIObject>> = {};
 
 function getBaseDocument(app: INestApplication): OpenAPIObject {
   if (!cachedBaseDocument) {

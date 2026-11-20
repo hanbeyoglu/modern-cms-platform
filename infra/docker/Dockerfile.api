@@ -43,6 +43,8 @@ RUN groupadd --gid 1001 nodejs \
 
 COPY --from=build --chown=nestjs:nodejs /deploy /app
 
+RUN mkdir -p /app/storage && chown nestjs:nodejs /app/storage
+
 USER nestjs
 EXPOSE 4000
 

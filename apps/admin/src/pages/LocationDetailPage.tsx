@@ -61,7 +61,7 @@ export function LocationDetailPage() {
   const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
   const [i18nDirty, setI18nDirty] = useState(false);
 
-  const reload = () => {
+  const reload = useCallback(() => {
     if (!accessToken || !id) return;
     setLoading(true);
     apiLocationGet(accessToken, id)
@@ -89,9 +89,9 @@ export function LocationDetailPage() {
       })
       .catch((e: Error) => toast.error(e.message))
       .finally(() => setLoading(false));
-  };
+  }, [accessToken, id]);
 
-  useEffect(() => { reload(); }, [accessToken, id]);
+  useEffect(() => { reload(); }, [reload]);
 
   useEffect(() => {
     if (!accessToken || !activeTenantId || !id || !location) {
@@ -134,7 +134,7 @@ export function LocationDetailPage() {
         setLocaleDrafts({});
       }
     })();
-  }, [accessToken, activeTenantId, id, location?.id]);
+  }, [accessToken, activeTenantId, id, location]);
 
   useEffect(() => {
     if (!location || (!dirty && !i18nDirty)) return;

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import type { Locale, Mall, Tenant } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TranslationResolverService } from '../translation-resolver/translation-resolver.service';
@@ -37,6 +37,13 @@ export class PublicContextService {
     if (!tenant) throw new NotFoundException('Tenant not found');
     if (tenant.status !== 'ACTIVE') {
       throw new BadRequestException('Tenant is not active');
+    }
+
+    const security = await this.prisma.tenantSetting.findUnique({
+      where: { tenantId_key: { tenantId: tenant.id, key: 'security' } },
+    });
+    if ((security?.value as { maintenanceMode?: boolean } | null)?.maintenanceMode === true) {
+      throw new ServiceUnavailableException('Site bakım modunda');
     }
 
     let mall: Pick<Mall, 'id' | 'name' | 'slug' | 'status'> | undefined;

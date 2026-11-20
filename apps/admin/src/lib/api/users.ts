@@ -125,6 +125,7 @@ export function apiUserRemoveMembership(
 export function apiUserResetPassword(
   token: string,
   userId: string,
+  newPassword: string,
 ): Promise<{ success: boolean; message: string }> {
-  return request(`/users/${userId}/reset-password`, { method: 'POST', token });
+  return request(`/users/${userId}/reset-password`, { method: 'POST', body: JSON.stringify({ newPassword }), token });
 }

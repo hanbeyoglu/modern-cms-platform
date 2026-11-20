@@ -1,7 +1,7 @@
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import * as path from 'node:path';
-import { Logger } from '@nestjs/common';
+import { BadRequestException, Logger } from '@nestjs/common';
 import { StorageProvider, UploadInput, UploadResult } from './storage.provider';
 
 export interface LocalStorageConfig {
@@ -47,16 +47,19 @@ export class LocalStorageProvider extends StorageProvider {
   ensureRootExists(): void {
     if (!existsSync(this.root)) {
       // synchronous at startup only
-      require('node:fs').mkdirSync(this.root, { recursive: true });
+      mkdirSync(this.root, { recursive: true });
     }
   }
 
   /**
-   * Prevent path-traversal: strip any leading ../ sequences from the key
-   * before joining with the storage root.
+   * Reject keys that could escape the configured storage directory.
    */
   private safePath(key: string): string {
-    const normalized = path.normalize(key).replace(/^(\.\.[/\\])+/, '');
-    return path.join(this.root, normalized);
+    const root = path.resolve(this.root);
+    const fullPath = path.resolve(root, key);
+    if (!key || key.includes('\\') || path.isAbsolute(key) || !fullPath.startsWith(`${root}${path.sep}`)) {
+      throw new BadRequestException('Geçersiz medya dosyası yolu');
+    }
+    return fullPath;
   }
 }

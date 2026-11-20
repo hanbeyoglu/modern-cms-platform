@@ -284,7 +284,7 @@ export function PageDetailPage() {
         setLocaleDrafts({});
       }
     })();
-  }, [accessToken, activeTenantId, id, page?.id]);
+  }, [accessToken, activeTenantId, activeMallId, id, page?.id]);
 
   useEffect(() => {
     if (!page || (!i18nDirty && !pageFormDirty)) return;

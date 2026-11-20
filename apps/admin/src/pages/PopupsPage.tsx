@@ -137,6 +137,34 @@ export function PopupsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const tenantId = mallCtx.status === 'ready' ? mallCtx.tenantId : '';
+  const mallId = mallCtx.status === 'ready' ? mallCtx.mallId : '';
+
+  const load = useCallback(async () => {
+    if (!accessToken || !tenantId || !mallId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiPopupsList(accessToken, tenantId, {
+        mallId,
+        status: filterStatus || undefined,
+        search: filterSearch || undefined,
+        limit: 50,
+      });
+      setRows(data.popups);
+      setTotal(data.total);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Popuplar yüklenemedi');
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken, tenantId, mallId, filterStatus, filterSearch]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+
   if (mallCtx.status === 'no-tenant') {
     return (
       <PageContainer>
@@ -169,33 +197,6 @@ export function PopupsPage() {
       </PageContainer>
     );
   }
-
-  const { tenantId, mallId } = mallCtx;
-
-  const load = useCallback(async () => {
-    if (!accessToken) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiPopupsList(accessToken, tenantId, {
-        mallId,
-        status: filterStatus || undefined,
-        search: filterSearch || undefined,
-        limit: 50,
-      });
-      setRows(data.popups);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Popuplar yüklenemedi');
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken, tenantId, mallId, filterStatus, filterSearch]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
 
   const inputStyle: CSSProperties = {
     width: '100%',

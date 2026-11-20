@@ -170,7 +170,7 @@ export function MallStoreCategoriesSection({
         setLocaleDrafts({});
       }
     })();
-  }, [showForm, editing?.id, accessToken, tenantId, mallId, canReadTranslations]);
+  }, [showForm, editing, accessToken, tenantId, mallId, canReadTranslations]);
 
   function resetForm() {
     setEditing(null);

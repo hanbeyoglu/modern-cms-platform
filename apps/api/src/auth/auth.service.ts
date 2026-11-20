@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
+import { assertPasswordPolicy, getSecurityPolicy } from '../common/security-policy';
 import type { User } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -60,8 +61,8 @@ export class AuthService {
       throw new UnauthorizedException('Geçersiz kimlik bilgileri');
     }
 
-    const accessToken = await this.signAccessToken(user);
-    const expiresIn = this.getAccessExpiresSeconds();
+    const expiresIn = await this.accessExpiresSeconds(user.id);
+    const accessToken = await this.signAccessToken(user, expiresIn);
     const refreshToken = await this.issueRefreshToken(user.id, meta);
 
     await this.audit.logAction({
@@ -104,18 +105,22 @@ export class AuthService {
       throw new UnauthorizedException('Geçersiz yenileme belirteci');
     }
 
-    await this.prisma.refreshToken.update({
-      where: { id: existing.id },
+    const claimed = await this.prisma.refreshToken.updateMany({
+      where: { id: existing.id, revokedAt: null, expiresAt: { gt: new Date() } },
       data: { revokedAt: new Date() },
     });
+    if (claimed.count !== 1) {
+      throw new UnauthorizedException('Geçersiz yenileme belirteci');
+    }
 
-    const accessToken = await this.signAccessToken(user);
+    const expiresIn = await this.accessExpiresSeconds(user.id);
+    const accessToken = await this.signAccessToken(user, expiresIn);
     const newRefresh = await this.issueRefreshToken(user.id, meta);
 
     return {
       accessToken,
       refreshToken: newRefresh,
-      expiresIn: this.getAccessExpiresSeconds(),
+      expiresIn,
     };
   }
 
@@ -125,7 +130,7 @@ export class AuthService {
       user.isSuperAdmin === true
         ? []
         : await this.prisma.tenantUser.findMany({
-            where: { userId: user.id, deletedAt: null },
+            where: { userId: user.id, deletedAt: null, isActive: true, role: { isActive: true }, tenant: { deletedAt: null, status: 'ACTIVE' } },
             include: {
               tenant: true,
               role: {
@@ -238,6 +243,8 @@ export class AuthService {
     const ok = await bcrypt.compare(dto.currentPassword, user.passwordHash);
     if (!ok) throw new BadRequestException('Mevcut şifre yanlış');
 
+    const policy = await getSecurityPolicy(this.prisma, { userId: user.id });
+    assertPasswordPolicy(dto.newPassword, policy.passwordPolicy);
     const newHash = await bcrypt.hash(dto.newPassword, 12);
     await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash: newHash } });
 
@@ -257,9 +264,14 @@ export class AuthService {
     return { success: true };
   }
 
-  private async signAccessToken(user: User): Promise<string> {
+  private async signAccessToken(user: User, expiresIn: number): Promise<string> {
     const payload: JwtPayload = { sub: user.id, email: user.email };
-    return this.jwt.signAsync(payload);
+    return this.jwt.signAsync(payload, { expiresIn });
+  }
+
+  private async accessExpiresSeconds(userId: string): Promise<number> {
+    const policy = await getSecurityPolicy(this.prisma, { userId });
+    return Math.min(this.getAccessExpiresSeconds(), policy.sessionTimeoutMinutes * 60);
   }
 
   private getAccessExpiresSeconds(): number {
@@ -275,8 +287,9 @@ export class AuthService {
     const token = randomBytes(48).toString('hex');
     const tokenHash = this.hashToken(token);
     const days = Number(this.config.get<string>('JWT_REFRESH_TTL_DAYS', '30'));
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + (Number.isFinite(days) && days > 0 ? days : 30));
+    const policy = await getSecurityPolicy(this.prisma, { userId });
+    const ttlMs = Math.min((Number.isFinite(days) && days > 0 ? days : 30) * 86400000, policy.sessionTimeoutMinutes * 60000);
+    const expiresAt = new Date(Date.now() + ttlMs);
 
     await this.prisma.refreshToken.create({
       data: {

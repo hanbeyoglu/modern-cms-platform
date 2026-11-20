@@ -90,3 +90,22 @@ Redis:
 - **Docker servisleri:** `docker compose ps` ile durumu kontrol edin; durdurmak için `docker compose stop postgres redis` kullanabilirsiniz.
 - **`Cannot find module` / eksik `dist`:** `pnpm dev` zaten `tsconfig*.tsbuildinfo` siliyor; hâlâ sorun varsa `apps/api` içinde `rm -rf dist` deyip `pnpm --filter @modern-cms/api dev` ile yeniden deneyin.
 - **Constructor’da `undefined` (ör. `ConfigService`):** API’yi `tsx` ile `src/main.ts` üzerinden çalıştırmayın; yerel için yalnızca `nest start --watch` kullanın (yukarıdaki komut). Nest DI duman testi (`smoke-di`) için de **`tsx` kullanmayın**; önce `pnpm --filter @modern-cms/api build`, ardından `pnpm --filter @modern-cms/api smoke:di:dist` (`node dist/smoke-di.js`).
+
+## Değişiklikleri doğrulama
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm build
+pnpm test
+pnpm compose:config
+```
+
+`pnpm test`, API'yi bağımlılıklarıyla derler ve API/admin regresyon testlerini çalıştırır.
+API testleri derlenmiş sınıfları ve kontrollü veritabanı taklitlerini kullanır;
+gerçek PostgreSQL, Redis ve tarayıcı üzerinden uçtan uca doğrulamanın yerini almaz.
+Postgres ve Redis çalışırken Nest modül bağlantılarını ayrıca doğrulayın:
+
+```bash
+pnpm --filter @modern-cms/api smoke:di:dist
+```

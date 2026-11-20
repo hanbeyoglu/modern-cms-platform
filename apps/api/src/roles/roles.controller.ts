@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -34,8 +35,10 @@ export class RolesController {
     related: [SWAGGER_TAGS.PERMISSIONS, SWAGGER_TAGS.TENANTS],
   })
   @ApiResponse({ status: 200, description: 'role.response.200' })
-  list(@CurrentUser() actor: User, @Query('tenantId') tenantId?: string) {
-    return this.roles.list(actor, tenantId);
+  list(@CurrentUser() actor: User, @Query('tenantId') tenantId?: string,
+    @Headers('x-tenant-id') contextTenantId?: string,
+  ) {
+    return this.roles.list(actor, tenantId, contextTenantId);
   }
 
   @Get('permissions')
@@ -57,8 +60,10 @@ export class RolesController {
     related: [SWAGGER_TAGS.PERMISSIONS],
   })
   @ApiResponse({ status: 200, description: 'role.response.200' })
-  findOne(@CurrentUser() actor: User, @Param('id') id: string) {
-    return this.roles.findOne(actor, id);
+  findOne(@CurrentUser() actor: User, @Param('id') id: string,
+    @Headers('x-tenant-id') contextTenantId?: string,
+  ) {
+    return this.roles.findOne(actor, id, contextTenantId);
   }
 
   @Post()
@@ -68,8 +73,10 @@ export class RolesController {
     related: [SWAGGER_TAGS.PERMISSIONS],
   })
   @ApiResponse({ status: 201, description: 'role.response.201' })
-  create(@CurrentUser() actor: User, @Body() dto: CreateRoleDto) {
-    return this.roles.create(actor, dto);
+  create(@CurrentUser() actor: User, @Body() dto: CreateRoleDto,
+    @Headers('x-tenant-id') contextTenantId?: string,
+  ) {
+    return this.roles.create(actor, dto, contextTenantId);
   }
 
   @Patch(':id')
@@ -77,8 +84,10 @@ export class RolesController {
   @ApiUuidParam('id', 'common.param.uuid')
   @ApiAdminOperation({ summary: 'role.update.summary', permissions: ['role:update'] })
   @ApiResponse({ status: 200, description: 'role.response.200' })
-  update(@CurrentUser() actor: User, @Param('id') id: string, @Body() dto: UpdateRoleDto) {
-    return this.roles.update(actor, id, dto);
+  update(@CurrentUser() actor: User, @Param('id') id: string, @Body() dto: UpdateRoleDto,
+    @Headers('x-tenant-id') contextTenantId?: string,
+  ) {
+    return this.roles.update(actor, id, dto, contextTenantId);
   }
 
   @Patch(':id/permissions')
@@ -93,8 +102,9 @@ export class RolesController {
     @CurrentUser() actor: User,
     @Param('id') id: string,
     @Body() dto: UpdateRolePermissionsDto,
+    @Headers('x-tenant-id') contextTenantId?: string,
   ) {
-    return this.roles.updatePermissions(actor, id, dto);
+    return this.roles.updatePermissions(actor, id, dto, contextTenantId);
   }
 
   @Post(':id/clone')
@@ -102,8 +112,10 @@ export class RolesController {
   @ApiUuidParam('id', 'common.param.uuid')
   @ApiAdminOperation({ summary: 'role.clone.summary', permissions: ['role:create'] })
   @ApiResponse({ status: 201, description: 'role.response.201' })
-  clone(@CurrentUser() actor: User, @Param('id') id: string, @Body() dto: CloneRoleDto) {
-    return this.roles.clone(actor, id, dto);
+  clone(@CurrentUser() actor: User, @Param('id') id: string, @Body() dto: CloneRoleDto,
+    @Headers('x-tenant-id') contextTenantId?: string,
+  ) {
+    return this.roles.clone(actor, id, dto, contextTenantId);
   }
 
   @Delete(':id')
@@ -111,7 +123,9 @@ export class RolesController {
   @ApiUuidParam('id', 'common.param.uuid')
   @ApiAdminOperation({ summary: 'role.delete.summary', permissions: ['role:delete'] })
   @ApiResponse({ status: 200, description: 'role.response.200' })
-  remove(@CurrentUser() actor: User, @Param('id') id: string) {
-    return this.roles.remove(actor, id);
+  remove(@CurrentUser() actor: User, @Param('id') id: string,
+    @Headers('x-tenant-id') contextTenantId?: string,
+  ) {
+    return this.roles.remove(actor, id, contextTenantId);
   }
 }

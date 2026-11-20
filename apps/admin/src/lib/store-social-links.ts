@@ -46,7 +46,6 @@ export function validateStoreSocialLinks(links: StoreSocialLink[]): string | nul
   const seen = new Set<string>();
   for (const link of links) {
     try {
-      // eslint-disable-next-line no-new
       new URL(link.url);
     } catch {
       return `Geçersiz URL: ${link.url}`;

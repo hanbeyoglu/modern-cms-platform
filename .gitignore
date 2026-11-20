@@ -10,3 +10,7 @@ coverage
 *.tsbuildinfo
 packages/config/dist
 apps/api/openapi
+
+# Runtime credentials; keep only example templates under version control.
+.env.*
+!.env*.example

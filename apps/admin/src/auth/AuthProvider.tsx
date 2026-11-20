@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useReducer, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, type ReactNode } from 'react';
+import { request, setApiContext, setSessionRefresher } from '../lib/api/client';
 import { apiMe, apiTenants, apiMalls, onUnauthorized, type Mall, type Tenant } from '../lib/api';
 import {
   AuthContext,
@@ -13,6 +14,7 @@ import { mallsFromMembership } from './mall-context';
 
 type Action =
   | { type: 'SET_SESSION'; accessToken: string; refreshToken: string; email: string }
+  | { type: 'REFRESH_SESSION'; accessToken: string; refreshToken: string }
   | { type: 'CLEAR_SESSION' }
   | { type: 'SET_PROFILE'; user: AuthUser; tenants: Tenant[] }
   | { type: 'SET_MALLS'; tenantId: string; malls: Mall[] }
@@ -46,6 +48,8 @@ function resolveActiveMallId(
 
 function reducer(state: AuthState, action: Action): AuthState {
   switch (action.type) {
+    case 'REFRESH_SESSION':
+      return { ...state, accessToken: action.accessToken, refreshToken: action.refreshToken };
     case 'SET_SESSION':
       return {
         ...state,
@@ -157,6 +161,25 @@ function reducer(state: AuthState, action: Action): AuthState {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialAuthState);
+
+  useLayoutEffect(() => {
+    setApiContext(state.activeTenantId, state.activeMallId);
+    return () => setApiContext(null, null);
+  }, [state.activeTenantId, state.activeMallId]);
+
+  useLayoutEffect(() => {
+    let cancelled = false;
+    setSessionRefresher(state.refreshToken ? async () => {
+      const tokens = await request<{ accessToken: string; refreshToken: string }>('/auth/refresh', {
+        method: 'POST', body: JSON.stringify({ refreshToken: state.refreshToken }),
+      });
+      if (cancelled) throw new Error('Oturum değişti');
+      persistTokens({ ...tokens, email: state.email });
+      dispatch({ type: 'REFRESH_SESSION', ...tokens });
+      return tokens.accessToken;
+    } : undefined);
+    return () => { cancelled = true; setSessionRefresher(undefined); };
+  }, [state.refreshToken, state.email]);
 
   // Auto-load profile whenever access token changes
   useEffect(() => {

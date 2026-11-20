@@ -1,5 +1,6 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { User } from '@prisma/client';
+import { AccessService } from '../access/access.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import type { UpdateGeneralSettingsDto, UpdateSecuritySettingsDto } from './dto/update-settings.dto';
@@ -26,10 +27,11 @@ export class SettingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly access: AccessService,
   ) {}
 
   async getSettings(actor: User, tenantId: string) {
-    await this.assertAccess(actor, tenantId);
+    await this.assertAccess(actor, tenantId, 'settings:read');
 
     const rows = await this.prisma.tenantSetting.findMany({ where: { tenantId } });
     const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
@@ -37,12 +39,12 @@ export class SettingsService {
     return {
       tenantId,
       general: { ...GENERAL_DEFAULTS, ...(map.general as JsonObject ?? {}) },
-      security: { ...SECURITY_DEFAULTS, ...(map.security as JsonObject ?? {}) },
+      security: { ...SECURITY_DEFAULTS, ...(map.security as JsonObject ?? {}), allowPublicRegistration: false },
     };
   }
 
   async updateGeneralSettings(actor: User, tenantId: string, dto: UpdateGeneralSettingsDto) {
-    await this.assertAccess(actor, tenantId);
+    await this.assertAccess(actor, tenantId, 'settings:update');
 
     const current = await this.getSettings(actor, tenantId);
     const next = { ...current.general, ...dto };
@@ -67,10 +69,13 @@ export class SettingsService {
   }
 
   async updateSecuritySettings(actor: User, tenantId: string, dto: UpdateSecuritySettingsDto) {
-    await this.assertAccess(actor, tenantId);
+    await this.assertAccess(actor, tenantId, 'settings:update');
 
     const current = await this.getSettings(actor, tenantId);
-    const next = { ...current.security, ...dto };
+    if (dto.allowPublicRegistration) {
+      throw new BadRequestException('CMS kullanıcıları yönetici tarafından oluşturulur; halka açık kayıt desteklenmiyor');
+    }
+    const next = { ...current.security, ...dto, allowPublicRegistration: false };
 
     await this.prisma.tenantSetting.upsert({
       where: { tenantId_key: { tenantId, key: 'security' } },
@@ -91,7 +96,7 @@ export class SettingsService {
     return this.getSettings(actor, tenantId);
   }
 
-  private async assertAccess(actor: User, tenantId: string): Promise<void> {
+  private async assertAccess(actor: User, tenantId: string, permission: string): Promise<void> {
     if (actor.isSuperAdmin) {
       const tenant = await this.prisma.tenant.findFirst({ where: { id: tenantId, deletedAt: null } });
       if (!tenant) throw new NotFoundException('Tenant bulunamadı');
@@ -99,8 +104,10 @@ export class SettingsService {
     }
 
     const tu = await this.prisma.tenantUser.findFirst({
-      where: { userId: actor.id, tenantId, deletedAt: null },
+      where: { userId: actor.id, tenantId, deletedAt: null, isActive: true, role: { isActive: true }, tenant: { status: 'ACTIVE', deletedAt: null } },
     });
     if (!tu) throw new ForbiddenException('Bu tenant için erişim yok');
+    const permissions = await this.access.getEffectivePermissionCodes(actor, tenantId);
+    if (!permissions.has(permission)) throw new ForbiddenException(`Eksik yetki: ${permission}`);
   }
 }

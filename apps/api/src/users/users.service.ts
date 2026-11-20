@@ -5,12 +5,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { assertPasswordPolicy, getSecurityPolicy } from '../common/security-policy';
 import * as bcrypt from 'bcrypt';
 import { AuditSeverity, type User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import type { ListUsersDto } from './dto/list-users.dto';
 import type { CreateUserDto } from './dto/create-user.dto';
+import type { ResetPasswordDto } from './dto/reset-password.dto';
 import type { UpdateUserDto, UpdateUserStatusDto } from './dto/update-user.dto';
 import type { CreateMembershipDto, UpdateMembershipDto } from './dto/membership.dto';
 
@@ -21,11 +23,11 @@ export class UsersService {
     private readonly audit: AuditLogService,
   ) {}
 
-  async list(actor: User, query: ListUsersDto) {
+  async list(actor: User, query: ListUsersDto, contextTenantId?: string) {
     const { search, roleId, tenantId, mallId, status } = query;
 
     // Non-super admins can only see users in their tenant
-    const scopedTenantId = actor.isSuperAdmin ? tenantId : await this.resolveSingleTenantId(actor);
+    const scopedTenantId = actor.isSuperAdmin ? tenantId : await this.resolveSingleTenantId(actor, contextTenantId);
 
     const where: Record<string, unknown> = { deletedAt: null };
     if (status) where.status = status;
@@ -72,7 +74,7 @@ export class UsersService {
     return { users: users.map((u) => this.formatUser(u)) };
   }
 
-  async findOne(actor: User, userId: string) {
+  async findOne(actor: User, userId: string, contextTenantId?: string) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
       include: {
@@ -92,7 +94,7 @@ export class UsersService {
     if (!user) throw new NotFoundException('Kullanıcı bulunamadı');
 
     if (!actor.isSuperAdmin) {
-      const actorTenantId = await this.resolveSingleTenantId(actor);
+      const actorTenantId = await this.resolveSingleTenantId(actor, contextTenantId);
       const inSameTenant = user.tenantUsers.some((tu) => tu.tenantId === actorTenantId);
       if (!inSameTenant) throw new ForbiddenException('Bu kullanıcıya erişim yok');
     }
@@ -100,7 +102,7 @@ export class UsersService {
     return this.formatUser(user);
   }
 
-  async create(actor: User, dto: CreateUserDto) {
+  async create(actor: User, dto: CreateUserDto, contextTenantId?: string) {
     const existing = await this.prisma.user.findFirst({
       where: { email: dto.email.toLowerCase() },
     });
@@ -108,12 +110,20 @@ export class UsersService {
 
     // Non-super admins can only create users in their own tenant
     if (!actor.isSuperAdmin && dto.tenantId) {
-      const actorTenantId = await this.resolveSingleTenantId(actor);
+      const actorTenantId = await this.resolveSingleTenantId(actor, contextTenantId);
       if (dto.tenantId !== actorTenantId) {
         throw new ForbiddenException('Yalnızca kendi tenant\'ınızda kullanıcı oluşturabilirsiniz');
       }
     }
 
+    if (Boolean(dto.tenantId) !== Boolean(dto.roleId) || (!actor.isSuperAdmin && !dto.tenantId)) {
+      throw new BadRequestException('Kullanıcı için tenant ve rol birlikte seçilmelidir');
+    }
+    const assignment = dto.tenantId && dto.roleId
+      ? await this.validateMembershipAssignment(actor, { tenantId: dto.tenantId, roleId: dto.roleId, mallIds: dto.mallIds }, contextTenantId)
+      : undefined;
+    const policy = await getSecurityPolicy(this.prisma, dto.tenantId ? { tenantId: dto.tenantId } : { userId: actor.id });
+    assertPasswordPolicy(dto.password, policy.passwordPolicy);
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const user = await this.prisma.user.create({
       data: {
@@ -122,16 +132,9 @@ export class UsersService {
         firstName: dto.firstName,
         lastName: dto.lastName,
         status: 'ACTIVE',
+        ...(assignment ? { tenantUsers: { create: assignment } } : {}),
       },
     });
-
-    if (dto.tenantId && dto.roleId) {
-      await this.addMembership(actor, user.id, {
-        tenantId: dto.tenantId,
-        roleId: dto.roleId,
-        mallIds: dto.mallIds,
-      });
-    }
 
     await this.audit.logAction({
       userId: actor.id,
@@ -141,11 +144,12 @@ export class UsersService {
       after: { email: user.email, firstName: user.firstName, lastName: user.lastName },
     });
 
-    return this.findOne(actor, user.id);
+    return this.findOne(actor, user.id, contextTenantId);
   }
 
-  async update(actor: User, userId: string, dto: UpdateUserDto) {
-    const user = await this.findOne(actor, userId);
+  async update(actor: User, userId: string, dto: UpdateUserDto, contextTenantId?: string) {
+    const user = await this.findOne(actor, userId, contextTenantId);
+    this.assertCanManageAccount(actor, user, contextTenantId);
 
     const before = { firstName: user.firstName, lastName: user.lastName };
     const updated = await this.prisma.user.update({
@@ -162,14 +166,15 @@ export class UsersService {
       after: { firstName: dto.firstName, lastName: dto.lastName },
     });
 
-    return this.findOne(actor, updated.id);
+    return this.findOne(actor, updated.id, contextTenantId);
   }
 
-  async updateStatus(actor: User, userId: string, dto: UpdateUserStatusDto) {
+  async updateStatus(actor: User, userId: string, dto: UpdateUserStatusDto, contextTenantId?: string) {
     if (userId === actor.id) {
       throw new BadRequestException('Kendi hesabınızın durumunu değiştiremezsiniz');
     }
-    const user = await this.findOne(actor, userId);
+    const user = await this.findOne(actor, userId, contextTenantId);
+    this.assertCanManageAccount(actor, user, contextTenantId);
 
     await this.prisma.user.update({
       where: { id: userId },
@@ -188,42 +193,16 @@ export class UsersService {
     return { success: true, status: dto.status };
   }
 
-  async addMembership(actor: User, userId: string, dto: CreateMembershipDto) {
-    if (!actor.isSuperAdmin) {
-      const actorTenantId = await this.resolveSingleTenantId(actor);
-      if (dto.tenantId !== actorTenantId) {
-        throw new ForbiddenException('Yalnızca kendi tenant\'ınızda üyelik oluşturabilirsiniz');
-      }
-    }
-
-    const tenant = await this.prisma.tenant.findFirst({
-      where: { id: dto.tenantId, deletedAt: null },
-    });
-    if (!tenant) throw new NotFoundException('Tenant bulunamadı');
-
-    const role = await this.prisma.role.findFirst({
-      where: { id: dto.roleId, isActive: true },
-    });
-    if (!role) throw new NotFoundException('Rol bulunamadı');
-
+  async addMembership(actor: User, userId: string, dto: CreateMembershipDto, contextTenantId?: string) {
+    const assignment = await this.validateMembershipAssignment(actor, dto, contextTenantId);
     const existing = await this.prisma.tenantUser.findFirst({
       where: { tenantId: dto.tenantId, userId, deletedAt: null },
     });
     if (existing) throw new ConflictException('Bu kullanıcı zaten bu tenant\'ta üye');
 
     const membership = await this.prisma.tenantUser.create({
-      data: { tenantId: dto.tenantId, userId, roleId: dto.roleId, isActive: true },
+      data: { userId, ...assignment },
     });
-
-    if (dto.mallIds?.length) {
-      const malls = await this.prisma.mall.findMany({
-        where: { id: { in: dto.mallIds }, tenantId: dto.tenantId, deletedAt: null },
-      });
-      await this.prisma.userMallAccess.createMany({
-        data: malls.map((m) => ({ tenantUserId: membership.id, mallId: m.id })),
-        skipDuplicates: true,
-      });
-    }
 
     await this.audit.logAction({
       userId: actor.id,
@@ -241,17 +220,26 @@ export class UsersService {
     actor: User,
     userId: string,
     membershipId: string,
-    dto: UpdateMembershipDto,
-  ) {
+    dto: UpdateMembershipDto, contextTenantId?: string) {
     const membership = await this.prisma.tenantUser.findFirst({
       where: { id: membershipId, userId, deletedAt: null },
     });
     if (!membership) throw new NotFoundException('Üyelik bulunamadı');
 
     if (!actor.isSuperAdmin) {
-      const actorTenantId = await this.resolveSingleTenantId(actor);
+      const actorTenantId = await this.resolveSingleTenantId(actor, contextTenantId);
       if (membership.tenantId !== actorTenantId) {
         throw new ForbiddenException('Bu üyeliğe erişim yok');
+      }
+    }
+
+    if (dto.roleId !== undefined) {
+      const role = await this.prisma.role.findFirst({
+        where: { id: dto.roleId, isActive: true, OR: [{ tenantId: null }, { tenantId: membership.tenantId }] },
+      });
+      if (!role) throw new BadRequestException('Bu tenant için uygun rol bulunamadı');
+      if (!actor.isSuperAdmin && role.code === 'SUPER_ADMIN') {
+        throw new ForbiddenException('SUPER_ADMIN rolünü yalnızca platform yöneticisi atayabilir');
       }
     }
 
@@ -260,20 +248,18 @@ export class UsersService {
     if (dto.isActive !== undefined) updateData.isActive = dto.isActive;
 
     const before = { roleId: membership.roleId, isActive: membership.isActive };
-    await this.prisma.tenantUser.update({ where: { id: membershipId }, data: updateData });
-
     if (dto.mallIds !== undefined) {
-      await this.prisma.userMallAccess.deleteMany({ where: { tenantUserId: membershipId } });
-      if (dto.mallIds.length) {
-        const malls = await this.prisma.mall.findMany({
-          where: { id: { in: dto.mallIds }, tenantId: membership.tenantId, deletedAt: null },
-        });
-        await this.prisma.userMallAccess.createMany({
-          data: malls.map((m) => ({ tenantUserId: membershipId, mallId: m.id })),
-          skipDuplicates: true,
-        });
-      }
+      const mallIds = [...new Set(dto.mallIds)];
+      const malls = mallIds.length ? await this.prisma.mall.findMany({
+        where: { id: { in: mallIds }, tenantId: membership.tenantId, deletedAt: null },
+      }) : [];
+      if (malls.length !== mallIds.length) throw new BadRequestException('Seçilen AVM bu tenant içinde bulunamadı');
+      updateData.mallAccess = {
+        deleteMany: {},
+        create: malls.map((mall) => ({ mallId: mall.id })),
+      };
     }
+    await this.prisma.tenantUser.update({ where: { id: membershipId }, data: updateData });
 
     await this.audit.logAction({
       userId: actor.id,
@@ -288,14 +274,14 @@ export class UsersService {
     return { success: true };
   }
 
-  async removeMembership(actor: User, userId: string, membershipId: string) {
+  async removeMembership(actor: User, userId: string, membershipId: string, contextTenantId?: string) {
     const membership = await this.prisma.tenantUser.findFirst({
       where: { id: membershipId, userId, deletedAt: null },
     });
     if (!membership) throw new NotFoundException('Üyelik bulunamadı');
 
     if (!actor.isSuperAdmin) {
-      const actorTenantId = await this.resolveSingleTenantId(actor);
+      const actorTenantId = await this.resolveSingleTenantId(actor, contextTenantId);
       if (membership.tenantId !== actorTenantId) {
         throw new ForbiddenException('Bu üyeliğe erişim yok');
       }
@@ -317,22 +303,74 @@ export class UsersService {
     return { success: true };
   }
 
-  // Placeholder — real email sending deferred
-  async resetPassword(actor: User, userId: string) {
-    await this.findOne(actor, userId);
+  async resetPassword(actor: User, userId: string, dto: ResetPasswordDto, contextTenantId?: string) {
+    const user = await this.findOne(actor, userId, contextTenantId);
+    this.assertCanManageAccount(actor, user, contextTenantId);
+    const policy = await getSecurityPolicy(this.prisma, { userId });
+    assertPasswordPolicy(dto.newPassword, policy.passwordPolicy);
+    const passwordHash = await bcrypt.hash(dto.newPassword, 12);
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
     await this.audit.logAction({
       userId: actor.id,
-      action: 'password_reset_requested',
+      action: 'password_reset',
       entityType: 'user',
       entityId: userId,
       severity: AuditSeverity.SECURITY,
     });
-    return { success: true, message: 'Password reset token placeholder' };
+    return { success: true, message: 'Şifre değiştirildi; mevcut yenileme oturumları kapatıldı' };
   }
 
-  private async resolveSingleTenantId(actor: User): Promise<string> {
+  private assertCanManageAccount(actor: User, user: { isSuperAdmin: boolean; memberships: Array<{ tenantId: string }> }, contextTenantId?: string) {
+    if (!actor.isSuperAdmin && (user.isSuperAdmin || user.memberships.some((m) => m.tenantId !== contextTenantId))) {
+      throw new ForbiddenException('Bu hesabı yalnızca platform yöneticisi değiştirebilir');
+    }
+  }
+
+  private async validateMembershipAssignment(actor: User, dto: CreateMembershipDto, contextTenantId?: string) {
+    if (!actor.isSuperAdmin) {
+      const actorTenantId = await this.resolveSingleTenantId(actor, contextTenantId);
+      if (dto.tenantId !== actorTenantId) {
+        throw new ForbiddenException('Yalnızca kendi tenant\'ınızda üyelik oluşturabilirsiniz');
+      }
+    }
+
+    const tenant = await this.prisma.tenant.findFirst({
+      where: { id: dto.tenantId, deletedAt: null },
+    });
+    if (!tenant) throw new NotFoundException('Tenant bulunamadı');
+
+    const role = await this.prisma.role.findFirst({
+      where: { id: dto.roleId, isActive: true, OR: [{ tenantId: null }, { tenantId: dto.tenantId }] },
+    });
+    if (!role) throw new NotFoundException('Bu tenant için uygun rol bulunamadı');
+    if (!actor.isSuperAdmin && role.code === 'SUPER_ADMIN') {
+      throw new ForbiddenException('SUPER_ADMIN rolünü yalnızca platform yöneticisi atayabilir');
+    }
+
+
+    const mallIds = [...new Set(dto.mallIds ?? [])];
+    const malls = mallIds.length ? await this.prisma.mall.findMany({
+      where: { id: { in: mallIds }, tenantId: dto.tenantId, deletedAt: null },
+    }) : [];
+    if (malls.length !== mallIds.length) throw new BadRequestException('Seçilen AVM bu tenant içinde bulunamadı');
+    return {
+      tenantId: dto.tenantId,
+      roleId: dto.roleId,
+      isActive: true,
+      mallAccess: { create: malls.map((mall) => ({ mallId: mall.id })) },
+    };
+  }
+
+  private async resolveSingleTenantId(actor: User, contextTenantId?: string): Promise<string> {
+    if (!contextTenantId) throw new ForbiddenException('x-tenant-id başlığı gerekli');
     const tu = await this.prisma.tenantUser.findFirst({
-      where: { userId: actor.id, deletedAt: null },
+      where: { userId: actor.id, tenantId: contextTenantId, deletedAt: null, isActive: true, role: { isActive: true }, tenant: { deletedAt: null, status: 'ACTIVE' } },
       orderBy: { createdAt: 'asc' },
     });
     if (!tu) throw new ForbiddenException('Tenant üyeliği bulunamadı');
