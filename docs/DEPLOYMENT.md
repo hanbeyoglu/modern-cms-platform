@@ -1,6 +1,6 @@
 # Dağıtım Rehberi (Modern CMS)
 
-Bu belge Sprint 17–18 ile güncellenmiştir. Amaç: tek VM / tek host üzerinde **Docker Compose** ile üretim benzeri dağıtım; Kubernetes veya Terraform yok.
+Amaç: tek VM / tek host üzerinde **Docker Compose** ile üretim benzeri dağıtım; Kubernetes veya Terraform yok.
 
 ## Bileşenler
 
@@ -55,7 +55,7 @@ export SMOKE_PASSWORD=...
 pnpm smoke:prod
 ```
 
-Detaylar: `infra/scripts/smoke-prod.sh` ve `docs/SPRINT17.md`. Operasyonel adımlar: `docs/RUNBOOK.md`.
+Detaylar: `infra/scripts/smoke-prod.sh`. Operasyonel adımlar: `docs/RUNBOOK.md`.
 
 ## PostgreSQL yedekleme ve geri yükleme
 
@@ -122,7 +122,7 @@ Her iki workflow’da **concurrency** vardır: aynı dal/ref için yeni commit g
 ## Geri alma (rollback)
 
 - Önceki imaj tag’lerine dönün: `docker compose ... up -d` öncesi kullandığınız digest veya sürüm etiketini tutun.
-- Veritabanı: migrasyon geri alma için ters migration stratejisi veya yedekten dönüş planı tanımlayın; otomatik down migration yok. Yedek script’leri: `docs/SPRINT18.md`, `docs/RUNBOOK.md`.
+- Veritabanı: migrasyon geri alma için ters migration stratejisi veya yedekten dönüş planı tanımlayın; otomatik down migration yok. Yedek script’leri: `docs/RUNBOOK.md`.
 
 ## Güvenlik notları
 

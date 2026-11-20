@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 
 /**
  * Ranking weights applied on top of PostgreSQL `ts_rank`.
- * Documented in docs/SPRINT15.md — keep multipliers conservative and predictable.
+ * Keep multipliers conservative and predictable; see docs/ARCHITECTURE.md.
  */
 @Injectable()
 export class SearchRankingService {

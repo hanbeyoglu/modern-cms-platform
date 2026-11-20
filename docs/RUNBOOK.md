@@ -1,6 +1,6 @@
 # Operasyonel çalışma kitabı (Runbook)
 
-Modern CMS tek host / Docker Compose dağıtımı için günlük operasyon ve arıza adımları. Kubernetes yok. Ayrıntılı yedek stratejisi: `docs/DEPLOYMENT.md`, sprint özeti: `docs/SPRINT18.md`.
+Modern CMS tek host / Docker Compose dağıtımı için günlük operasyon ve arıza adımları. Kubernetes yok. Ayrıntılı dağıtım ve yedek stratejisi: `docs/DEPLOYMENT.md`.
 
 ## Servisleri başlatma
 

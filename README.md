@@ -41,9 +41,10 @@ Yerelde (varsayılan port): http://localhost:4000/developer
 
 Ayrıntılar: [docs/DEVELOPER_PORTAL.md](docs/DEVELOPER_PORTAL.md)
 
-## Sprint 1 (kimlik ve tenant temeli)
+## Dokümantasyon
 
-Ayrıntılar için: [docs/SPRINT1.md](docs/SPRINT1.md)
+Güncel geliştirme, mimari, entegrasyon ve operasyon rehberleri için
+[dokümantasyon dizinine](docs/README.md) bakın.
 
 ## Kurulum
 

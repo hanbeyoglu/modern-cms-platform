@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
  * Query + document normalization for FTS and slug-friendly tokens.
  * PostgreSQL `simple` text search config handles case-folding for Latin scripts;
  * we additionally trim and collapse whitespace. Full accent stripping uses DB
- * `unaccent` only when enabled (see SPRINT15); here we keep characters stable.
+ * `unaccent` only when enabled; here we keep characters stable.
  */
 @Injectable()
 export class SearchNormalizerService {
