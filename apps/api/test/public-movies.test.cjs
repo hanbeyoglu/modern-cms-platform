@@ -5,7 +5,7 @@ const { PublicController } = require('../dist/public/public.controller');
 
 const base = { listingStatus: 'NOW_PLAYING', tenantId: 'tenant', status: 'ACTIVE', deletedAt: null, publishStartAt: null,
   publishEndAt: null, title: 'Original', slug: 'original', description: 'Description',
-  durationMinutes: 120, releaseDate: new Date('2026-01-01'), ticketUrl: null,
+  durationMinutes: 120, releaseDate: new Date('2026-01-01'), ticketUrl: null, trailerUrl: null,
   posterMedia: null, posterPath: null, categories: [], providerRaw: { secret: 'private' } };
 
 // In-memory Prisma boundary: execute the query predicates and pagination against fixtures.
@@ -54,7 +54,7 @@ test('active films without sessions are public; inactive, deleted, foreign and u
   assert.deepEqual(result.items.map(movie => movie.id), ['no-sessions', 'in-window']);
   assert.equal(result.total, 2);
   assert.equal(result.items[0].poster, null);
-  assert.deepEqual(Object.keys(result.items[0]).sort(), ['id','title','slug','description','durationMinutes','releaseDate','ticketUrl','poster','posterPath','categories','listingStatus'].sort());
+  assert.deepEqual(Object.keys(result.items[0]).sort(), ['id','title','slug','description','durationMinutes','releaseDate','ticketUrl','trailerUrl','trailer','poster','posterPath','categories','listingStatus'].sort());
   assert.equal(result.items[0].posterPath, null);
   assert.equal(calls[0].select.posterPath, true);
   assert.equal(calls[0].select.providerRaw, undefined);
@@ -163,4 +163,22 @@ test('listingStatus filters before pagination and is isolated in cache', async (
   assert.deepEqual(soon.data.map(movie => movie.id), ['soon']);
   assert.equal(new Set(writes.map(row => row.key)).size, 2);
   await assert.rejects(api.getMovies('tenant', 'mall', 'tr', '1', '100', 'INVALID'), /Invalid listingStatus/);
+});
+
+test('public movies expose the stored trailer link and null when no trailer exists', async () => {
+  const { content, calls } = fixture([
+    { ...base, id: 'with-trailer', trailerUrl: 'https://www.youtube.com/watch?v=M7lc1UVf-VE' },
+    { ...base, id: 'without-trailer' },
+  ]);
+  const { api } = controller(content);
+  const { data } = await api.getMovies('tenant', 'mall', 'tr', '1', '100');
+  assert.equal(calls[0].select.trailerUrl, true);
+  assert.equal(data[0].trailerUrl, 'https://www.youtube.com/watch?v=M7lc1UVf-VE');
+  assert.deepEqual(data[0].trailer, {
+    provider: 'YOUTUBE', videoId: 'M7lc1UVf-VE',
+    url: 'https://www.youtube.com/watch?v=M7lc1UVf-VE',
+    embedUrl: 'https://www.youtube-nocookie.com/embed/M7lc1UVf-VE?rel=0&playsinline=1',
+  });
+  assert.equal(data[1].trailerUrl, null);
+  assert.equal(data[1].trailer, null);
 });

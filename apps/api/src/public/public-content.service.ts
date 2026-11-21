@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { resolveMovieTrailer } from './movie-trailer.util';
 import { Prisma, type MovieListingStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -662,7 +663,7 @@ export class PublicContentService {
         where,
         select: {
           id: true, title: true, slug: true, description: true, listingStatus: true,
-          durationMinutes: true, releaseDate: true, ticketUrl: true, posterPath: true,
+          durationMinutes: true, releaseDate: true, ticketUrl: true, trailerUrl: true, posterPath: true,
           posterMedia: { select: { id: true, publicUrl: true, altText: true } },
           categories: {
             where: { category: { tenantId: opts.tenantId } },
@@ -695,6 +696,8 @@ export class PublicContentService {
         durationMinutes: movie.durationMinutes,
         releaseDate: movie.releaseDate?.toISOString() ?? null,
         ticketUrl: movie.ticketUrl,
+        trailerUrl: movie.trailerUrl,
+        trailer: resolveMovieTrailer(movie.trailerUrl),
         posterPath: movie.posterPath,
         poster: movie.posterMedia ? {
           id: movie.posterMedia.id,

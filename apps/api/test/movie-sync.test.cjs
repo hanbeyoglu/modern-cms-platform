@@ -99,3 +99,16 @@ test('automatic archive reopens when movie returns to TMDB, manual archive/publi
   assert.equal(rows.find(row => row.id === 'editor-live').status, 'ACTIVE');
   assert.equal(rows.find(row => row.id === 'editor-live').listingStatus, 'NOW_PLAYING');
 });
+
+test('TMDB import stores official YouTube trailer and allows films without a trailer', async () => {
+  const { deps, provider, rows } = setup();
+  provider.getMovie = async id => ({ id, title: `Film ${id}`, videos: { results: id === 1 ? [
+    { key: 'teaser', site: 'YouTube', type: 'Teaser' },
+    { key: 'fan', site: 'YouTube', type: 'Trailer', official: false },
+    { key: 'official', site: 'YouTube', type: 'Trailer', official: true },
+  ] : [] } });
+  await importMovieFromProvider({ ...deps, userId: 'editor' }, 1);
+  await importMovieFromProvider({ ...deps, userId: 'editor' }, 2);
+  assert.equal(rows.find(row => row.tmdbId === 1).trailerUrl, 'https://www.youtube.com/watch?v=official');
+  assert.equal(rows.find(row => row.tmdbId === 2).trailerUrl, null);
+});

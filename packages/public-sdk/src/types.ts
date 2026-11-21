@@ -470,6 +470,13 @@ export interface CmsAnalyticsEvent {
   meta?: Record<string, string | number | boolean | null>;
 }
 
+export interface CmsMovieTrailer {
+  provider: 'YOUTUBE';
+  videoId: string;
+  url: string;
+  embedUrl: string;
+}
+
 export interface CmsMovie {
   listingStatus: 'NOW_PLAYING' | 'UPCOMING' | 'OTHER';
   id: string;
@@ -479,6 +486,8 @@ export interface CmsMovie {
   durationMinutes: number | null;
   releaseDate: string | null;
   ticketUrl: string | null;
+  trailerUrl: string | null;
+  trailer: CmsMovieTrailer | null;
   posterPath: string | null;
   poster: { id: string; url: string; alt: string | null } | null;
   categories: Array<{ id: string; name: string; slug: string }>;

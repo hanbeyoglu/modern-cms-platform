@@ -311,6 +311,13 @@ export interface PublicCinema {
   logo: PublicMediaAsset | null;
 }
 
+export interface PublicMovieTrailer {
+  provider: 'YOUTUBE';
+  videoId: string;
+  url: string;
+  embedUrl: string;
+}
+
 export interface PublicMovie {
   listingStatus: 'NOW_PLAYING' | 'UPCOMING' | 'OTHER';
   id: string;
@@ -320,6 +327,8 @@ export interface PublicMovie {
   durationMinutes: number | null;
   releaseDate: string | null;
   ticketUrl: string | null;
+  trailerUrl: string | null;
+  trailer: PublicMovieTrailer | null;
   posterPath: string | null;
   poster: { id: string; url: string; alt: string | null } | null;
   categories: Array<{ id: string; name: string; slug: string }>;

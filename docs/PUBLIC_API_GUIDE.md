@@ -776,3 +776,22 @@ TMDB senkronizasyonu ayarlardaki bölgeye göre **Vizyondakiler** ve **Yakında*
 Panelde Filmler sayfasındaki gösterim filtresi ve film formundaki gösterim seçimi aynı alanı kullanır. Gösterim/yayın durumu elle değiştirilmemiş TMDB filmleri senkronizasyonda listelere göre yönetilir. Panelden elle arşivleme, yayına alma ve gösterim durumu seçimi sonraki senkronizasyonlarda korunur. Manuel filmin gösterim durumunu kullanıcı belirler.
 
 Filmler paneli varsayılan olarak Vizyonda ve Yakında filmlerini gösterir (`view=CURRENT`). Arşiv sekmesi `view=ARCHIVE` kullanır. Arşivdeki film Vizyonda veya Yakında olarak yeniden yayına alınabilir. Public API arşivdeki filmleri döndürmez.
+
+Film yanıtındaki `trailerUrl: string | null`, CMS’te kayıtlı fragman bağlantısıdır. TMDB aktarımı resmi YouTube fragmanını, ardından diğer fragmanı ve son olarak teaser’ı tercih eder. Uygun video yoksa null gelir. Eski kayıtların fragmanını doldurmak için TMDB’den güncelleme/senkronizasyon çalıştırılabilir. Web sitesi bu bağlantıyı fragman oynatıcısında kullanabilir.
+
+### Fragman oynatma
+
+Film yanıtında `trailerUrl` ham bağlantısı korunur. Desteklenen YouTube bağlantılarında ayrıca `trailer: { provider: 'YOUTUBE', videoId, url, embedUrl }` döner. Web sitesi `trailer.embedUrl` değerini iframe `src` olarak kullanabilir; `trailer.url` harici izleme bağlantısıdır. Watch, youtu.be, embed, shorts ve live bağlantıları standart oynatıcı adresine çevrilir. Eksik, hatalı veya desteklenmeyen bağlantıda `trailer` null olur; bu durumda fragman butonunu gizleyebilir veya geçerli ham bağlantıyı harici açabilirsiniz.
+
+```tsx
+{movie.trailer && (
+  <iframe
+    src={movie.trailer.embedUrl}
+    title={`${movie.title} — Fragman`}
+    allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+    allowFullScreen
+  />
+)}
+```
+
+Otomatik oynatma varsayılan olarak açılmaz. API video dosyası sağlamaz; video sahibinin yerleştirme izni, bölge veya yaş kısıtı oynatmayı etkileyebilir. Böyle bir durumda `trailer.url` ile YouTube’da izleme seçeneği sunulabilir. Migration gerekmez.

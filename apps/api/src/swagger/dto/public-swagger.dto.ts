@@ -246,7 +246,16 @@ export class PublicMovieCategoryDto {
   @ApiProperty() slug!: string;
 }
 
+export class PublicMovieTrailerDto {
+  @ApiProperty({ enum: ['YOUTUBE'] }) provider!: 'YOUTUBE';
+  @ApiProperty({ example: 'M7lc1UVf-VE' }) videoId!: string;
+  @ApiProperty({ example: 'https://www.youtube.com/watch?v=M7lc1UVf-VE' }) url!: string;
+  @ApiProperty({ example: 'https://www.youtube-nocookie.com/embed/M7lc1UVf-VE?rel=0&playsinline=1' }) embedUrl!: string;
+}
+
 export class PublicMovieDto {
+  @ApiProperty({ type: PublicMovieTrailerDto, nullable: true, description: 'Normalized YouTube player data; null for missing or unsupported links. Embedding availability is controlled by the video publisher.' }) trailer!: PublicMovieTrailerDto | null;
+  @ApiProperty({ type: String, nullable: true, example: 'https://www.youtube.com/watch?v=example', description: 'Trailer URL from TMDB or manually entered in the CMS. Null when unavailable.' }) trailerUrl!: string | null;
   @ApiProperty({ enum: ['NOW_PLAYING', 'UPCOMING', 'OTHER'] }) listingStatus!: string;
   @ApiProperty() id!: string;
   @ApiProperty() title!: string;
