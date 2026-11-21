@@ -758,3 +758,19 @@ Varsayılan sayfa 1, limit 100, üst limit 100’dür. Tüm kayıtlar için `pag
 Kategori çevirileri için eklenen migration’ı yayın sırasında `prisma migrate deploy` ile uygulayın.
 
 Film afişlerinde önce `poster.url` kullanılır. `poster` null olduğunda web sitesi `posterPath` üzerinden TMDB görsel URL’sini oluşturabilir; iki alan da null olabilir.
+
+### Filmlerde gösterim ayrımı
+
+`listingStatus`, editöryal `ACTIVE`/`PASSIVE` durumundan bağımsızdır:
+
+| Değer | Anlamı |
+|---|---|
+| `NOW_PLAYING` | Vizyonda |
+| `UPCOMING` | Yakında |
+| `OTHER` | Diğer / henüz sınıflandırılmamış |
+
+Web sitesi `GET /public/movies?locale=tr&listingStatus=NOW_PLAYING&page=1&limit=100` ve `listingStatus=UPCOMING` istekleriyle iki bölümü ayrı listeleyebilir. Alan her filmin yanıtında da bulunur. Filtre verilmezse önceki gibi bütün aktif, silinmemiş ve yayın aralığı geçerli filmler gelir. Filtre, sayfalama ve toplam kayıt sayısı hesaplanmadan önce uygulanır; cache anahtarı da gösterim durumunu içerir. SDK: `client.getMovies({ listingStatus: 'UPCOMING', locale: 'tr' })`.
+
+TMDB senkronizasyonu ayarlardaki bölgeye göre **Vizyondakiler** ve **Yakında** listelerini alır; Popüler listesinden otomatik ekleme yapmaz. İki listede de bulunan film Vizyonda kabul edilir. Artık bu listelerde bulunmayan TMDB filmleri Diğer olarak işaretlenir; otomatik silinmez veya pasife alınmaz. Manuel filmler senkronizasyondan etkilenmez. Silinmiş TMDB filmleri otomatik geri gelmez; TMDB merkezinden açıkça tekrar içe aktarılırsa aynı kayıt geri açılır.
+
+Panelde Filmler sayfasındaki gösterim filtresi ve film formundaki gösterim seçimi aynı alanı kullanır. TMDB filminin gösterim durumu sonraki senkronizasyonda tekrar TMDB listelerine göre belirlenir; aktif/pasif seçimi korunur. Manuel filmin gösterim durumunu kullanıcı belirler.

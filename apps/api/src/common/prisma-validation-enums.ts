@@ -107,3 +107,5 @@ export const ANALYTICS_EVENT_TYPES = [
 ] as const;
 export const NOTIFICATION_TYPES = ['SYSTEM', 'CONTENT', 'SCHEDULING', 'ANALYTICS', 'SECURITY'] as const;
 export const NOTIFICATION_SEVERITIES = ['INFO', 'SUCCESS', 'WARNING', 'ERROR'] as const;
+
+export const MOVIE_LISTING_STATUSES = ['NOW_PLAYING', 'UPCOMING', 'OTHER'] as const;

@@ -2,6 +2,8 @@ import { appendLimitParam } from './constants';
 import { request } from './client';
 import type { MediaAsset } from './media';
 
+export type MovieListingStatus = 'NOW_PLAYING' | 'UPCOMING' | 'OTHER';
+
 export type MovieStatus = 'ACTIVE' | 'PASSIVE' | 'ARCHIVED';
 
 export type MovieMediaPreview = Pick<MediaAsset, 'id' | 'publicUrl' | 'originalName' | 'mimeType'>;
@@ -36,6 +38,7 @@ export type CmsMovie = {
   publishEndAt: string | null;
   sortOrder: number;
   status: MovieStatus;
+  listingStatus: MovieListingStatus;
   provider: 'TMDB' | 'MANUAL';
   tmdbId: number | null;
   tmdbVoteAverage: number | null;
@@ -76,6 +79,7 @@ export type CreateMoviePayload = {
   sortOrder?: number;
   categoryIds?: string[];
   status?: MovieStatus;
+  listingStatus?: MovieListingStatus;
 };
 
 export async function apiMoviesList(
@@ -83,6 +87,9 @@ export async function apiMoviesList(
   tenantId: string,
   opts?: {
     status?: MovieStatus;
+    listingStatus?: MovieListingStatus;
+    provider?: 'TMDB' | 'MANUAL';
+    categoryId?: string;
     search?: string;
     sortBy?: 'sortOrder' | 'title' | 'createdAt' | 'releaseDate';
     sortDir?: 'asc' | 'desc';
@@ -93,6 +100,9 @@ export async function apiMoviesList(
 ): Promise<MovieListResponse> {
   const params = new URLSearchParams();
   if (opts?.status) params.set('status', opts.status);
+  if (opts?.listingStatus) params.set('listingStatus', opts.listingStatus);
+  if (opts?.provider) params.set('provider', opts.provider);
+  if (opts?.categoryId) params.set('categoryId', opts.categoryId);
   if (opts?.search) params.set('search', opts.search);
   if (opts?.sortBy) params.set('sortBy', opts.sortBy);
   if (opts?.sortDir) params.set('sortDir', opts.sortDir);

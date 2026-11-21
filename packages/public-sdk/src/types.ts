@@ -471,6 +471,7 @@ export interface CmsAnalyticsEvent {
 }
 
 export interface CmsMovie {
+  listingStatus: 'NOW_PLAYING' | 'UPCOMING' | 'OTHER';
   id: string;
   title: string;
   slug: string;

@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient, MovieListingStatus } from '@prisma/client';
 import type { MovieProvider } from '../movie-provider.interface';
 import type { MovieProviderDetail } from '../types';
 import {
@@ -15,11 +15,14 @@ export type ImportMovieDeps = {
   tenantId: string;
   userId: string;
   tmdbProvider?: TmdbProvider;
+  listingStatus?: MovieListingStatus;
+  skipDeleted?: boolean;
 };
 
 export type ImportMovieResult = {
   movieId: string;
   created: boolean;
+  skipped?: boolean;
   tmdbId: number;
 };
 
@@ -41,7 +44,6 @@ async function uniqueSlug(prisma: PrismaClient, tenantId: string, base: string, 
       where: {
         tenantId,
         slug: candidate,
-        deletedAt: null,
         ...(excludeId ? { NOT: { id: excludeId } } : {}),
       },
       select: { id: true },
@@ -123,8 +125,12 @@ export async function importMovieFromProvider(
   const detail = await provider.getMovie(externalId);
 
   const existing = await prisma.movie.findFirst({
-    where: { tenantId, tmdbId: externalId, deletedAt: null },
+    where: { tenantId, tmdbId: externalId },
   });
+
+  if (existing?.deletedAt && deps.skipDeleted) {
+    return { movieId: existing.id, created: false, skipped: true, tmdbId: externalId };
+  }
 
   const categoryIds = await upsertGenreCategories(prisma, tenantId, detail.genreNames);
   const movieData = buildMovieData(detail, userId);
@@ -139,6 +145,8 @@ export async function importMovieFromProvider(
       where: { id: existing.id },
       data: {
         ...movieData,
+        deletedAt: null,
+        ...(deps.listingStatus && { listingStatus: deps.listingStatus }),
         slug,
         categories: {
           deleteMany: {},
@@ -154,6 +162,7 @@ export async function importMovieFromProvider(
         tenantId,
         slug,
         status: 'ACTIVE',
+        listingStatus: deps.listingStatus ?? 'OTHER',
         createdBy: userId,
         ...movieData,
         categories: {

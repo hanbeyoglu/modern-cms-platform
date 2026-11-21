@@ -1,3 +1,5 @@
+import type { MovieListingStatus } from '@prisma/client';
+import { MOVIE_LISTING_STATUSES } from '../common/prisma-validation-enums';
 import {
   BadRequestException,
   Controller,
@@ -665,6 +667,7 @@ export class PublicController {
   })
   @ApiLocaleQuery()
   @ApiPaginationQuery(100, 100)
+  @ApiQuery({ name: 'listingStatus', required: false, enum: [...MOVIE_LISTING_STATUSES], description: 'NOW_PLAYING: vizyondakiler, UPCOMING: yakında, OTHER: diğer filmler.' })
   @ApiResponse({ status: 200, description: 'public.response.200', type: PublicMoviesPaginatedDto })
   async getMovies(
     @Headers('x-tenant-id') tenantId: string | undefined,
@@ -672,16 +675,20 @@ export class PublicController {
     @Query('locale') locale: string | undefined,
     @Query('page') pageStr: string | undefined,
     @Query('limit') limitStr: string | undefined,
+    @Query('listingStatus') listingStatus?: string,
   ): Promise<PublicPaginatedEnvelope<PublicMovie>> {
+    if (listingStatus !== undefined && !MOVIE_LISTING_STATUSES.includes(listingStatus as MovieListingStatus)) {
+      throw new BadRequestException('Invalid listingStatus');
+    }
     const context = await this.ctx.resolve(tenantId, mallId, locale);
     if (!context.mallId) throw new BadRequestException('x-mall-id header is required for the movies endpoint');
     const { page, limit } = parsePagination(pageStr, limitStr, 100, 100);
-    const cacheKey = `public:${context.tenantId}:${context.mallId}:movies:p:${page}:n:${limit}` + lseg(context.locale?.code);
+    const cacheKey = `public:${context.tenantId}:${context.mallId}:movies:p:${page}:n:${limit}` + lseg(context.locale?.code) + `:listing:${listingStatus ?? 'all'}`;
     const cached = await this.cache.get<PublicPaginatedEnvelope<PublicMovie>>(cacheKey);
     if (cached) return cached;
     const { items, total } = await this.content.getMovies({
       tenantId: context.tenantId, mallId: context.mallId,
-      localeId: context.locale?.id, page, limit,
+      localeId: context.locale?.id, page, limit, listingStatus: listingStatus as MovieListingStatus | undefined,
     });
     const result = paginatedEnvelop(items, total, page, limit, context);
     await this.cache.set(cacheKey, result, TTL.list);

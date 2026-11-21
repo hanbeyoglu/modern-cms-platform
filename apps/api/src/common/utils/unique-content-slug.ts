@@ -85,7 +85,6 @@ export async function uniqueMovieSlug(
       where: {
         tenantId,
         slug,
-        deletedAt: null,
         ...(excludeId ? { NOT: { id: excludeId } } : {}),
       },
       select: { id: true },

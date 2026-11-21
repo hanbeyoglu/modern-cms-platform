@@ -1,5 +1,5 @@
-import type { MovieStatus } from '@prisma/client';
-import { MOVIE_STATUSES } from '../../common/prisma-validation-enums.js';
+import type { MovieStatus, MovieListingStatus } from '@prisma/client';
+import { MOVIE_STATUSES, MOVIE_LISTING_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
@@ -20,6 +20,18 @@ export class ListMoviesDto {
   @IsOptional()
   @IsIn(MOVIE_STATUSES)
   status?: MovieStatus;
+
+  @IsOptional()
+  @IsIn(MOVIE_LISTING_STATUSES)
+  listingStatus?: MovieListingStatus;
+
+  @IsOptional()
+  @IsIn(['TMDB', 'MANUAL'])
+  provider?: 'TMDB' | 'MANUAL';
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
 
   @IsOptional()
   @IsString()

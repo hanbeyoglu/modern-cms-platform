@@ -24,19 +24,11 @@ async function fetchAllPages(
 ): Promise<MovieProviderListItem[]> {
   const first = await fetchPage(1);
   const all = [...first.results];
-  for (let p = 2; p <= first.totalPages && p <= 5; p++) {
+  for (let p = 2; p <= first.totalPages; p++) {
     const next = await fetchPage(p);
     all.push(...next.results);
   }
   return all;
-}
-
-function dedupeById(items: MovieProviderListItem[]): MovieProviderListItem[] {
-  const map = new Map<number, MovieProviderListItem>();
-  for (const item of items) {
-    map.set(item.id, item);
-  }
-  return [...map.values()];
 }
 
 export async function runMovieSync(deps: RunMovieSyncDeps): Promise<MovieSyncRunResult> {
@@ -56,22 +48,28 @@ export async function runMovieSync(deps: RunMovieSyncDeps): Promise<MovieSyncRun
   const errors: string[] = [];
 
   try {
-    const [nowPlaying, upcoming, popular] = await Promise.all([
+    const [nowPlaying, upcoming] = await Promise.all([
       fetchAllPages((page) => provider.getNowPlaying(page)),
       fetchAllPages((page) => provider.getUpcoming(page)),
-      fetchAllPages((page) => provider.getPopular(page)),
     ]);
 
-    const availableIds = new Set(
-      dedupeById([...nowPlaying, ...upcoming, ...popular]).map((m) => m.id),
-    );
+    // NOW_PLAYING wins if a regional TMDB feed includes the same film in both lists.
+    const nowPlayingIds = new Set(nowPlaying.map((movie) => movie.id));
+    const availableIds = new Set([...nowPlaying, ...upcoming].map((movie) => movie.id));
+    const deleted = await prisma.movie.findMany({
+      where: { tenantId, provider: 'TMDB', deletedAt: { not: null }, tmdbId: { in: [...availableIds] } },
+      select: { tmdbId: true },
+    });
+    const deletedIds = new Set(deleted.map((movie) => movie.tmdbId));
 
     for (const tmdbId of availableIds) {
+      if (deletedIds.has(tmdbId)) continue;
       try {
         const result = await importMovieFromProvider(
-          { prisma, provider, tenantId, userId: systemUserId },
+          { prisma, provider, tenantId, userId: systemUserId, skipDeleted: true, listingStatus: nowPlayingIds.has(tmdbId) ? 'NOW_PLAYING' : 'UPCOMING' },
           tmdbId,
         );
+        if (result.skipped) continue;
         if (result.created) newMovies += 1;
         else updatedMovies += 1;
       } catch (err) {
@@ -87,7 +85,6 @@ export async function runMovieSync(deps: RunMovieSyncDeps): Promise<MovieSyncRun
         provider: 'TMDB',
         tmdbId: { not: null },
         deletedAt: null,
-        notCurrentlyAvailable: false,
       },
       select: { id: true, tmdbId: true },
     });
@@ -98,8 +95,8 @@ export async function runMovieSync(deps: RunMovieSyncDeps): Promise<MovieSyncRun
 
     if (toMarkUnavailable.length > 0) {
       await prisma.movie.updateMany({
-        where: { id: { in: toMarkUnavailable.map((m) => m.id) } },
-        data: { notCurrentlyAvailable: true, updatedBy: systemUserId },
+        where: { tenantId, provider: 'TMDB', deletedAt: null, id: { in: toMarkUnavailable.map((m) => m.id) } },
+        data: { notCurrentlyAvailable: true, listingStatus: 'OTHER', updatedBy: systemUserId },
       });
       updatedMovies += toMarkUnavailable.length;
     }

@@ -140,3 +140,7 @@ dosyasında saklayın. Bu dosya Git ve Docker build bağlamından dışlanır.
 Compose, R2 ve TMDB ayarlarını API'ye aktarır. R2 kullanılmıyorsa yerel medya
 `modern-cms-media-data` volume'unda saklanır; bu volume'u da yedekleyin.
 OpenAPI üretimi veritabanı, Redis veya gerçek JWT anahtarı gerektirmez.
+
+## Film gösterim durumu güncellemesi
+
+`20261121140000_movie_listing_status` migration'ını yeni API/worker imajlarını başlatmadan önce uygulayın. Bu sürüm API, worker ve admin değişiklikleri içerir; üçünü de yeniden build edip yayınlayın. Eski filmler migration sonrasında `OTHER` olur; TMDB merkezinden bir kez senkronizasyon başlatıldığında bölgesel Vizyonda/Yakında sınıflandırmaları doldurulur. Manuel filmlerin gösterim durumunu formdan seçebilirsiniz. Migration uygulanmadan yeni kod başlatılırsa yeni `listingStatus` kolonu bulunamayacağı için sorgular hata verir.

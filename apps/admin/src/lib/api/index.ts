@@ -185,7 +185,7 @@ export type {
 } from './cinemas';
 
 export { apiMoviesList, apiMovieGet, apiMovieCreate, apiMovieUpdate, apiMovieDelete, apiMovieCategoriesList, tmdbPosterUrl } from './movies';
-export type { MovieStatus, CmsMovie, MovieCategory, MovieListResponse, CreateMoviePayload } from './movies';
+export type { MovieStatus, MovieListingStatus, CmsMovie, MovieCategory, MovieListResponse, CreateMoviePayload } from './movies';
 
 export {
   apiMovieSessionsList,

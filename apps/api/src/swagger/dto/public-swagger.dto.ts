@@ -247,6 +247,7 @@ export class PublicMovieCategoryDto {
 }
 
 export class PublicMovieDto {
+  @ApiProperty({ enum: ['NOW_PLAYING', 'UPCOMING', 'OTHER'] }) listingStatus!: string;
   @ApiProperty() id!: string;
   @ApiProperty() title!: string;
   @ApiProperty() slug!: string;

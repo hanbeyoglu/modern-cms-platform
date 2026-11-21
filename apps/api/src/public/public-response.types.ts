@@ -312,6 +312,7 @@ export interface PublicCinema {
 }
 
 export interface PublicMovie {
+  listingStatus: 'NOW_PLAYING' | 'UPCOMING' | 'OTHER';
   id: string;
   title: string;
   slug: string;

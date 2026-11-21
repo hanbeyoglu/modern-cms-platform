@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ import {
   type CreateMoviePayload,
   type MovieCategory,
   type MovieStatus,
+  type MovieListingStatus,
 } from '../lib/api';
 import { apiMovieResyncFromProvider } from '../lib/api/movie-providers';
 
@@ -42,6 +43,7 @@ type FormState = {
   sortOrder: string;
   categoryIds: string[];
   status: MovieStatus;
+  listingStatus: MovieListingStatus;
 };
 
 const EMPTY: FormState = {
@@ -61,6 +63,7 @@ const EMPTY: FormState = {
   sortOrder: '0',
   categoryIds: [],
   status: 'ACTIVE',
+  listingStatus: 'OTHER',
 };
 
 function toForm(m: CmsMovie): FormState {
@@ -81,6 +84,7 @@ function toForm(m: CmsMovie): FormState {
     sortOrder: String(m.sortOrder ?? 0),
     categoryIds: m.categories.map((c) => c.categoryId),
     status: m.status,
+    listingStatus: m.listingStatus,
   };
 }
 
@@ -102,6 +106,7 @@ function toPayload(f: FormState): CreateMoviePayload {
     sortOrder: f.sortOrder.trim() ? parseInt(f.sortOrder, 10) : 0,
     categoryIds: f.categoryIds,
     status: f.status,
+    listingStatus: f.listingStatus,
   };
 }
 
@@ -327,6 +332,8 @@ function SkeletonRows() {
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
+const LISTING_LABELS: Record<MovieListingStatus, string> = { NOW_PLAYING: 'Vizyonda', UPCOMING: 'Yakında', OTHER: 'Diğer' };
+
 const STATUS_CONFIG: Record<MovieStatus, { bg: string; color: string; label: string; dot: string }> = {
   ACTIVE: { bg: '#d1fae5', color: '#065f46', label: 'Aktif', dot: '#10b981' },
   PASSIVE: { bg: '#fef3c7', color: '#92400e', label: 'Pasif', dot: '#f59e0b' },
@@ -474,6 +481,8 @@ export function MoviesPage() {
   const tenantId = activeTenantId;
   const mallId = activeMallId ?? undefined;
 
+  const listRequestId = useRef(0);
+
   // List state
   const [rows, setRows] = useState<CmsMovie[]>([]);
   const [total, setTotal] = useState(0);
@@ -485,6 +494,8 @@ export function MoviesPage() {
 
   // Filters (API-level)
   const [filterStatus, setFilterStatus] = useState<MovieStatus | ''>('');
+  const [filterListingStatus, setFilterListingStatus] = useState<MovieListingStatus | ''>('');
+  const [page, setPage] = useState(1);
   const [filterSearch, setFilterSearch] = useState('');
   const [filterSortBy, setFilterSortBy] = useState<'sortOrder' | 'title' | 'releaseDate' | 'createdAt'>('sortOrder');
 
@@ -511,24 +522,33 @@ export function MoviesPage() {
 
   const load = useCallback(async () => {
     if (!accessToken || !tenantId) return;
+    const requestId = ++listRequestId.current;
     setLoading(true);
     setError(null);
     try {
       const data = await apiMoviesList(accessToken, tenantId, {
         status: filterStatus || undefined,
+        listingStatus: filterListingStatus || undefined,
+        page,
+        provider: filterProvider || undefined,
+        categoryId: filterCategoryId || undefined,
         search: filterSearch || undefined,
         sortBy: filterSortBy,
         mallId,
         limit: 80,
       });
-      setRows(data.movies);
-      setTotal(data.total);
+      if (requestId === listRequestId.current) {
+        setRows(data.movies);
+        setTotal(data.total);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Yüklenemedi');
+      if (requestId === listRequestId.current) setError(err instanceof Error ? err.message : 'Yüklenemedi');
     } finally {
-      setLoading(false);
+      if (requestId === listRequestId.current) setLoading(false);
     }
-  }, [accessToken, tenantId, mallId, filterStatus, filterSearch, filterSortBy]);
+  }, [accessToken, tenantId, mallId, filterStatus, filterSearch, filterSortBy, filterListingStatus, page, filterProvider, filterCategoryId]);
+
+  useEffect(() => { setPage(1); }, [filterStatus, filterListingStatus, filterSearch, filterSortBy, filterProvider, filterCategoryId]);
 
   const loadStats = useCallback(async () => {
     if (!accessToken || !tenantId) return;
@@ -589,17 +609,12 @@ export function MoviesPage() {
 
   // ── Computed ────────────────────────────────────────────────────────────────
 
-  const filteredRows = rows.filter((m) => {
-    if (filterProvider && m.provider !== filterProvider) return false;
-    if (filterCategoryId && !m.categories.some((c) => c.categoryId === filterCategoryId))
-      return false;
-    return true;
-  });
+  const filteredRows = rows;
 
   const tmdbCount = rows.filter((m) => m.provider === 'TMDB').length;
   const manualCount = rows.filter((m) => m.provider === 'MANUAL').length;
 
-  const hasFilters = !!(filterStatus || filterSearch || filterCategoryId || filterProvider);
+  const hasFilters = !!(filterListingStatus || filterStatus || filterSearch || filterCategoryId || filterProvider);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -613,6 +628,7 @@ export function MoviesPage() {
   const clearFilters = () => {
     setFilterSearch('');
     setFilterStatus('');
+    setFilterListingStatus('');
     setFilterCategoryId('');
     setFilterProvider('');
     setFilterSortBy('sortOrder');
@@ -765,6 +781,13 @@ export function MoviesPage() {
           <option value="ACTIVE">Aktif</option>
           <option value="PASSIVE">Pasif</option>
           <option value="ARCHIVED">Arşiv</option>
+        </select>
+
+        <select aria-label="Gösterim durumu" value={filterListingStatus}
+          onChange={(e) => setFilterListingStatus(e.target.value as MovieListingStatus | '')}
+          className="movie-filter-input" style={SELECT_STYLE}>
+          <option value="">Tüm gösterim durumları</option>
+          {Object.entries(LISTING_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
 
         {/* Category */}
@@ -961,6 +984,12 @@ export function MoviesPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}>
+        <Button variant="secondary" disabled={loading || page === 1} onClick={() => setPage((p) => p - 1)}>Önceki</Button>
+        <span>Sayfa {page} / {Math.max(1, Math.ceil(total / 80))}</span>
+        <Button variant="secondary" disabled={loading || page * 80 >= total} onClick={() => setPage((p) => p + 1)}>Sonraki</Button>
       </div>
 
       {/* ── Edit / Create Modal ────────────────────────────────────────────── */}
@@ -1215,6 +1244,12 @@ export function MoviesPage() {
                 />
               </div>
               <div>
+                <label style={LABEL}>Gösterim durumu</label>
+                <select style={{ ...FORM_INPUT, height: 31 }} value={form.listingStatus}
+                  onChange={(e) => setForm({ ...form, listingStatus: e.target.value as MovieListingStatus })}>
+                  {Object.entries(LISTING_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+                {editing?.provider === 'TMDB' && <p style={{ fontSize: 12 }}>TMDB senkronizasyonu bu alanı günceller.</p>}
                 <label style={LABEL}>Durum</label>
                 <select
                   style={{ ...FORM_INPUT, height: 31 }}
@@ -1604,6 +1639,7 @@ function MovieRow({
       {/* ── Durum ── */}
       <td style={{ padding: '12px 12px', verticalAlign: 'middle' }}>
         <StatusBadge status={m.status} />
+        <div style={{ marginTop: 5, fontSize: 12 }}>{LISTING_LABELS[m.listingStatus]}</div>
       </td>
 
       {/* ── İşlemler ── */}

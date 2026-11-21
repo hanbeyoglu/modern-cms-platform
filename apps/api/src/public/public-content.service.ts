@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type MovieListingStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   TranslationResolverService,
@@ -648,10 +648,12 @@ export class PublicContentService {
     localeId?: string;
     page: number;
     limit: number;
+    listingStatus?: MovieListingStatus;
   }): Promise<PaginatedItems<PublicMovie>> {
     const where: Prisma.MovieWhereInput = {
       tenantId: opts.tenantId,
       status: 'ACTIVE',
+      ...(opts.listingStatus && { listingStatus: opts.listingStatus }),
       deletedAt: null,
       ...PUBLISH_WINDOW_FILTER(new Date()),
     };
@@ -659,7 +661,7 @@ export class PublicContentService {
       this.prisma.movie.findMany({
         where,
         select: {
-          id: true, title: true, slug: true, description: true,
+          id: true, title: true, slug: true, description: true, listingStatus: true,
           durationMinutes: true, releaseDate: true, ticketUrl: true, posterPath: true,
           posterMedia: { select: { id: true, publicUrl: true, altText: true } },
           categories: {
@@ -686,6 +688,7 @@ export class PublicContentService {
       total,
       items: rows.map((movie) => ({
         id: movie.id,
+        listingStatus: movie.listingStatus,
         title: movies[movie.id]?.title || movie.title,
         slug: movie.slug,
         description: movies[movie.id]?.description || movie.description,

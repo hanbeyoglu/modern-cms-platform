@@ -865,6 +865,7 @@ model Movie {
   publishEndAt            DateTime?
   sortOrder               Int                 @default(0)
   status                  MovieStatus         @default(ACTIVE)
+  listingStatus           MovieListingStatus  @default(OTHER)
   provider                MovieProviderSource @default(MANUAL)
   tmdbId                  Int?
   tmdbVoteAverage         Float?
@@ -1411,6 +1412,12 @@ enum CinemaStatus {
   ACTIVE
   PASSIVE
   ARCHIVED
+}
+
+enum MovieListingStatus {
+  NOW_PLAYING
+  UPCOMING
+  OTHER
 }
 
 enum MovieStatus {

@@ -223,8 +223,8 @@ export class CmsPublicClient {
 
   // ── Movie Sessions ────────────────────────────────────────────────────────
 
-  getMovies(opts: PaginatedListOpts = {}): Promise<CmsPaginatedEnvelope<CmsMovie>> {
-    return this.get('/public/movies', { locale: opts.locale, page: opts.page, limit: opts.limit });
+  getMovies(opts: PaginatedListOpts & { listingStatus?: CmsMovie['listingStatus'] } = {}): Promise<CmsPaginatedEnvelope<CmsMovie>> {
+    return this.get('/public/movies', { locale: opts.locale, page: opts.page, limit: opts.limit, listingStatus: opts.listingStatus });
   }
 
   getMovieSessions(opts: GetMovieSessionsOpts = {}): Promise<CmsEnvelope<CmsMovieSession[]>> {

@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const { PublicContentService } = require('../dist/public/public-content.service');
 const { PublicController } = require('../dist/public/public.controller');
 
-const base = { tenantId: 'tenant', status: 'ACTIVE', deletedAt: null, publishStartAt: null,
+const base = { listingStatus: 'OTHER', tenantId: 'tenant', status: 'ACTIVE', deletedAt: null, publishStartAt: null,
   publishEndAt: null, title: 'Original', slug: 'original', description: 'Description',
   durationMinutes: 120, releaseDate: new Date('2026-01-01'), ticketUrl: null,
   posterMedia: null, posterPath: null, categories: [], providerRaw: { secret: 'private' } };
@@ -52,7 +52,7 @@ test('active films without sessions are public; inactive, deleted, foreign and u
   assert.deepEqual(result.items.map(movie => movie.id), ['no-sessions', 'in-window']);
   assert.equal(result.total, 2);
   assert.equal(result.items[0].poster, null);
-  assert.deepEqual(Object.keys(result.items[0]).sort(), ['id','title','slug','description','durationMinutes','releaseDate','ticketUrl','poster','posterPath','categories'].sort());
+  assert.deepEqual(Object.keys(result.items[0]).sort(), ['id','title','slug','description','durationMinutes','releaseDate','ticketUrl','poster','posterPath','categories','listingStatus'].sort());
   assert.equal(result.items[0].posterPath, null);
   assert.equal(calls[0].select.posterPath, true);
   assert.equal(calls[0].select.providerRaw, undefined);
@@ -144,4 +144,21 @@ test('generated OpenAPI documents required context, pagination and movie array e
   assert.equal(envelope.properties.data.type, 'array');
   assert.equal(envelope.properties.data.items.$ref, '#/components/schemas/PublicMovieDto');
   assert.ok(doc.components.schemas.PublicPaginationMetaDto.properties.totalPages);
+});
+
+test('listingStatus filters before pagination and is isolated in cache', async () => {
+  const { content } = fixture([
+    { ...base, id: 'now', listingStatus: 'NOW_PLAYING' },
+    { ...base, id: 'soon', listingStatus: 'UPCOMING' },
+    { ...base, id: 'other' },
+  ]);
+  const { api, writes } = controller(content);
+  const now = await api.getMovies('tenant', 'mall', 'tr', '1', '100', 'NOW_PLAYING');
+  const soon = await api.getMovies('tenant', 'mall', 'tr', '1', '100', 'UPCOMING');
+  assert.deepEqual(now.data.map(movie => movie.id), ['now']);
+  assert.equal(now.data[0].listingStatus, 'NOW_PLAYING');
+  assert.equal(now.pagination.total, 1);
+  assert.deepEqual(soon.data.map(movie => movie.id), ['soon']);
+  assert.equal(new Set(writes.map(row => row.key)).size, 2);
+  await assert.rejects(api.getMovies('tenant', 'mall', 'tr', '1', '100', 'INVALID'), /Invalid listingStatus/);
 });

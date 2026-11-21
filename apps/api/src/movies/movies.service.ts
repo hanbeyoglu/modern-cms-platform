@@ -54,6 +54,9 @@ export class MoviesService {
       tenantId,
       deletedAt: null,
       ...(query.status ? { status: query.status } : {}),
+      ...(query.listingStatus ? { listingStatus: query.listingStatus } : {}),
+      ...(query.provider ? { provider: query.provider } : {}),
+      ...(query.categoryId ? { categories: { some: { categoryId: query.categoryId } } } : {}),
       ...(query.search
         ? {
             OR: [
@@ -226,6 +229,7 @@ export class MoviesService {
         publishEndAt: dto.publishEndAt ? new Date(dto.publishEndAt) : null,
         sortOrder: dto.sortOrder ?? 0,
         status: dto.status ?? 'ACTIVE',
+        listingStatus: dto.listingStatus ?? 'OTHER',
         createdBy: user.id,
         categories: {
           create: categoryIds.map((categoryId) => ({ categoryId })),
@@ -313,6 +317,7 @@ export class MoviesService {
         ...(dto.publishEndAt !== undefined && { publishEndAt }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder ?? 0 }),
         ...(dto.status !== undefined && { status: dto.status }),
+        ...(dto.listingStatus !== undefined && { listingStatus: dto.listingStatus }),
         ...(categoryIds !== undefined && {
           categories: {
             deleteMany: {},
