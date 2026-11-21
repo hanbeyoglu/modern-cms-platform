@@ -28,6 +28,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1069.0",
     "@modern-cms/content-scheduling": "workspace:*",
+    "@modern-cms/mail": "workspace:*",
     "@modern-cms/movie-providers": "workspace:*",
     "@modern-cms/notifications": "workspace:*",
     "@nestjs/common": "^10.4.15",

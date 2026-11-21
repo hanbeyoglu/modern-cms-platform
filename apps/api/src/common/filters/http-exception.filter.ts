@@ -8,6 +8,7 @@ type ErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'UNPROCESSABLE_ENTITY'
+  | 'TOO_MANY_REQUESTS'
   | 'INTERNAL_SERVER_ERROR';
 
 const HTTP_STATUS_TO_CODE: Record<number, ErrorCode> = {
@@ -17,6 +18,7 @@ const HTTP_STATUS_TO_CODE: Record<number, ErrorCode> = {
   404: 'NOT_FOUND',
   409: 'CONFLICT',
   422: 'UNPROCESSABLE_ENTITY',
+  429: 'TOO_MANY_REQUESTS',
 };
 
 @Catch(HttpException)

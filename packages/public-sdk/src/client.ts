@@ -1,3 +1,4 @@
+import type { CmsContactMessageInput } from './types';
 import type {
   CmsCampaign,
   CmsCinema,
@@ -249,11 +250,20 @@ export class CmsPublicClient {
     });
   }
 
+  submitContactMessage(input: CmsContactMessageInput, locale?: string): Promise<CmsEnvelope<{ accepted: true }>> {
+    return this.request('/public/contact-messages', { locale }, input);
+  }
+
+  private get<T>(path: string, params: Record<string, string | number | boolean | undefined | null> = {}): Promise<T> {
+    return this.request(path, params);
+  }
+
   // ── Internal fetch ────────────────────────────────────────────────────────
 
-  private async get<T>(
+  private async request<T>(
     path: string,
     params: Record<string, string | number | boolean | undefined | null> = {},
+    body?: CmsContactMessageInput,
   ): Promise<T> {
     const fetchFn = this.config.fetchImpl ?? globalThis.fetch;
     if (!fetchFn) {
@@ -281,7 +291,8 @@ export class CmsPublicClient {
       headers['x-mall-id'] = this.config.mallId;
     }
 
-    const response = await fetchFn(url.toString(), { headers });
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    const response = await fetchFn(url.toString(), { headers, method: body === undefined ? 'GET' : 'POST', ...(body !== undefined && { body: JSON.stringify(body) }) });
 
     if (!response.ok) {
       let errorBody: unknown;

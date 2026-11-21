@@ -16,7 +16,7 @@ for (const [configured, expected] of [['60', 60], ['invalid', 900], ['0', 900]])
     const hash = await bcrypt.hash('test-password', 4);
     const service = new AuthService(
       { tenantSetting: { findMany: async () => [] }, refreshToken: { create: async () => {} } }, jwt,
-      new ConfigService({ JWT_ACCESS_TTL: configured }),
+      { get: (key, fallback) => key === 'JWT_ACCESS_TTL' ? configured : fallback },
       { findActiveUserByEmail: async () => ({ ...user, passwordHash: hash }) }, audit, {},
     );
     const result = await service.login(user.email, 'test-password', {});

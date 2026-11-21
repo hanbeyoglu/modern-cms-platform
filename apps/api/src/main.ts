@@ -57,6 +57,9 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   assertProductionSafety(config, logger);
 
+  const trustedProxies = config.get<string>('TRUST_PROXY')?.trim();
+  if (trustedProxies) app.set('trust proxy', trustedProxies.split(',').map((value) => value.trim()).filter(Boolean));
+
   const port = config.get<number>('API_PORT', 4000);
   const version = config.get<string>('APP_VERSION') ?? '0.0.0';
   const gitSha = config.get<string>('APP_GIT_SHA') ?? 'unknown';

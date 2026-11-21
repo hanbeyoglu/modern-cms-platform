@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@modern-cms/content-scheduling": "workspace:*",
+    "@modern-cms/mail": "workspace:*",
     "@modern-cms/movie-providers": "workspace:*",
     "@modern-cms/notifications": "workspace:*",
     "@prisma/client": "^6.1.0",

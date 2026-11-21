@@ -75,6 +75,9 @@ importers:
       '@modern-cms/content-scheduling':
         specifier: workspace:*
         version: link:../../packages/content-scheduling
+      '@modern-cms/mail':
+        specifier: workspace:*
+        version: link:../../packages/mail
       '@modern-cms/movie-providers':
         specifier: workspace:*
         version: link:../../packages/movie-providers
@@ -187,6 +190,9 @@ importers:
       '@modern-cms/content-scheduling':
         specifier: workspace:*
         version: link:../../packages/content-scheduling
+      '@modern-cms/mail':
+        specifier: workspace:*
+        version: link:../../packages/mail
       '@modern-cms/movie-providers':
         specifier: workspace:*
         version: link:../../packages/movie-providers
@@ -205,6 +211,9 @@ importers:
       ioredis:
         specifier: ^5.10.1
         version: 5.10.1
+      nodemailer:
+        specifier: ^6.10.1
+        version: 6.10.1
     devDependencies:
       '@eslint/js':
         specifier: ^9.17.0
@@ -232,6 +241,22 @@ importers:
 
   packages/content-scheduling:
     devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/mail:
+    dependencies:
+      nodemailer:
+        specifier: ^6.10.1
+        version: 6.10.1
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.19
+      '@types/nodemailer':
+        specifier: ^6.4.17
+        version: 6.4.24
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -1539,6 +1564,9 @@ packages:
 
   '@types/node@22.19.19':
     resolution: {integrity: sha512-dyh/xO2Fh5bYrfWaaqGrRQQGkNdmYw6AmaAUvYeUMNTWQtvb796ikLdmTchRmOlOiIJ1TDXfWgVx1QkUlQ6Hew==}
+
+  '@types/nodemailer@6.4.24':
+    resolution: {integrity: sha512-Ww4u0rT9wQNXh4JiQaIwx3QWdcOFXzOjQA2zc+jtFYNmQiT4mIUqcDin51bDFdkzKubFnQCZNK7FIHlPKQ/q9w==}
 
   '@types/passport-jwt@4.0.1':
     resolution: {integrity: sha512-Y0Ykz6nWP4jpxgEUYq8NoVZeCQPo1ZndJLfapI249g1jHChvRfZRO/LS3tqu26YgAS/laI1qx98sYGz0IalRXQ==}
@@ -2888,6 +2916,10 @@ packages:
 
   node-releases@2.0.44:
     resolution: {integrity: sha512-5WUyunoPMsvvEhS8AxHtRzP+oA8UCkJ7YRxatWKjngndhDGLiqEVAQKWjFAiAiuL8zMRGzGSJxFnLetoa43qGQ==}
+
+  nodemailer@6.10.1:
+    resolution: {integrity: sha512-Z+iLaBGVaSjbIzQ4pX6XV41HrooLsQ10ZWPUehGmuantvzWoDVBnmsdUcOIDM1t+yPor5pDhVlDESgOMEGxhHA==}
+    engines: {node: '>=6.0.0'}
 
   nopt@5.0.0:
     resolution: {integrity: sha512-Tbj67rffqceeLpcRXrT7vKAN8CwfPeIBgM7E6iBkmKLV7bEMwpGgYLGv0jACUsECaa/vuxP0IjEont6umdMgtQ==}
@@ -4922,6 +4954,10 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/nodemailer@6.4.24':
+    dependencies:
+      '@types/node': 22.19.19
+
   '@types/passport-jwt@4.0.1':
     dependencies:
       '@types/jsonwebtoken': 9.0.10
@@ -6435,6 +6471,8 @@ snapshots:
     optional: true
 
   node-releases@2.0.44: {}
+
+  nodemailer@6.10.1: {}
 
   nopt@5.0.0:
     dependencies:

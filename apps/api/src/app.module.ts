@@ -1,3 +1,4 @@
+import { ContactMessagesModule } from './contact-messages/contact-messages.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AccessModule } from './access/access.module';
@@ -87,6 +88,7 @@ import { DeveloperApiModule } from './developer-api/developer-api.module';
     LocationServicesModule,
     DashboardModule,
     DeveloperApiModule,
+    ContactMessagesModule,
   ],
 })
 export class AppModule implements NestModule {

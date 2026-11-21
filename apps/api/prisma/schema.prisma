@@ -57,6 +57,7 @@ model User {
 }
 
 model Tenant {
+  contactMessages    ContactMessage[]
   id                 String             @id @default(cuid())
   name               String
   slug               String             @unique
@@ -110,6 +111,7 @@ model Tenant {
 }
 
 model Mall {
+  contactMessages    ContactMessage[]
   id                 String             @id @default(cuid())
   tenantId           String
   name               String
@@ -169,6 +171,7 @@ model Mall {
 
   @@unique([tenantId, slug])
   @@index([tenantId])
+  @@unique([id, tenantId])
 }
 
 /// Per-location language activation (system Locale definitions are tenant-global).
@@ -1669,4 +1672,49 @@ model ApiUsageDaily {
 
   @@unique([tenantId, date])
   @@index([tenantId, date])
+}
+
+enum ContactMessageStatus {
+  NEW
+  READ
+  ARCHIVED
+}
+
+enum ContactEmailNotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model ContactMessage {
+  id                        String                          @id @default(cuid())
+  tenantId                  String
+  mallId                    String
+  name                      String                          @db.VarChar(120)
+  email                     String                          @db.VarChar(254)
+  phone                     String?                         @db.VarChar(30)
+  subject                   String?                         @db.VarChar(180)
+  message                   String                          @db.VarChar(5000)
+  status                    ContactMessageStatus            @default(NEW)
+  emailNotificationStatus     ContactEmailNotificationStatus
+  emailNotificationSentAt     DateTime?
+  emailNotificationAttempts   Int                             @default(0)
+  /// Deterministic SMTP Message-ID local-part; set before send for provider-side dedupe.
+  emailNotificationDispatchId String?
+  /// Provider-accepted id from SMTP response; if set, do not send again.
+  emailNotificationProviderId String?
+  kvkkConsent               Boolean
+  kvkkConsentAt             DateTime
+  createdAt                 DateTime                        @default(now())
+  updatedAt                 DateTime                        @updatedAt
+  readAt                    DateTime?
+  archivedAt                DateTime?
+  tenant                    Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall                      Mall                            @relation(fields: [mallId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@index([tenantId, mallId, createdAt, id])
+  @@index([tenantId, mallId, status, createdAt])
+  @@index([tenantId, status, createdAt])
+  @@index([emailNotificationStatus, createdAt])
 }

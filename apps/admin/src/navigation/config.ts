@@ -18,6 +18,7 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: NavItem[] = [
+  { id: 'contact-messages', label: 'İletişim Mesajları', icon: '✉', href: '/contact-messages', permission: 'contact-message:read', group: 'İçerik' },
   {
     id: 'dashboard',
     label: 'Gösterge Paneli',

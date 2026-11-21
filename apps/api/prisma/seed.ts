@@ -181,6 +181,8 @@ const DEMO_TENANT_CAPABILITIES = [
 ];
 
 const PERMISSIONS = [
+  'contact-message:read',
+  'contact-message:update',
   'tenant:read',
   'tenant:create',
   'tenant:update',
@@ -355,6 +357,8 @@ async function main(): Promise<void> {
       code: 'MALL_MANAGER',
       name: 'Mall Manager',
       permissions: [
+        'contact-message:read',
+        'contact-message:update',
         'mall:read',
         'mall:switch',
         'location:read',

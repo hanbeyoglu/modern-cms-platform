@@ -492,3 +492,13 @@ export interface CmsMovie {
   poster: { id: string; url: string; alt: string | null } | null;
   categories: Array<{ id: string; name: string; slug: string }>;
 }
+
+export interface CmsContactMessageInput {
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+  kvkkConsent: true;
+  website?: string;
+}

@@ -24,6 +24,17 @@ import {
   type MovieImportBulkJobData,
   type MovieProvidersSettings,
 } from '@modern-cms/movie-providers';
+import {
+  CONTACT_EMAIL_QUEUE_NAME,
+  classifyMailError,
+  contactEmailJobId,
+  type ContactEmailJobData,
+} from '@modern-cms/mail';
+import {
+  markContactEmailFailed,
+  processContactEmailJob,
+  recoverPendingContactEmails,
+} from './contact-email.js';
 
 const repoRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '../../..');
 // Match the API ConfigModule's file precedence. Both processes must use the
@@ -368,9 +379,43 @@ async function main(): Promise<void> {
     connection: bullConnection,
   });
 
+  const contactEmailQueue = new Queue<ContactEmailJobData>(CONTACT_EMAIL_QUEUE_NAME, {
+    connection: bullConnection,
+    defaultJobOptions: {
+      removeOnComplete: 100,
+      removeOnFail: 200,
+      attempts: 5,
+      backoff: { type: 'exponential', delay: 5000 },
+    },
+  });
+
+  const contactEmailWorker = new Worker<ContactEmailJobData>(
+    CONTACT_EMAIL_QUEUE_NAME,
+    async (job) => {
+      await processContactEmailJob(prisma, job.data);
+    },
+    { connection: { ...bullConnection, maxRetriesPerRequest: null }, concurrency: 2 },
+  );
+
+  contactEmailWorker.on('failed', (job, err) => {
+    const code = classifyMailError(err);
+    console.error(
+      `[service=worker] contactEmail job failed id=${job?.id ?? 'unknown'} code=${code}`,
+    );
+    if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
+      void markContactEmailFailed(prisma, job.data).catch(() => {
+        console.error(
+          `[service=worker] contactEmail mark-failed errored messageId=${job.data.messageId}`,
+        );
+      });
+    }
+  });
+
   await movieSyncWorker.waitUntilReady();
   await movieImportWorker.waitUntilReady();
+  await contactEmailWorker.waitUntilReady();
   console.log(`[MovieImportWorker] Listening on queue ${MOVIE_IMPORT_QUEUE_NAME}`);
+  console.log(`[service=worker] Listening on queue ${CONTACT_EMAIL_QUEUE_NAME}`);
 
   console.log(
     `[service=worker] ready poll=${pollMs}ms redis=${maskRedisUrl(redisUrl)} db=${maskDatabaseUrl(databaseUrl)} version=${appVersion} gitSha=${gitSha}`,
@@ -393,6 +438,18 @@ async function main(): Promise<void> {
         );
       } else {
         console.log(`[service=worker] tickOk at=${new Date().toISOString()}`);
+      }
+
+      const recovered = await recoverPendingContactEmails(prisma, {
+        getJob: (jobId) => contactEmailQueue.getJob(jobId),
+        add: async (data) => {
+          await contactEmailQueue.add('notify', data, {
+            jobId: contactEmailJobId(data.messageId),
+          });
+        },
+      });
+      if (recovered > 0) {
+        console.log(`[service=worker] contactEmail recovery actions=${recovered}`);
       }
 
       const tenants = await prisma.tenant.findMany({
@@ -433,7 +490,9 @@ async function main(): Promise<void> {
     clearInterval(timer);
     await movieSyncWorker.close();
     await movieImportWorker.close();
+    await contactEmailWorker.close();
     await movieSyncQueue.close();
+    await contactEmailQueue.close();
     await prisma.$disconnect().catch(() => undefined);
     await redis.quit().catch(() => undefined);
     process.exit(0);

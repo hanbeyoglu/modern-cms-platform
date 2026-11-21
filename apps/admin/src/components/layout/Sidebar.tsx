@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { contactMessagesCount } from '../../lib/api/contact-messages';
 import { NavLink } from 'react-router-dom';
 import { NAV_ITEMS, NAV_GROUPS, type NavItem } from '../../navigation/config';
 import { usePermission } from '../../hooks/usePermission';
@@ -169,6 +171,7 @@ function GroupNavItems({ items }: { items: NavItem[] }) {
 }
 
 function SidebarItem({
+  id,
   icon,
   label,
   href,
@@ -200,6 +203,27 @@ function SidebarItem({
     >
       <span style={{ fontSize: 14, opacity: 0.8 }}>{icon}</span>
       <span>{label}</span>
+      {id === 'contact-messages' && <ContactMessageBadge />}
     </NavLink>
   );
+}
+
+function ContactMessageBadge() {
+  const { accessToken, activeTenantId, activeMallId } = useAuth();
+  const { can } = usePermission();
+  const allowed = can('contact-message:read');
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    setCount(null);
+    if (!allowed || !accessToken || !activeTenantId || !activeMallId) return;
+    let disposed = false;
+    const refresh = () => { void contactMessagesCount(accessToken, activeTenantId, activeMallId)
+      .then(data => { if (!disposed) setCount(data.count); })
+      .catch(() => { if (!disposed) setCount(null); }); };
+    refresh();
+    const timer = window.setInterval(refresh, 60000);
+    window.addEventListener('cms:contact-messages-changed', refresh);
+    return () => { disposed = true; window.clearInterval(timer); window.removeEventListener('cms:contact-messages-changed', refresh); };
+  }, [allowed, accessToken, activeTenantId, activeMallId]);
+  return count ? <span aria-label={`${count} yeni mesaj`} style={{ background: '#2563eb', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 11 }}>{count > 99 ? '99+' : count}</span> : null;
 }

@@ -1,3 +1,4 @@
+import { ContactMessagesPage } from '../pages/ContactMessagesPage';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { DashboardLayout } from '../layouts/DashboardLayout';
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
 
           // Always accessible to any authenticated user
           { path: '/dashboard', element: <DashboardPage /> },
+          { path: '/contact-messages', element: <PermissionGate permission="contact-message:read"><ContactMessagesPage /></PermissionGate> },
           { path: '/account', element: <AccountPage /> },
 
           // Analytic

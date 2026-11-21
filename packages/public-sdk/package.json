@@ -17,7 +17,8 @@
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "pnpm build && node --test test/*.test.cjs"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

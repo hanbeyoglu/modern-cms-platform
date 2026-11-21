@@ -89,6 +89,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET required}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET required}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+      TRUST_PROXY: ${TRUST_PROXY:-loopback,uniquelocal}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-900}
       JWT_REFRESH_TTL_DAYS: ${JWT_REFRESH_TTL_DAYS:-30}
       API_BASE_URL: ${API_BASE_URL:?API_BASE_URL required}
@@ -192,6 +193,12 @@ services:
       APP_VERSION: ${APP_VERSION:-0.0.0}
       APP_GIT_SHA: ${GIT_SHA:-unknown}
       APP_BUILD_TIME: ${BUILD_TIME:-unknown}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     depends_on:
       postgres:
         condition: service_healthy

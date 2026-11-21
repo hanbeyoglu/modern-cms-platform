@@ -1,0 +1,209 @@
+--- /dev/null
++++ b/src/api/contact-messages.ts
+@@ -0,0 +1,22 @@
++import { ApiError, apiClient } from './client'
++import { getCmsLocale } from './public'
++import type { CmsEnvelope } from './cmsTypes'
++
++export interface ContactMessageInput {
++  name: string
++  email: string
++  phone?: string
++  subject?: string
++  message: string
++  kvkkConsent: true
++  website?: string
++}
++
++export async function sendContactMessage(input: ContactMessageInput): Promise<void> {
++  const response = await apiClient.post<CmsEnvelope<{ accepted: true }>>(
++    `/public/contact-messages?locale=${encodeURIComponent(getCmsLocale())}`, input,
++  )
++  if (!response?.success || response.data?.accepted !== true) {
++    throw new ApiError(502, 'Mesaj gönderimi doğrulanamadı.')
++  }
++}
+--- a/src/components/contact/ContactForm.tsx
++++ b/src/components/contact/ContactForm.tsx
+@@ -8,6 +8,8 @@
+ import { useTranslation } from 'react-i18next'
+ import { ROUTES } from '@/lib/constants'
+ import { cn } from '@/lib/cn'
++import { ApiError } from '@/api/client'
++import { sendContactMessage } from '@/api/contact-messages'
+ 
+ /* Schema is defined inside the component so error messages can use t() */
+ 
+@@ -44,7 +46,7 @@
+ 
+ /* ─────────────────────────────────────────────────────────── */
+ 
+-export function ContactForm({ contactEmail }: { contactEmail: string }) {
++export function ContactForm(_props: { contactEmail: string }) {
+   const { t } = useTranslation()
+   const [submitted, setSubmitted] = useState(false)
+   const [submitting, setSubmitting] = useState(false)
+@@ -52,11 +54,12 @@
+ 
+   /* Build schema using translated error messages */
+   const schema = z.object({
+-    name: z.string().min(2, t('form.errors.nameMin')).max(100),
+-    email: z.string().email(t('form.errors.emailInvalid')),
+-    phone: z.string().optional(),
+-    subject: z.string().min(1, t('form.errors.subjectRequired')),
+-    message: z.string().min(10, t('form.errors.messageMin')).max(2000),
++    name: z.string().trim().min(1, t('form.errors.nameMin')).max(120),
++    email: z.string().trim().email(t('form.errors.emailInvalid')).max(254),
++    phone: z.string().trim().max(30).optional(),
++    subject: z.string().trim().max(180).optional(),
++    message: z.string().trim().min(1, t('form.errors.messageMin')).max(5000),
++    website: z.string().max(200).optional(),
+     kvkk: z.literal(true, { errorMap: () => ({ message: t('form.errors.kvkkRequired') }) }),
+   })
+ 
+@@ -74,23 +77,30 @@
+   const {
+     register,
+     handleSubmit,
++    reset,
+     formState: { errors },
+   } = useForm<FormValues>({
+     resolver: zodResolver(schema),
+   })
+ 
+   const onSubmit = async (data: FormValues) => {
++    if (submitting) return
+     setSubmitting(true)
+     setSubmitError('')
+     try {
+-      const subject = encodeURIComponent(`Metrogarden AVM iletişim: ${data.subject}`)
+-      const body = encodeURIComponent(
+-        `Ad Soyad: ${data.name}\nE-posta: ${data.email}\nTelefon: ${data.phone || '-'}\n\n${data.message}\n\nKVKK onayı: ${data.kvkk ? 'Evet' : 'Hayır'}`,
+-      )
+-      window.location.href = `mailto:${contactEmail}?subject=${subject}&body=${body}`
++      await sendContactMessage({
++        name: data.name,
++        email: data.email,
++        phone: data.phone || undefined,
++        subject: SUBJECTS.find(subject => subject.value === data.subject)?.label || data.subject || undefined,
++        message: data.message,
++        kvkkConsent: data.kvkk,
++        website: data.website || '',
++      })
++      reset()
+       setSubmitted(true)
+-    } catch {
+-      setSubmitError('E-posta taslağı açılamadı. Lütfen doğrudan e-posta adresimize yazın.')
++    } catch (error) {
++      setSubmitError(t(error instanceof ApiError && error.status === 429 ? 'form.errors.tooManyMessages' : 'form.errors.sendFailed'))
+     } finally {
+       setSubmitting(false)
+     }
+@@ -112,10 +122,10 @@
+           </div>
+           <div>
+             <h3 className="mb-2 font-display text-2xl font-light text-carbon">
+-              E-posta taslağınız açılıyor
++              {t('form.messageReceived')}
+             </h3>
+             <p className="font-sans text-[14px] leading-relaxed text-graphite">
+-              Varsayılan e-posta uygulamanızda taslak açılacak. Mesajı göndermeyi oradan tamamlayın.
++              {t('form.messageReceivedDescription')}
+             </p>
+           </div>
+           <button
+@@ -135,11 +145,16 @@
+           noValidate
+           className="space-y-5"
+         >
++          <div aria-hidden="true" style={{ position: 'absolute', left: '-10000px' }}>
++            <label htmlFor="contact-website">Website</label>
++            <input id="contact-website" {...register('website')} tabIndex={-1} autoComplete="off" />
++          </div>
+           {/* Name + Email */}
+           <div className="grid gap-5 sm:grid-cols-2">
+             <Field label={t('form.name')} error={errors.name?.message} required>
+               <input
+                 {...register('name')}
++                maxLength={120}
+                 type="text"
+                 autoComplete="name"
+                 placeholder={t('form.namePlaceholder')}
+@@ -149,6 +164,7 @@
+             <Field label={t('form.email')} error={errors.email?.message} required>
+               <input
+                 {...register('email')}
++                maxLength={254}
+                 type="email"
+                 autoComplete="email"
+                 placeholder={t('form.emailPlaceholder')}
+@@ -162,13 +178,14 @@
+             <Field label={t('form.phone')} error={errors.phone?.message}>
+               <input
+                 {...register('phone')}
++                maxLength={30}
+                 type="tel"
+                 autoComplete="tel"
+                 placeholder={t('form.phonePlaceholder')}
+                 className={cn(INPUT_BASE)}
+               />
+             </Field>
+-            <Field label={t('form.subject')} error={errors.subject?.message} required>
++            <Field label={t('form.subject')} error={errors.subject?.message}>
+               <select
+                 {...register('subject')}
+                 className={cn(
+@@ -194,6 +211,7 @@
+           <Field label={t('form.message')} error={errors.message?.message} required>
+             <textarea
+               {...register('message')}
++              maxLength={5000}
+               rows={5}
+               placeholder={t('form.messagePlaceholder')}
+               className={cn(INPUT_BASE, 'resize-none', errors.message && INPUT_ERROR)}
+--- a/src/i18n/locales/tr/common.json
++++ b/src/i18n/locales/tr/common.json
+@@ -380,12 +380,16 @@
+       "press": "Basın & Medya"
+     },
+     "errors": {
+-      "nameMin": "Ad en az 2 karakter olmalıdır.",
++      "nameMin": "Lütfen adınızı girin.",
+       "emailInvalid": "Geçerli bir e-posta adresi girin.",
+       "subjectRequired": "Lütfen bir konu seçin.",
+-      "messageMin": "Mesaj en az 10 karakter olmalıdır.",
++      "messageMin": "Lütfen mesajınızı girin.",
+       "kvkkRequired": "Devam etmek için KVKK metnini kabul etmeniz gerekir.",
+-      "phoneInvalid": "Geçerli bir telefon numarası girin."
+-    }
++      "phoneInvalid": "Geçerli bir telefon numarası girin.",
++      "tooManyMessages": "Çok fazla mesaj gönderdiniz. Lütfen daha sonra tekrar deneyin.",
++      "sendFailed": "Mesajınız gönderilemedi. Bilgileriniz korundu; lütfen tekrar deneyin."
++    },
++    "messageReceived": "Mesajınız alındı",
++    "messageReceivedDescription": "Mesajınız AVM yönetimine iletildi. İlginiz için teşekkür ederiz."
+   }
+ }
+--- a/src/i18n/locales/en/common.json
++++ b/src/i18n/locales/en/common.json
+@@ -380,12 +380,16 @@
+       "press": "Press & Media"
+     },
+     "errors": {
+-      "nameMin": "Name must be at least 2 characters.",
++      "nameMin": "Please enter your name.",
+       "emailInvalid": "Enter a valid email address.",
+       "subjectRequired": "Please select a subject.",
+-      "messageMin": "Message must be at least 10 characters.",
++      "messageMin": "Please enter your message.",
+       "kvkkRequired": "You must accept the KVKK text to continue.",
+-      "phoneInvalid": "Enter a valid phone number."
+-    }
++      "phoneInvalid": "Enter a valid phone number.",
++      "tooManyMessages": "You have sent too many messages. Please try again later.",
++      "sendFailed": "Your message could not be sent. Your entries are preserved; please try again."
++    },
++    "messageReceived": "Your message has been received",
++    "messageReceivedDescription": "Your message has been sent to mall management. Thank you for contacting us."
+   }
+ }
