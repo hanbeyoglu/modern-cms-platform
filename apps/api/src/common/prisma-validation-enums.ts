@@ -69,6 +69,7 @@ export const LOCALIZED_ENTITY_TYPES = [
   'CAMPAIGN',
   'STORE',
   'MOVIE',
+  'MOVIE_CATEGORY',
   'CINEMA',
   'LOCATION',
   'POPUP',

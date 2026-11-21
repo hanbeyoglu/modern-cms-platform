@@ -12,6 +12,7 @@ export type LocalizedEntityType =
   | 'STORE'
   | 'STORE_CATEGORY'
   | 'MOVIE'
+  | 'MOVIE_CATEGORY'
   | 'CINEMA'
   | 'POPUP'
   | 'SERVICE'

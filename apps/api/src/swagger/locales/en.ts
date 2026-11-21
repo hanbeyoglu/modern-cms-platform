@@ -933,6 +933,7 @@ export const en = {
   'public.movie-sessions.get.response.400': "Missing required header or invalid query parameter",
   'public.movie-sessions.get.response.404': "Resource not found",
   'public.movie-sessions.get.summary': "List movie sessions",
+  'public.movies.summary': 'List active movies (sessions optional)',
   'public.movieSessions.summary': "List movie sessions",
   'public.page.getBySlug.summary': "Get CMS page by slug",
   'public.pages.byId.get.description': "Returns page content, blocks, attachments, and SEO metadata. Supports HTML, PDF, and document-list render modes.",

@@ -1,0 +1,1 @@
+ALTER TYPE "LocalizedEntityType" ADD VALUE 'MOVIE_CATEGORY';

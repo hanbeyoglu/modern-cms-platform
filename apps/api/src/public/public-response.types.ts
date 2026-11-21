@@ -311,6 +311,18 @@ export interface PublicCinema {
   logo: PublicMediaAsset | null;
 }
 
+export interface PublicMovie {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  durationMinutes: number | null;
+  releaseDate: string | null;
+  ticketUrl: string | null;
+  poster: { id: string; url: string; alt: string | null } | null;
+  categories: Array<{ id: string; name: string; slug: string }>;
+}
+
 export interface PublicMovieSession {
   id: string;
   cinema: { id: string; name: string; slug: string };

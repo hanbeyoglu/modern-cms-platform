@@ -58,6 +58,11 @@ const ROUTE_SAMPLES: Record<string, RouteSampleConfig> = {
     sdkArgs: "{ slug: 'privacy-policy', locale: 'tr' }",
   },
   'GET /public/cinema': { sdkMethod: 'getCinemas' },
+  'GET /public/movies': {
+    query: { locale: 'tr', page: '1', limit: '100' },
+    sdkMethod: 'getMovies',
+    sdkArgs: "{ locale: 'tr', page: 1, limit: 100 }",
+  },
   'GET /public/movie-sessions': {
     query: { locale: 'tr', date: '2026-06-27' },
     sdkMethod: 'getMovieSessions',

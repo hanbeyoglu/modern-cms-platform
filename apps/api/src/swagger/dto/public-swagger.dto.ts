@@ -233,3 +233,31 @@ export class PublicStoresPaginatedDto extends PublicPaginatedEnvelopeDto {
   @ApiProperty({ type: [PublicStoreSummaryDto] })
   data!: PublicStoreSummaryDto[];
 }
+
+export class PublicMoviePosterDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() url!: string;
+  @ApiProperty({ type: String, nullable: true }) alt!: string | null;
+}
+
+export class PublicMovieCategoryDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() slug!: string;
+}
+
+export class PublicMovieDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() title!: string;
+  @ApiProperty() slug!: string;
+  @ApiProperty({ type: String, nullable: true }) description!: string | null;
+  @ApiProperty({ type: Number, nullable: true }) durationMinutes!: number | null;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true }) releaseDate!: string | null;
+  @ApiProperty({ type: String, nullable: true }) ticketUrl!: string | null;
+  @ApiProperty({ type: PublicMoviePosterDto, nullable: true }) poster!: PublicMoviePosterDto | null;
+  @ApiProperty({ type: [PublicMovieCategoryDto] }) categories!: PublicMovieCategoryDto[];
+}
+
+export class PublicMoviesPaginatedDto extends PublicPaginatedEnvelopeDto {
+  @ApiProperty({ type: [PublicMovieDto] }) data!: PublicMovieDto[];
+}

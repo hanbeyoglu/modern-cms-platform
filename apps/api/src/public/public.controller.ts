@@ -23,6 +23,7 @@ import {
   type PublicEnvelope,
   type PublicMediaGuideline,
   type PublicPaginatedEnvelope,
+  type PublicMovie,
   type PublicSiteConfig,
 } from './public-response.types';
 import { parsePagination, parseLimit } from './public-pagination.util';
@@ -41,6 +42,7 @@ import {
 import {
   PublicCampaignsPaginatedDto,
   PublicEventsPaginatedDto,
+  PublicMoviesPaginatedDto,
   PublicMediaGuidelinesEnvelopeDto,
   PublicPaginatedEnvelopeDto,
   PublicEnvelopeDto,
@@ -651,6 +653,37 @@ export class PublicController {
       localeId: context.locale?.id,
     });
     const result = envelop(data, context);
+    await this.cache.set(cacheKey, result, TTL.list);
+    return result;
+  }
+
+  @Get('movies')
+  @ApiPublicOperation({ summary: 'public.movies.summary',
+    description: 'Lists active, non-deleted tenant movies within their publication window, including movies without sessions. A valid mall context is required; movies are tenant-wide.',
+    mallRequired: true,
+    related: [SWAGGER_TAGS.MOVIES, SWAGGER_TAGS.MOVIE_SESSIONS],
+  })
+  @ApiLocaleQuery()
+  @ApiPaginationQuery(100, 100)
+  @ApiResponse({ status: 200, description: 'public.response.200', type: PublicMoviesPaginatedDto })
+  async getMovies(
+    @Headers('x-tenant-id') tenantId: string | undefined,
+    @Headers('x-mall-id') mallId: string | undefined,
+    @Query('locale') locale: string | undefined,
+    @Query('page') pageStr: string | undefined,
+    @Query('limit') limitStr: string | undefined,
+  ): Promise<PublicPaginatedEnvelope<PublicMovie>> {
+    const context = await this.ctx.resolve(tenantId, mallId, locale);
+    if (!context.mallId) throw new BadRequestException('x-mall-id header is required for the movies endpoint');
+    const { page, limit } = parsePagination(pageStr, limitStr, 100, 100);
+    const cacheKey = `public:${context.tenantId}:${context.mallId}:movies:p:${page}:n:${limit}` + lseg(context.locale?.code);
+    const cached = await this.cache.get<PublicPaginatedEnvelope<PublicMovie>>(cacheKey);
+    if (cached) return cached;
+    const { items, total } = await this.content.getMovies({
+      tenantId: context.tenantId, mallId: context.mallId,
+      localeId: context.locale?.id, page, limit,
+    });
+    const result = paginatedEnvelop(items, total, page, limit, context);
     await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }

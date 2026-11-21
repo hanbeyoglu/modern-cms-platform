@@ -12,6 +12,7 @@ import type {
   PublicHomeResponse,
   PublicLocationService,
   PublicMediaAsset,
+  PublicMovie,
   PublicMovieSession,
   PublicPage,
   PublicPageBlock,
@@ -637,6 +638,72 @@ export class PublicContentService {
       cinemas.map((c) => c.id),
     );
     return cinemas.map((c) => this.applyFromMap(c, tMap, c.id, ['description']));
+  }
+
+  // Movies belong to a tenant. Mall context is validated by the controller;
+  // sessions must not restrict this catalogue, including movies without sessions.
+  async getMovies(opts: {
+    tenantId: string;
+    mallId: string;
+    localeId?: string;
+    page: number;
+    limit: number;
+  }): Promise<PaginatedItems<PublicMovie>> {
+    const where: Prisma.MovieWhereInput = {
+      tenantId: opts.tenantId,
+      status: 'ACTIVE',
+      deletedAt: null,
+      ...PUBLISH_WINDOW_FILTER(new Date()),
+    };
+    const [rows, total] = await Promise.all([
+      this.prisma.movie.findMany({
+        where,
+        select: {
+          id: true, title: true, slug: true, description: true,
+          durationMinutes: true, releaseDate: true, ticketUrl: true,
+          posterMedia: { select: { id: true, publicUrl: true, altText: true } },
+          categories: {
+            where: { category: { tenantId: opts.tenantId } },
+            select: { category: { select: { id: true, name: true, slug: true } } },
+            orderBy: [{ category: { sortOrder: 'asc' } }, { categoryId: 'asc' }],
+          },
+        },
+        orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }, { id: 'asc' }],
+        skip: (opts.page - 1) * opts.limit,
+        take: opts.limit,
+      }),
+      this.prisma.movie.count({ where }),
+    ]);
+    const categoryIds = [...new Set(rows.flatMap((movie) => movie.categories.map((item) => item.category.id)))];
+    const [movies, categories] = opts.localeId && rows.length
+      ? await Promise.all([
+          this.resolver.getTranslationsForEntities(opts.tenantId, opts.localeId, 'MOVIE', rows.map((movie) => movie.id)),
+          this.resolver.getTranslationsForEntities(opts.tenantId, opts.localeId, 'MOVIE_CATEGORY', categoryIds),
+        ])
+      : [{}, {}] as [EntityTranslationMap, EntityTranslationMap];
+
+    return {
+      total,
+      items: rows.map((movie) => ({
+        id: movie.id,
+        title: movies[movie.id]?.title || movie.title,
+        slug: movie.slug,
+        description: movies[movie.id]?.description || movie.description,
+        durationMinutes: movie.durationMinutes,
+        releaseDate: movie.releaseDate?.toISOString() ?? null,
+        ticketUrl: movie.ticketUrl,
+        poster: movie.posterMedia ? {
+          id: movie.posterMedia.id,
+          url: movie.posterMedia.publicUrl,
+          alt: movie.posterMedia.altText,
+        } : null,
+        categories: movie.categories.map(({ category }) => ({
+          id: category.id,
+          name: categories[category.id]?.name || category.name,
+          slug: category.slug,
+        })),
+      })),
+    };
   }
 
   // ── Movie Sessions ────────────────────────────────────────────────────────

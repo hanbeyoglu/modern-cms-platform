@@ -109,6 +109,15 @@ function addPublicSdkCodeSamples(document: OpenAPIObject): void {
       const operation = pathItem[method];
       if (!operation) continue;
 
+      // The class-level context declares mall optional; mall-scoped operations override it.
+      if (operation.description?.includes('common.requires.mallHeader')) {
+        for (const parameter of operation.parameters ?? []) {
+          if ('name' in parameter && parameter.in === 'header' && parameter.name === 'x-mall-id') {
+            parameter.required = true;
+          }
+        }
+      }
+
       const sdkMethod = inferSdkMethod(path, method);
       if (!sdkMethod) continue;
 
@@ -137,6 +146,7 @@ function inferSdkMethod(path: string, method: string): string | null {
     '/public/campaigns': 'getCampaigns',
     '/public/stores': 'getStores',
     '/public/cinema': 'getCinemas',
+    '/public/movies': 'getMovies',
     '/public/movie-sessions': 'getMovieSessions',
     '/public/popups': 'getPopups',
     '/public/services': 'getServices',

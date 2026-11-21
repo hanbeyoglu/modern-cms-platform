@@ -21,7 +21,7 @@ function resolveDeveloperTag(path: string): string {
   if (path.startsWith('/public/stores')) return SWAGGER_TAGS.PUBLIC_STORES;
   if (path.startsWith('/public/pages')) return SWAGGER_TAGS.PUBLIC_PAGES;
   if (path.startsWith('/public/services')) return SWAGGER_TAGS.PUBLIC_SERVICES;
-  if (path === '/public/cinema' || path.startsWith('/public/movie-sessions')) {
+  if (path === '/public/cinema' || path === '/public/movies' || path.startsWith('/public/movie-sessions')) {
     return SWAGGER_TAGS.PUBLIC_MOVIES;
   }
   if (path === '/public/search') return SWAGGER_TAGS.PUBLIC_SEARCH;

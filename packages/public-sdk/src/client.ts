@@ -6,6 +6,7 @@ import type {
   CmsHomeResponse,
   CmsMediaGuideline,
   CmsMovieSession,
+  CmsMovie,
   CmsPage,
   CmsPaginatedEnvelope,
   CmsPopup,
@@ -221,6 +222,10 @@ export class CmsPublicClient {
   }
 
   // ── Movie Sessions ────────────────────────────────────────────────────────
+
+  getMovies(opts: PaginatedListOpts = {}): Promise<CmsPaginatedEnvelope<CmsMovie>> {
+    return this.get('/public/movies', { locale: opts.locale, page: opts.page, limit: opts.limit });
+  }
 
   getMovieSessions(opts: GetMovieSessionsOpts = {}): Promise<CmsEnvelope<CmsMovieSession[]>> {
     return this.get('/public/movie-sessions', {

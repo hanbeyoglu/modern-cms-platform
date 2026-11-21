@@ -744,3 +744,15 @@ cltenant:clmall:tr:all:campaigns:p1-l20
 ---
 
 *Son güncelleme: API `apps/api/src/public/public.controller.ts` ile uyumlu.*
+
+## Aktif film kataloğu
+
+`GET /public/movies?locale=tr&page=1&limit=100`
+
+`x-api-key`, `x-tenant-id` ve `x-mall-id` header’larını gönderin. AVM bağlamı zorunludur; film kataloğu tenant bazındadır. ACTIVE, silinmemiş ve yayın aralığı geçerli filmler, seansları olmasa da listelenir. `releaseDate` vizyon tarihidir; yayın aralığı filtresi `publishStartAt` / `publishEndAt` üzerinden uygulanır.
+
+Yanıt `{ success, data: Movie[], locale, tenant, pagination: { page, limit, total, totalPages } }` biçimindedir. Her film `id`, `title`, `slug`, `description`, `durationMinutes`, `releaseDate`, `ticketUrl`, `poster: { id, url, alt } | null` ve `categories: { id, name, slug }[]` içerir. Başlık, açıklama ve kategori adı istenen dile çevrilir; çeviri yoksa ana değer kullanılır. Kategori çevirileri `MOVIE_CATEGORY` entity türüyle kaydedilir.
+
+Varsayılan sayfa 1, limit 100, üst limit 100’dür. Tüm kayıtlar için `pagination.totalPages` boyunca sayfaları alın. Cache TTL 120 saniyedir; tenant, AVM, dil, sayfa ve limit ayrı anahtarlanır. SDK: `client.getMovies({ locale: 'tr', page: 1, limit: 100 })`.
+
+Kategori çevirileri için eklenen migration’ı yayın sırasında `prisma migrate deploy` ile uygulayın.

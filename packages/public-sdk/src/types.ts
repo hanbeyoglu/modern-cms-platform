@@ -469,3 +469,15 @@ export interface CmsAnalyticsEvent {
   /** Additional arbitrary metadata */
   meta?: Record<string, string | number | boolean | null>;
 }
+
+export interface CmsMovie {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  durationMinutes: number | null;
+  releaseDate: string | null;
+  ticketUrl: string | null;
+  poster: { id: string; url: string; alt: string | null } | null;
+  categories: Array<{ id: string; name: string; slug: string }>;
+}

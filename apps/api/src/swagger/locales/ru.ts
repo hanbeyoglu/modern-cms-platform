@@ -933,6 +933,7 @@ export const ru = {
   'public.movie-sessions.get.response.400': "Отсутствует обязательно header or недействителен query parameter",
   'public.movie-sessions.get.response.404': "Ресурс не найден",
   'public.movie-sessions.get.summary': "Список Киносеансы",
+  'public.movies.summary': 'Активные фильмы (сеансы необязательны)',
   'public.movieSessions.summary': "Киносеансы",
   'public.page.getBySlug.summary': "CMS-страница по slug",
   'public.pages.byId.get.description': "Returns страница Контент, blocks, attachments, and SEO metadata. Supports HTML, PDF, and document-Список render modes.",

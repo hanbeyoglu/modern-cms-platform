@@ -933,6 +933,7 @@ export const tr = {
   'public.movie-sessions.get.response.400': "Gerekli header eksik veya geçersiz sorgu parametresi",
   'public.movie-sessions.get.response.404': "Kaynak bulunamadı",
   'public.movie-sessions.get.summary': "Listele Film Seansları",
+  'public.movies.summary': 'Aktif filmleri listele (seans gerekmez)',
   'public.movieSessions.summary': "Film seanslarını listele",
   'public.page.getBySlug.summary': "Slug ile CMS sayfa detayı",
   'public.pages.byId.get.description': "Returns sayfa İçerik, blocks, attachments, and SEO metadata. Supports HTML, PDF, and document-Listele render modes.",

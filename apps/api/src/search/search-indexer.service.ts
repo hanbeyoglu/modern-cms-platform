@@ -425,6 +425,7 @@ export class SearchIndexerService {
       SLIDER_ITEM: () => this.syncSliderItem(entityId),
       STORE: () => this.syncMallStore(entityId),
       MOVIE: () => this.syncMovie(entityId),
+      MOVIE_CATEGORY: async () => { /* Movie categories are not standalone search documents. */ },
       CINEMA: () => this.syncCinema(entityId),
       LOCATION: async () => { /* Location search sync reserved for future sprint */ },
       POPUP: () => this.syncPopup(entityId),
