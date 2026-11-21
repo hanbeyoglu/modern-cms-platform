@@ -102,6 +102,17 @@ test('mall is required; default/capped limits and cache vary by tenant, mall, lo
   assert.ok(writes.every(row => row.ttl === 120));
 });
 
+test('empty movie catalogue returns a successful empty envelope without translation queries', async () => {
+  const { content } = fixture([]);
+  content.resolver = { getTranslationsForEntities: async () => { throw new Error('No translations should be queried'); } };
+  const { api } = controller(content);
+  const result = await api.getMovies('tenant', 'mall', 'tr', '1', '100');
+  assert.deepEqual(result, {
+    success: true, data: [], locale: 'tr', tenant: { id: 'tenant', mallId: 'mall' },
+    pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
+  });
+});
+
 test('generated OpenAPI documents required context, pagination and movie array envelope', () => {
   const doc = require('../openapi/openapi.json');
   const operation = doc.paths['/public/movies'].get;

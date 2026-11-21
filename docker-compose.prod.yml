@@ -3,6 +3,19 @@
 # docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 
 services:
+  # Run explicitly before starting updated application images. Not a long-running service.
+  migrate:
+    profiles: ['tools']
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+      target: build
+    command: ['pnpm', '--filter', '@modern-cms/api', 'exec', 'prisma', 'migrate', 'deploy']
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
+    networks:
+      - modern-cms
+
   postgres:
     container_name: modern-cms-postgres
     image: postgres:16-alpine

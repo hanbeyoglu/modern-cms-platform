@@ -26,13 +26,16 @@ Ortam değişkenleri için kök `.env.example` ve `apps/*/.env.example` dosyalar
 
 1. `.env.production.example` dosyasını `.env.production` olarak kopyalayın ve **güçlü parolalar** ile doldurun.
 2. İmajları derleyin: `docker compose --env-file .env.production -f docker-compose.prod.yml build`
-3. **Veritabanı migrasyonları**: Üretim `DATABASE_URL`’e ağ erişimi olan güvenilir bir ortamda (CI job, jump host veya geliştirici makinesi) şu komutu çalıştırın:
+3. **Veritabanı migrasyonları**: Yeni API'yi başlatmadan önce, sunucuda production ayarlarıyla çalıştırın. Compose içindeki Postgres kullanılıyorsa önce `postgres` servisini başlatın.
 
 ```bash
-DATABASE_URL="postgresql://..." pnpm --filter @modern-cms/api exec prisma migrate deploy
+docker compose --env-file .env.production -f docker-compose.prod.yml \
+  --profile tools run --build --rm migrate
 ```
 
-API çalışma imajı `prisma` CLI içermez (yalnızca `@prisma/client`); migrasyonları release pipeline’ında API’yi yeniden başlatmadan önce uygulamak en güvenli modeldir.
+`migrate`, Prisma CLI bulunan Docker build aşamasını kullanır ve `.env.production` içindeki `DATABASE_URL` veritabanına bekleyen migration'ları uygular. API çalışma imajı CLI içermez. Komut hata verirse yeni API'yi başlatmadan önce migration hatasını çözün; üretimde `migrate reset` kullanmayın.
+
+`/public/movies` çağrısında PostgreSQL `22P02: invalid input value for enum "LocalizedEntityType": "MOVIE_CATEGORY"` hatası, uygulamanın kategori çevirisini sorguladığı fakat `20261121120000_movie_category_localization` migration'ının hedef veritabanına uygulanmadığı anlamına gelir. Yukarıdaki komutla migration'ı uygulayın; ardından aynı isteği tekrar deneyin. Bu düzeltme için film sorgusunu veya kategori çevirilerini kaldırmak gerekmez.
 
 4. Uygulamayı kaldırın: `docker compose --env-file .env.production -f docker-compose.prod.yml up -d`
 
