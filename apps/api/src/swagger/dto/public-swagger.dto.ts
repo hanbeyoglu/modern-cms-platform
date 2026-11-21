@@ -254,6 +254,7 @@ export class PublicMovieDto {
   @ApiProperty({ type: Number, nullable: true }) durationMinutes!: number | null;
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) releaseDate!: string | null;
   @ApiProperty({ type: String, nullable: true }) ticketUrl!: string | null;
+  @ApiProperty({ type: String, nullable: true, example: '/poster.jpg', description: 'TMDB poster path; use when poster is null.' }) posterPath!: string | null;
   @ApiProperty({ type: PublicMoviePosterDto, nullable: true }) poster!: PublicMoviePosterDto | null;
   @ApiProperty({ type: [PublicMovieCategoryDto] }) categories!: PublicMovieCategoryDto[];
 }

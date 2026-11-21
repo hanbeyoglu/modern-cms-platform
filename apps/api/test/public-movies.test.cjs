@@ -6,7 +6,7 @@ const { PublicController } = require('../dist/public/public.controller');
 const base = { tenantId: 'tenant', status: 'ACTIVE', deletedAt: null, publishStartAt: null,
   publishEndAt: null, title: 'Original', slug: 'original', description: 'Description',
   durationMinutes: 120, releaseDate: new Date('2026-01-01'), ticketUrl: null,
-  posterMedia: null, categories: [], providerRaw: { secret: 'private' } };
+  posterMedia: null, posterPath: null, categories: [], providerRaw: { secret: 'private' } };
 
 // In-memory Prisma boundary: execute the query predicates and pagination against fixtures.
 // No session delegate exists: any dependency on sessions would fail these tests.
@@ -52,7 +52,9 @@ test('active films without sessions are public; inactive, deleted, foreign and u
   assert.deepEqual(result.items.map(movie => movie.id), ['no-sessions', 'in-window']);
   assert.equal(result.total, 2);
   assert.equal(result.items[0].poster, null);
-  assert.deepEqual(Object.keys(result.items[0]).sort(), ['id','title','slug','description','durationMinutes','releaseDate','ticketUrl','poster','categories'].sort());
+  assert.deepEqual(Object.keys(result.items[0]).sort(), ['id','title','slug','description','durationMinutes','releaseDate','ticketUrl','poster','posterPath','categories'].sort());
+  assert.equal(result.items[0].posterPath, null);
+  assert.equal(calls[0].select.posterPath, true);
   assert.equal(calls[0].select.providerRaw, undefined);
   assert.equal(calls[0].select.movieSessions, undefined);
   assert.deepEqual(calls[0].orderBy, [{ sortOrder: 'asc' }, { title: 'asc' }, { id: 'asc' }]);
@@ -60,6 +62,7 @@ test('active films without sessions are public; inactive, deleted, foreign and u
 
 test('movie and category translations, fallback and minimal poster projection', async () => {
   const { content } = fixture([{ ...base, id: 'film',
+    posterPath: '/tmdb-poster.jpg',
     posterMedia: { id: 'poster', publicUrl: 'https://cdn.test/poster.jpg', altText: 'Poster', secret: 'hidden' },
     categories: [{ category: { id: 'category', name: 'Action', slug: 'action' } }, { category: { id: 'fallback', name: 'Drama', slug: 'drama' } }],
   }], { MOVIE: { film: { title: 'Türkçe film', description: 'Türkçe açıklama' } }, MOVIE_CATEGORY: { category: { name: 'Aksiyon' } } });
@@ -67,7 +70,16 @@ test('movie and category translations, fallback and minimal poster projection', 
   assert.equal(movie.title, 'Türkçe film'); assert.equal(movie.description, 'Türkçe açıklama');
   assert.deepEqual(movie.categories, [{ id: 'category', name: 'Aksiyon', slug: 'action' }, { id: 'fallback', name: 'Drama', slug: 'drama' }]);
   assert.deepEqual(movie.poster, { id: 'poster', url: 'https://cdn.test/poster.jpg', alt: 'Poster' });
+  assert.equal(movie.posterPath, '/tmdb-poster.jpg');
   assert.equal(movie.releaseDate, '2026-01-01T00:00:00.000Z');
+});
+
+test('TMDB poster path is returned when no uploaded poster exists', async () => {
+  const { content } = fixture([{ ...base, id: 'tmdb-film', posterPath: '/tmdb-only.jpg' }]);
+  const { api } = controller(content);
+  const result = await api.getMovies('tenant', 'mall', 'tr', '1', '100');
+  assert.equal(result.data[0].poster, null);
+  assert.equal(result.data[0].posterPath, '/tmdb-only.jpg');
 });
 
 function controller(content) {

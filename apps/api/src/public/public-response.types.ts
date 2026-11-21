@@ -319,6 +319,7 @@ export interface PublicMovie {
   durationMinutes: number | null;
   releaseDate: string | null;
   ticketUrl: string | null;
+  posterPath: string | null;
   poster: { id: string; url: string; alt: string | null } | null;
   categories: Array<{ id: string; name: string; slug: string }>;
 }

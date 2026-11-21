@@ -660,7 +660,7 @@ export class PublicContentService {
         where,
         select: {
           id: true, title: true, slug: true, description: true,
-          durationMinutes: true, releaseDate: true, ticketUrl: true,
+          durationMinutes: true, releaseDate: true, ticketUrl: true, posterPath: true,
           posterMedia: { select: { id: true, publicUrl: true, altText: true } },
           categories: {
             where: { category: { tenantId: opts.tenantId } },
@@ -692,6 +692,7 @@ export class PublicContentService {
         durationMinutes: movie.durationMinutes,
         releaseDate: movie.releaseDate?.toISOString() ?? null,
         ticketUrl: movie.ticketUrl,
+        posterPath: movie.posterPath,
         poster: movie.posterMedia ? {
           id: movie.posterMedia.id,
           url: movie.posterMedia.publicUrl,
