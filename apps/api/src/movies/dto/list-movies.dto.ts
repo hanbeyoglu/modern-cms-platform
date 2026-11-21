@@ -5,6 +5,10 @@ import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class ListMoviesDto {
   @IsOptional()
+  @IsIn(['CURRENT', 'ARCHIVE'])
+  view?: 'CURRENT' | 'ARCHIVE';
+
+  @IsOptional()
   @Transform(({ value }: { value: string }) => Number(value))
   @IsInt()
   @Min(1)

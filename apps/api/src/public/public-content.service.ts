@@ -653,7 +653,7 @@ export class PublicContentService {
     const where: Prisma.MovieWhereInput = {
       tenantId: opts.tenantId,
       status: 'ACTIVE',
-      ...(opts.listingStatus && { listingStatus: opts.listingStatus }),
+      listingStatus: opts.listingStatus ?? { in: ['NOW_PLAYING', 'UPCOMING'] },
       deletedAt: null,
       ...PUBLISH_WINDOW_FILTER(new Date()),
     };

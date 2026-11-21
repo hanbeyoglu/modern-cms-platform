@@ -146,7 +146,10 @@ export async function importMovieFromProvider(
       data: {
         ...movieData,
         deletedAt: null,
-        ...(deps.listingStatus && { listingStatus: deps.listingStatus }),
+        ...(!existing.manualStatusOverride && deps.listingStatus && {
+          listingStatus: deps.listingStatus,
+          ...(existing.status === 'ARCHIVED' ? { status: 'ACTIVE' } : {}),
+        }),
         slug,
         categories: {
           deleteMany: {},

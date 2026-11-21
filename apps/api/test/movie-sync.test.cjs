@@ -4,7 +4,7 @@ const { runMovieSync, importMovieFromProvider } = require('@modern-cms/movie-pro
 
 function setup(initial = []) {
   const rows = initial.map(row => ({ tenantId: 'tenant', status: 'ACTIVE', provider: 'TMDB', deletedAt: null,
-    listingStatus: 'OTHER', slug: `movie-${row.tmdbId}`, ...row }));
+    manualStatusOverride: false, listingStatus: 'OTHER', slug: `movie-${row.tmdbId}`, ...row }));
   const fetched = [];
   const matches = (row, where) => row.tenantId === where.tenantId && (!where.provider || row.provider === where.provider);
   const prisma = {
@@ -20,7 +20,7 @@ function setup(initial = []) {
       },
       update: async ({ where, data }) => { const row = rows.find(row => row.id === where.id); Object.assign(row, data); return row; },
       updateMany: async ({ where, data }) => {
-        const selected = rows.filter(row => matches(row, where) && row.deletedAt == null && where.id.in.includes(row.id));
+        const selected = rows.filter(row => matches(row, where) && row.deletedAt == null && (!('manualStatusOverride' in where) || row.manualStatusOverride === where.manualStatusOverride) && where.id.in.includes(row.id));
         selected.forEach(row => Object.assign(row, data)); return { count: selected.length };
       },
     },
@@ -51,6 +51,7 @@ test('sync stores regional now-playing/upcoming classifications, prioritizes now
   assert.ok(rows.find(row => row.tmdbId === 4).deletedAt);
   assert.ok(!fetched.includes(4));
   assert.equal(rows.find(row => row.id === 'old').listingStatus, 'OTHER');
+  assert.equal(rows.find(row => row.id === 'old').status, 'ARCHIVED');
   assert.equal(rows.find(row => row.id === 'manual').listingStatus, 'UPCOMING');
   assert.equal(rows.find(row => row.id === 'foreign').listingStatus, 'NOW_PLAYING');
 });
@@ -82,4 +83,19 @@ test('explicit import can restore a deleted TMDB movie, but automatic import can
   assert.equal(restored.movieId, 'deleted');
   assert.equal(rows[0].deletedAt, null);
   assert.equal(rows.length, 1);
+});
+
+test('automatic archive reopens when movie returns to TMDB, manual archive/publication stays unchanged', async () => {
+  const { deps, rows } = setup([
+    { id: 'returning', tmdbId: 1, status: 'ARCHIVED' },
+    { id: 'editor-archived', tmdbId: 2, status: 'ARCHIVED', manualStatusOverride: true },
+    { id: 'editor-live', tmdbId: 7, status: 'ACTIVE', listingStatus: 'NOW_PLAYING', manualStatusOverride: true },
+  ]);
+  await runMovieSync(deps);
+  assert.equal(rows.find(row => row.id === 'returning').status, 'ACTIVE');
+  assert.equal(rows.find(row => row.id === 'returning').listingStatus, 'NOW_PLAYING');
+  assert.equal(rows.find(row => row.id === 'editor-archived').status, 'ARCHIVED');
+  assert.equal(rows.find(row => row.id === 'editor-archived').listingStatus, 'OTHER');
+  assert.equal(rows.find(row => row.id === 'editor-live').status, 'ACTIVE');
+  assert.equal(rows.find(row => row.id === 'editor-live').listingStatus, 'NOW_PLAYING');
 });

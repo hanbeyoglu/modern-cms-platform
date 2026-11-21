@@ -29,3 +29,31 @@ test('management listing applies display group, provider and category filters be
   assert.deepEqual(query.where.categories, { some: { categoryId: 'category' } });
   assert.equal(query.skip, 20);
 });
+
+test('current and archive views are scoped before pagination', async () => {
+  const queries = [];
+  const service = new MoviesService({ movie: {
+    findMany: async args => { queries.push(args); return []; }, count: async () => 0,
+  } }, {}, {});
+  await service.list('tenant', { view: 'CURRENT' });
+  await service.list('tenant', { view: 'ARCHIVE' });
+  assert.deepEqual(queries[0].where.AND, [
+    { status: { not: 'ARCHIVED' } }, { listingStatus: { in: ['NOW_PLAYING', 'UPCOMING'] } },
+  ]);
+  assert.equal(queries[1].where.status, 'ARCHIVED');
+});
+
+test('manual archive and restoration persist the editorial override', async () => {
+  const row = { id: 'film', tenantId: 'tenant', title: 'Movie', slug: 'movie', status: 'ACTIVE', listingStatus: 'NOW_PLAYING', deletedAt: null };
+  const service = new MoviesService({ movie: {
+    findFirst: async () => row,
+    update: async ({ data }) => Object.assign(row, data),
+  } }, { logAction: async () => {} }, { syncMovie: async () => {} });
+  await service.update('film', { status: 'ARCHIVED' }, { id: 'editor' }, 'tenant');
+  assert.equal(row.status, 'ARCHIVED');
+  assert.equal(row.manualStatusOverride, true);
+  await service.update('film', { status: 'ACTIVE', listingStatus: 'UPCOMING' }, { id: 'editor' }, 'tenant');
+  assert.equal(row.status, 'ACTIVE');
+  assert.equal(row.listingStatus, 'UPCOMING');
+  assert.equal(row.manualStatusOverride, true);
+});

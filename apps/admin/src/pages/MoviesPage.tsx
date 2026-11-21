@@ -63,7 +63,7 @@ const EMPTY: FormState = {
   sortOrder: '0',
   categoryIds: [],
   status: 'ACTIVE',
-  listingStatus: 'OTHER',
+  listingStatus: 'NOW_PLAYING',
 };
 
 function toForm(m: CmsMovie): FormState {
@@ -493,6 +493,7 @@ export function MoviesPage() {
   const [stats, setStats] = useState({ total: 0, active: 0, passive: 0, archived: 0 });
 
   // Filters (API-level)
+  const [view, setView] = useState<'CURRENT' | 'ARCHIVE'>('CURRENT');
   const [filterStatus, setFilterStatus] = useState<MovieStatus | ''>('');
   const [filterListingStatus, setFilterListingStatus] = useState<MovieListingStatus | ''>('');
   const [page, setPage] = useState(1);
@@ -527,7 +528,8 @@ export function MoviesPage() {
     setError(null);
     try {
       const data = await apiMoviesList(accessToken, tenantId, {
-        status: filterStatus || undefined,
+        view,
+        status: view === 'ARCHIVE' ? undefined : filterStatus || undefined,
         listingStatus: filterListingStatus || undefined,
         page,
         provider: filterProvider || undefined,
@@ -546,9 +548,9 @@ export function MoviesPage() {
     } finally {
       if (requestId === listRequestId.current) setLoading(false);
     }
-  }, [accessToken, tenantId, mallId, filterStatus, filterSearch, filterSortBy, filterListingStatus, page, filterProvider, filterCategoryId]);
+  }, [accessToken, tenantId, mallId, filterStatus, filterSearch, filterSortBy, filterListingStatus, page, filterProvider, filterCategoryId, view]);
 
-  useEffect(() => { setPage(1); }, [filterStatus, filterListingStatus, filterSearch, filterSortBy, filterProvider, filterCategoryId]);
+  useEffect(() => { setPage(1); }, [filterStatus, filterListingStatus, filterSearch, filterSortBy, filterProvider, filterCategoryId, view]);
 
   const loadStats = useCallback(async () => {
     if (!accessToken || !tenantId) return;
@@ -721,6 +723,11 @@ export function MoviesPage() {
         )}
       </div>
 
+      <div role="tablist" aria-label="Film listesi" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <Button role="tab" aria-selected={view === 'CURRENT'} variant={view === 'CURRENT' ? 'primary' : 'secondary'} onClick={() => { setView('CURRENT'); clearFilters(); }}>Vizyonda ve Yakında</Button>
+        <Button role="tab" aria-selected={view === 'ARCHIVE'} variant={view === 'ARCHIVE' ? 'primary' : 'secondary'} onClick={() => { setView('ARCHIVE'); clearFilters(); }}>Arşiv</Button>
+      </div>
+
       {/* ── Filter toolbar ─────────────────────────────────────────────────── */}
       <div
         style={{
@@ -771,7 +778,7 @@ export function MoviesPage() {
         </div>
 
         {/* Status */}
-        <select
+        {view === 'CURRENT' && <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as MovieStatus | '')}
           className="movie-filter-input"
@@ -780,14 +787,13 @@ export function MoviesPage() {
           <option value="">Tüm Durumlar</option>
           <option value="ACTIVE">Aktif</option>
           <option value="PASSIVE">Pasif</option>
-          <option value="ARCHIVED">Arşiv</option>
-        </select>
+        </select>}
 
         <select aria-label="Gösterim durumu" value={filterListingStatus}
           onChange={(e) => setFilterListingStatus(e.target.value as MovieListingStatus | '')}
           className="movie-filter-input" style={SELECT_STYLE}>
           <option value="">Tüm gösterim durumları</option>
-          {Object.entries(LISTING_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          {Object.entries(LISTING_LABELS).filter(([value]) => view === 'ARCHIVE' || value !== 'OTHER').map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
 
         {/* Category */}
@@ -952,6 +958,17 @@ export function MoviesPage() {
                   rowResyncingId={rowResyncingId}
                   openMenuId={openMenuId}
                   onEdit={openEdit}
+                  onPublicationChange={async (status, listingStatus) => {
+                    if (!accessToken) return;
+                    try {
+                      await apiMovieUpdate(accessToken, tenantId, m.id, { status, ...(listingStatus && { listingStatus }) });
+                      await load();
+                      void loadStats();
+                      toast.success(status === 'ARCHIVED' ? 'Film arşive alındı' : 'Film yayına alındı');
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : 'Durum değiştirilemedi');
+                    }
+                  }}
                   onSessions={() => navigate(`/movies/${m.id}/sessions`)}
                   onResync={async () => {
                     if (!accessToken) return;
@@ -1247,14 +1264,14 @@ export function MoviesPage() {
                 <label style={LABEL}>Gösterim durumu</label>
                 <select style={{ ...FORM_INPUT, height: 31 }} value={form.listingStatus}
                   onChange={(e) => setForm({ ...form, listingStatus: e.target.value as MovieListingStatus })}>
-                  {Object.entries(LISTING_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  {Object.entries(LISTING_LABELS).filter(([value]) => form.status === 'ARCHIVED' || value !== 'OTHER').map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
-                {editing?.provider === 'TMDB' && <p style={{ fontSize: 12 }}>TMDB senkronizasyonu bu alanı günceller.</p>}
+                {editing?.provider === 'TMDB' && <p style={{ fontSize: 12 }}>Gösterim durumunu veya yayın durumunu elle değiştirirseniz seçiminiz senkronizasyonda korunur.</p>}
                 <label style={LABEL}>Durum</label>
                 <select
                   style={{ ...FORM_INPUT, height: 31 }}
                   value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value as MovieStatus })}
+                  onChange={(e) => setForm({ ...form, status: e.target.value as MovieStatus, listingStatus: e.target.value !== 'ARCHIVED' && form.listingStatus === 'OTHER' ? 'NOW_PLAYING' : form.listingStatus })}
                 >
                   <option value="ACTIVE">Aktif</option>
                   <option value="PASSIVE">Pasif</option>
@@ -1388,12 +1405,14 @@ interface MovieRowProps {
   openMenuId: string | null;
   onEdit: (m: CmsMovie) => void;
   onSessions: () => void;
+  onPublicationChange: (status: MovieStatus, listingStatus?: MovieListingStatus) => Promise<void>;
   onResync: () => Promise<void>;
   onDelete: () => Promise<void>;
   onMenuToggle: (id: string) => void;
 }
 
 function MovieRow({
+  onPublicationChange,
   movie: m,
   rowResyncingId,
   openMenuId,
@@ -1665,6 +1684,13 @@ function MovieRow({
               <IconRefresh />
             </IconBtn>
           )}
+
+          {m.status === 'ARCHIVED' ? (
+            <>
+              <Button variant="secondary" onClick={() => void onPublicationChange('ACTIVE', 'NOW_PLAYING')}>Vizyonda yayınla</Button>
+              <Button variant="secondary" onClick={() => void onPublicationChange('ACTIVE', 'UPCOMING')}>Yakında yayınla</Button>
+            </>
+          ) : <Button variant="secondary" onClick={() => void onPublicationChange('ARCHIVED')}>Arşive al</Button>}
 
           {/* Overflow menu */}
           <div style={{ position: 'relative' }} data-menu-anchor>

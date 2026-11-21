@@ -866,6 +866,7 @@ model Movie {
   sortOrder               Int                 @default(0)
   status                  MovieStatus         @default(ACTIVE)
   listingStatus           MovieListingStatus  @default(OTHER)
+  manualStatusOverride    Boolean             @default(false)
   provider                MovieProviderSource @default(MANUAL)
   tmdbId                  Int?
   tmdbVoteAverage         Float?

@@ -144,3 +144,5 @@ OpenAPI üretimi veritabanı, Redis veya gerçek JWT anahtarı gerektirmez.
 ## Film gösterim durumu güncellemesi
 
 `20261121140000_movie_listing_status` migration'ını yeni API/worker imajlarını başlatmadan önce uygulayın. Bu sürüm API, worker ve admin değişiklikleri içerir; üçünü de yeniden build edip yayınlayın. Eski filmler migration sonrasında `OTHER` olur; TMDB merkezinden bir kez senkronizasyon başlatıldığında bölgesel Vizyonda/Yakında sınıflandırmaları doldurulur. Manuel filmlerin gösterim durumunu formdan seçebilirsiniz. Migration uygulanmadan yeni kod başlatılırsa yeni `listingStatus` kolonu bulunamayacağı için sorgular hata verir.
+
+`20261121160000_movie_archive_control` migration’ı yeni API/worker sürümü başlamadan önce uygulanmalıdır. Daha önce kullanılabilir olmadığı doğrulanan eski TMDB filmleri arşivlenir; diğer eski filmler ilk başarılı senkronizasyonda değerlendirilir. Önceden elle arşivlenmiş/pasife alınmış filmler korunur.

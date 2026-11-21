@@ -86,6 +86,7 @@ export async function apiMoviesList(
   token: string,
   tenantId: string,
   opts?: {
+    view?: 'CURRENT' | 'ARCHIVE';
     status?: MovieStatus;
     listingStatus?: MovieListingStatus;
     provider?: 'TMDB' | 'MANUAL';
@@ -99,6 +100,7 @@ export async function apiMoviesList(
   },
 ): Promise<MovieListResponse> {
   const params = new URLSearchParams();
+  if (opts?.view) params.set('view', opts.view);
   if (opts?.status) params.set('status', opts.status);
   if (opts?.listingStatus) params.set('listingStatus', opts.listingStatus);
   if (opts?.provider) params.set('provider', opts.provider);

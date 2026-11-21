@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const { PublicContentService } = require('../dist/public/public-content.service');
 const { PublicController } = require('../dist/public/public.controller');
 
-const base = { listingStatus: 'OTHER', tenantId: 'tenant', status: 'ACTIVE', deletedAt: null, publishStartAt: null,
+const base = { listingStatus: 'NOW_PLAYING', tenantId: 'tenant', status: 'ACTIVE', deletedAt: null, publishStartAt: null,
   publishEndAt: null, title: 'Original', slug: 'original', description: 'Description',
   durationMinutes: 120, releaseDate: new Date('2026-01-01'), ticketUrl: null,
   posterMedia: null, posterPath: null, categories: [], providerRaw: { secret: 'private' } };
@@ -17,6 +17,7 @@ function fixture(rows, translations = {}) {
       if (key === 'AND') return value.every(part => matches(row, part));
       if (key === 'OR') return value.some(part => matches(row, part));
       if (value && typeof value === 'object') {
+        if ('in' in value) return value.in.includes(row[key]);
         if ('lte' in value) return row[key] != null && row[key] <= value.lte;
         if ('gte' in value) return row[key] != null && row[key] >= value.gte;
         throw new Error(`Unsupported predicate: ${key}`);
@@ -47,6 +48,7 @@ test('active films without sessions are public; inactive, deleted, foreign and u
     { ...base, id: 'future', publishStartAt: new Date('2099-01-01') },
     { ...base, id: 'expired', publishEndAt: new Date('2000-01-01') },
     { ...base, id: 'foreign', tenantId: 'another' },
+    { ...base, id: 'old-other', listingStatus: 'OTHER' },
   ]);
   const result = await content.getMovies(options);
   assert.deepEqual(result.items.map(movie => movie.id), ['no-sessions', 'in-window']);
@@ -150,7 +152,7 @@ test('listingStatus filters before pagination and is isolated in cache', async (
   const { content } = fixture([
     { ...base, id: 'now', listingStatus: 'NOW_PLAYING' },
     { ...base, id: 'soon', listingStatus: 'UPCOMING' },
-    { ...base, id: 'other' },
+    { ...base, id: 'other', listingStatus: 'OTHER' },
   ]);
   const { api, writes } = controller(content);
   const now = await api.getMovies('tenant', 'mall', 'tr', '1', '100', 'NOW_PLAYING');

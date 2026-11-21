@@ -86,17 +86,17 @@ export async function runMovieSync(deps: RunMovieSyncDeps): Promise<MovieSyncRun
         tmdbId: { not: null },
         deletedAt: null,
       },
-      select: { id: true, tmdbId: true },
+      select: { id: true, tmdbId: true, manualStatusOverride: true, status: true },
     });
 
     const toMarkUnavailable = staleMovies.filter(
-      (m) => m.tmdbId != null && !availableIds.has(m.tmdbId),
+      (m) => m.tmdbId != null && !availableIds.has(m.tmdbId) && !m.manualStatusOverride && m.status !== 'ARCHIVED',
     );
 
     if (toMarkUnavailable.length > 0) {
       await prisma.movie.updateMany({
-        where: { tenantId, provider: 'TMDB', deletedAt: null, id: { in: toMarkUnavailable.map((m) => m.id) } },
-        data: { notCurrentlyAvailable: true, listingStatus: 'OTHER', updatedBy: systemUserId },
+        where: { tenantId, provider: 'TMDB', deletedAt: null, manualStatusOverride: false, id: { in: toMarkUnavailable.map((m) => m.id) } },
+        data: { status: 'ARCHIVED', notCurrentlyAvailable: true, listingStatus: 'OTHER', updatedBy: systemUserId },
       });
       updatedMovies += toMarkUnavailable.length;
     }

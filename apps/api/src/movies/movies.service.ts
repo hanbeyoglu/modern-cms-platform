@@ -54,6 +54,11 @@ export class MoviesService {
       tenantId,
       deletedAt: null,
       ...(query.status ? { status: query.status } : {}),
+      ...(query.view === 'CURRENT' ? { AND: [
+        { status: { not: 'ARCHIVED' } },
+        { listingStatus: { in: ['NOW_PLAYING', 'UPCOMING'] } },
+      ] } : {}),
+      ...(query.view === 'ARCHIVE' ? { status: 'ARCHIVED' } : {}),
       ...(query.listingStatus ? { listingStatus: query.listingStatus } : {}),
       ...(query.provider ? { provider: query.provider } : {}),
       ...(query.categoryId ? { categories: { some: { categoryId: query.categoryId } } } : {}),
@@ -229,7 +234,8 @@ export class MoviesService {
         publishEndAt: dto.publishEndAt ? new Date(dto.publishEndAt) : null,
         sortOrder: dto.sortOrder ?? 0,
         status: dto.status ?? 'ACTIVE',
-        listingStatus: dto.listingStatus ?? 'OTHER',
+        listingStatus: dto.listingStatus ?? 'NOW_PLAYING',
+        manualStatusOverride: true,
         createdBy: user.id,
         categories: {
           create: categoryIds.map((categoryId) => ({ categoryId })),
@@ -258,6 +264,8 @@ export class MoviesService {
     tenantId: string,
   ): Promise<MovieResponse> {
     const existing = await this.assertExists(id, tenantId);
+    const nextListingStatus = dto.listingStatus ??
+      (dto.status === 'ACTIVE' && existing.listingStatus === 'OTHER' ? 'NOW_PLAYING' : existing.listingStatus);
 
     const nextTrailer = dto.trailerUrl !== undefined ? dto.trailerUrl : existing.trailerUrl;
     assertOptionalHttpUrl(nextTrailer ?? undefined);
@@ -317,7 +325,10 @@ export class MoviesService {
         ...(dto.publishEndAt !== undefined && { publishEndAt }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder ?? 0 }),
         ...(dto.status !== undefined && { status: dto.status }),
-        ...(dto.listingStatus !== undefined && { listingStatus: dto.listingStatus }),
+        ...(nextListingStatus !== existing.listingStatus && { listingStatus: nextListingStatus }),
+        ...((dto.status !== undefined && dto.status !== existing.status) ||
+          (nextListingStatus !== existing.listingStatus)
+          ? { manualStatusOverride: true } : {}),
         ...(categoryIds !== undefined && {
           categories: {
             deleteMany: {},
