@@ -6,6 +6,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { IconPencil, IconTrash } from '../components/ui/icons';
 import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import { WorkingHoursEditor } from '../components/WorkingHoursEditor';
 import {
@@ -30,15 +32,16 @@ import { usePermission } from '../hooks/usePermission';
 import { useMallRequired } from '../hooks/useMallRequired';
 import { LocationScopedModuleShell } from '../components/location-scoped/LocationScopedModuleShell';
 
-const STATUS_STYLE: Record<ServiceStatus, { bg: string; color: string; label: string }> = {
-  ACTIVE: { bg: '#d1fae5', color: '#065f46', label: 'Aktif' },
-  INACTIVE: { bg: '#f3f4f6', color: '#374151', label: 'Pasif' },
+const STATUS_STYLE: Record<ServiceStatus, { bg: string; color: string; label: string; dot: string }> = {
+  ACTIVE: { bg: '#d1fae5', color: '#065f46', label: 'Aktif', dot: '#10b981' },
+  INACTIVE: { bg: '#f3f4f6', color: '#374151', label: 'Pasif', dot: '#9ca3af' },
 };
 
 function StatusBadge({ status }: { status: ServiceStatus }) {
   const c = STATUS_STYLE[status];
   return (
-    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: c.bg, color: c.color }}>
+    <span className="cms-status-badge" style={{ background: c.bg, color: c.color }}>
+      <span className="cms-status-badge__dot" style={{ background: c.dot }} />
       {c.label}
     </span>
   );
@@ -173,6 +176,8 @@ export function ServicesPage() {
   const [mallWorkingHours, setMallWorkingHours] = useState<WorkingHoursSchedule | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
 
   const tenantId = mallCtx.status === 'ready' ? mallCtx.tenantId : '';
   const mallId = mallCtx.status === 'ready' ? mallCtx.mallId : '';
@@ -295,15 +300,18 @@ export function ServicesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!accessToken || !tenantId) return;
-    if (!window.confirm('Bu hizmet silinsin mi?')) return;
+    if (!accessToken || !tenantId || actionBusyId) return;
+    setActionBusyId(id);
     try {
       await apiServiceDelete(accessToken, tenantId, id);
       setRows((prev) => prev.filter((r) => r.id !== id));
       setTotal((t) => t - 1);
       toast.success('Hizmet silindi');
+      setConfirmDelete(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Silinemedi');
+    } finally {
+      setActionBusyId(null);
     }
   }
 
@@ -487,45 +495,74 @@ export function ServicesPage() {
         )}
 
         {rows.length > 0 && (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="cms-data-table-wrap">
+          <table className="cms-data-table">
             <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ padding: 8 }}>Ad</th>
-                <th style={{ padding: 8 }}>Kategori</th>
-                <th style={{ padding: 8 }}>Durum</th>
-                <th style={{ padding: 8 }}>İşlem</th>
+              <tr>
+                <th>Ad</th>
+                <th>Kategori</th>
+                <th>Durum</th>
+                <th style={{ textAlign: 'right' }}>İşlem</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((s) => (
-                <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: 8 }}>
+              {rows.map((s) => {
+                const busy = actionBusyId === s.id;
+                return (
+                <tr key={s.id}>
+                  <td>
                     {s.name}
                     {s.isSoon && (
                       <span style={{ marginLeft: 6, fontSize: 10, color: '#b45309' }}>Yakında</span>
                     )}
                   </td>
-                  <td style={{ padding: 8, color: '#6b7280' }}>{s.category ?? '—'}</td>
-                  <td style={{ padding: 8 }}>
+                  <td style={{ color: '#6b7280' }}>{s.category ?? '—'}</td>
+                  <td>
                     <StatusBadge status={s.status} />
                   </td>
-                  <td style={{ padding: 8, whiteSpace: 'nowrap' }}>
-                    {can('service:update') && (
-                      <Button variant="ghost" onClick={() => openEdit(s)}>
-                        Düzenle
-                      </Button>
-                    )}
-                    {can('service:delete') && (
-                      <Button variant="ghost" onClick={() => void handleDelete(s.id)}>
-                        Sil
-                      </Button>
-                    )}
+                  <td>
+                    <div className="cms-data-table__actions">
+                      {can('service:update') && (
+                        <Button variant="secondary" size="sm" disabled={busy} onClick={() => openEdit(s)}>
+                          <IconPencil />
+                          Düzenle
+                        </Button>
+                      )}
+                      {can('service:delete') && (
+                        <Button
+                          variant="dangerSoft"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => setConfirmDelete({ id: s.id, name: s.name })}
+                        >
+                          <IconTrash />
+                          Sil
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
+          </div>
         )}
+
+        <ConfirmDialog
+          open={confirmDelete !== null}
+          title="Hizmeti sil"
+          description={`"${confirmDelete?.name ?? ''}" hizmetini silmek istediğinizden emin misiniz?`}
+          confirmLabel="Sil"
+          variant="danger"
+          confirming={Boolean(confirmDelete && actionBusyId === confirmDelete.id)}
+          onCancel={() => {
+            if (!actionBusyId) setConfirmDelete(null);
+          }}
+          onConfirm={() => {
+            if (confirmDelete) void handleDelete(confirmDelete.id);
+          }}
+        />
       </div>
     </LocationScopedModuleShell>
   );

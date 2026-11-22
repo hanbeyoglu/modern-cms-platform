@@ -8,6 +8,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { IconPencil, IconTrash } from '../components/ui/icons';
 import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import {
   apiCinemaCreate,
@@ -20,10 +22,10 @@ import {
   type CreateCinemaPayload,
 } from '../lib/api';
 
-const STATUS_STYLE: Record<CinemaStatus, { bg: string; color: string; label: string }> = {
-  ACTIVE: { bg: '#d1fae5', color: '#065f46', label: 'Aktif' },
-  PASSIVE: { bg: '#fef3c7', color: '#92400e', label: 'Pasif' },
-  ARCHIVED: { bg: '#e5e7eb', color: '#6b7280', label: 'Arşiv' },
+const STATUS_STYLE: Record<CinemaStatus, { bg: string; color: string; label: string; dot: string }> = {
+  ACTIVE: { bg: '#d1fae5', color: '#065f46', label: 'Aktif', dot: '#10b981' },
+  PASSIVE: { bg: '#fef3c7', color: '#92400e', label: 'Pasif', dot: '#f59e0b' },
+  ARCHIVED: { bg: '#e5e7eb', color: '#6b7280', label: 'Arşiv', dot: '#9ca3af' },
 };
 
 const PROVIDER_LABELS: Record<CinemaProviderType, string> = {
@@ -35,7 +37,8 @@ const PROVIDER_LABELS: Record<CinemaProviderType, string> = {
 function StatusBadge({ status }: { status: CinemaStatus }) {
   const c = STATUS_STYLE[status];
   return (
-    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: c.bg, color: c.color }}>
+    <span className="cms-status-badge" style={{ background: c.bg, color: c.color }}>
+      <span className="cms-status-badge__dot" style={{ background: c.dot }} />
       {c.label}
     </span>
   );
@@ -104,6 +107,8 @@ export function CinemasPage() {
   const [filterStatus, setFilterStatus] = useState<CinemaStatus | ''>('');
   const [filterSearch, setFilterSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [editing, setEditing] = useState<CmsCinema | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [formError, setFormError] = useState<string | null>(null);
@@ -189,57 +194,90 @@ export function CinemasPage() {
         ) : rows.length === 0 ? (
           <EmptyState title="Sinema yok" description="Yeni sinema ekleyerek başlayın." />
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="cms-data-table-wrap">
+          <table className="cms-data-table">
             <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ padding: '8px 4px' }}>Ad</th>
-                <th style={{ padding: '8px 4px' }}>Sağlayıcı</th>
-                <th style={{ padding: '8px 4px' }}>Durum</th>
-                <th style={{ padding: '8px 4px' }} />
+              <tr>
+                <th>Ad</th>
+                <th>Sağlayıcı</th>
+                <th>Durum</th>
+                <th style={{ textAlign: 'right' }}>İşlem</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((c) => (
-                <tr key={c.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: '8px 4px' }}>{c.name}</td>
-                  <td style={{ padding: '8px 4px' }}>{PROVIDER_LABELS[c.providerType]}</td>
-                  <td style={{ padding: '8px 4px' }}>
+              {rows.map((c) => {
+                const busy = actionBusyId === c.id;
+                return (
+                <tr key={c.id}>
+                  <td>{c.name}</td>
+                  <td>{PROVIDER_LABELS[c.providerType]}</td>
+                  <td>
                     <StatusBadge status={c.status} />
                   </td>
-                  <td style={{ padding: '8px 4px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setEditing(c);
-                        setForm(toForm(c));
-                        setFormError(null);
-                        setShowForm(true);
-                      }}
-                    >
-                      Düzenle
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={async () => {
-                        if (!accessToken || !window.confirm('Silinsin mi?')) return;
-                        try {
-                          await apiCinemaDelete(accessToken, tenantId, mallId, c.id);
-                          setRows((prev) => prev.filter((x) => x.id !== c.id));
-                          setTotal((t) => t - 1);
-                          toast.success('Silindi');
-                        } catch (err) {
-                          toast.error(err instanceof Error ? err.message : 'Hata');
-                        }
-                      }}
-                    >
-                      Sil
-                    </Button>
+                  <td>
+                    <div className="cms-data-table__actions">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => {
+                          setEditing(c);
+                          setForm(toForm(c));
+                          setFormError(null);
+                          setShowForm(true);
+                        }}
+                      >
+                        <IconPencil />
+                        Düzenle
+                      </Button>
+                      <Button
+                        variant="dangerSoft"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => setConfirmDelete({ id: c.id, name: c.name })}
+                      >
+                        <IconTrash />
+                        Sil
+                      </Button>
+                    </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
+          </div>
         )}
+
+        <ConfirmDialog
+          open={confirmDelete !== null}
+          title="Sinemayı sil"
+          description={`"${confirmDelete?.name ?? ''}" sinemasını silmek istediğinizden emin misiniz?`}
+          confirmLabel="Sil"
+          variant="danger"
+          confirming={Boolean(confirmDelete && actionBusyId === confirmDelete.id)}
+          onCancel={() => {
+            if (!actionBusyId) setConfirmDelete(null);
+          }}
+          onConfirm={() => {
+            if (!confirmDelete || !accessToken || actionBusyId) return;
+            const { id } = confirmDelete;
+            void (async () => {
+              setActionBusyId(id);
+              try {
+                await apiCinemaDelete(accessToken, tenantId, mallId, id);
+                setRows((prev) => prev.filter((x) => x.id !== id));
+                setTotal((t) => t - 1);
+                toast.success('Silindi');
+                setConfirmDelete(null);
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : 'Hata');
+              } finally {
+                setActionBusyId(null);
+              }
+            })();
+          }}
+        />
       </div>
 
       {showForm && (

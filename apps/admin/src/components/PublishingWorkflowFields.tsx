@@ -47,6 +47,8 @@ type BaseProps = {
   onStatusChange: (status: PublishWorkflowStatus) => void;
   labelStyle?: CSSProperties;
   inputStyle?: CSSProperties;
+  /** Optional short explanation shown under the status field. */
+  scheduleHint?: string;
 };
 
 type PageModeProps = BaseProps & {
@@ -84,16 +86,9 @@ export function PublishingWorkflowFields(props: PublishingWorkflowFieldsProps) {
     onStatusChange(next);
   };
 
-  const primaryLabel =
-    status === 'SCHEDULED'
-      ? props.mode === 'page'
-        ? 'Yayın zamanı *'
-        : 'Yayın zamanı (startAt) *'
-      : props.mode === 'page'
-        ? 'Yayın zamanı'
-        : 'Başlangıç (startAt)';
+  const primaryLabel = status === 'SCHEDULED' ? 'Yayın başlangıcı *' : 'Yayın başlangıcı';
 
-  const secondaryLabel = props.mode === 'page' ? 'Yayından kalkma (unpublishAt)' : 'Bitiş (endAt)';
+  const secondaryLabel = props.mode === 'page' ? 'Yayından kaldırılma (isteğe bağlı)' : 'Yayın bitişi (isteğe bağlı)';
 
   const primaryValue = props.mode === 'page' ? props.publishAt : props.startAt;
   const secondaryValue = props.mode === 'page' ? props.unpublishAt : props.endAt;
@@ -114,6 +109,7 @@ export function PublishingWorkflowFields(props: PublishingWorkflowFieldsProps) {
           ))}
         </select>
         <p style={helperTextStyle}>{STATUS_HELPER[status]}</p>
+        {props.scheduleHint && <p style={helperTextStyle}>{props.scheduleHint}</p>}
         {status === 'ARCHIVED' && (
           <p style={warningStyle}>
             Bu içerik arşivlenecek ve public taraftan kaldırılacak. Admin panelinde görünmeye devam eder.
@@ -158,8 +154,8 @@ export function PublishingWorkflowFields(props: PublishingWorkflowFieldsProps) {
             {status === 'PUBLISHED' && (
               <p style={{ ...helperTextStyle, marginTop: 4 }}>
                 {props.mode === 'page'
-                  ? 'Yayından kalkma tarihi dolunca sayfa otomatik arşivlenir (scheduler).'
-                  : 'Bitiş tarihi dolunca içerik otomatik arşivlenir (scheduler).'}
+                  ? 'Bu tarih gelince içerik otomatik olarak arşivlenir.'
+                  : 'Bu tarih gelince içerik otomatik olarak arşivlenir.'}
               </p>
             )}
           </div>

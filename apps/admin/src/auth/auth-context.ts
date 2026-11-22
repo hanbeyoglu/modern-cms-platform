@@ -15,6 +15,9 @@ export type AuthState = {
   activeTenantId: string | null;
   malls: Mall[];
   activeMallId: string | null;
+  /** Restored from storage, not yet verified against the user's current access. */
+  pendingTenantId: string | null;
+  pendingMallId: string | null;
   profileLoading: boolean;
   mallsLoading: boolean;
   mallsError: string | null;
@@ -104,11 +107,14 @@ export function initialAuthState(): AuthState {
     ...tokens,
     user: null,
     tenants: [],
-    activeTenantId: context.activeTenantId,
+    // Stored scope is only a candidate until the profile confirms the user may still use it.
+    activeTenantId: null,
     malls: [],
-    activeMallId: context.activeMallId,
+    activeMallId: null,
+    pendingTenantId: tokens.accessToken !== null ? context.activeTenantId : null,
+    pendingMallId: tokens.accessToken !== null ? context.activeMallId : null,
     profileLoading: tokens.accessToken !== null,
-    mallsLoading: tokens.accessToken !== null && context.activeTenantId !== null,
+    mallsLoading: false,
     mallsError: null,
   };
 }

@@ -149,8 +149,14 @@ export interface PublicSlider {
   targetDevice: string;
 }
 
+export interface PublicEventSlide {
+  id: string;
+  sortOrder: number;
+  image: { id: string; url: string; alt: string | null; caption: string | null };
+}
+
 export interface PublicEventDetail extends PublicEvent {
-  sliders: PublicSlider[];
+  sliders: PublicEventSlide[];
 }
 
 export interface PublicEvent {

@@ -192,6 +192,23 @@ Aşağıdaki tabloda `Mall` sütunu `x-mall-id` gereksinimini gösterir.
 
 Site meta verisi ve dil anahtarı.
 
+Web sitesinin dil seçicisini `data.supportedLocales` veya `data.languages`
+üzerinden oluşturun; sabit bir dil listesi kullanmayın. Sistemde aktif diller,
+AVM'de ayrıca pasifleştirilmedikçe desteklenir. Sistem seviyesinde pasif dil,
+AVM'de açılmış olsa bile dönmez. Varsayılan dil AVM'de kapatılamaz.
+
+`GET /public/site-config?locale=ar` için Arapça destekleniyorsa `activeLocale: "ar"`
+ve `rtl: true` döner. Türkçe/İngilizce için `rtl: false` doğrudur. Üst seviyedeki
+`rtl` yalnızca seçili dile aittir; her dilin kendi yönü `supportedLocales[].rtl`
+ve `languages[].rtl` alanlarında bulunur. Web istemcisi seçilen yanıtla HTML
+`lang` ve `dir` (`rtl`/`ltr`) değerlerini güncellemelidir. Bilinmeyen veya pasif
+`locale`, varsayılan aktif dile düşer; yanıttaki `locale` ve `activeLocale`
+gerçekte kullanılan dili gösterir.
+
+Dil aktivasyonu, sıralama, varsayılan dil ve AVM dil ayarları değişince public
+cache temizlenir. Yeni dillerin aktif olması mevcut içerikleri otomatik çevirmez;
+çeviri bulunmayan alanlar mevcut varsayılan dil yedeğini kullanır.
+
 **Sorgu:** `locale` (isteğe bağlı)
 
 **Örnek yanıt (`data` özeti):**
@@ -795,3 +812,17 @@ Film yanıtında `trailerUrl` ham bağlantısı korunur. Desteklenen YouTube ba�
 ```
 
 Otomatik oynatma varsayılan olarak açılmaz. API video dosyası sağlamaz; video sahibinin yerleştirme izni, bölge veya yaş kısıtı oynatmayı etkileyebilir. Böyle bir durumda `trailer.url` ile YouTube’da izleme seçeneği sunulabilir. Migration gerekmez.
+
+### Etkinlik detay slaytları
+
+`GET /public/events/:slug?locale=tr` yanıtındaki `data.sliders`, etkinliğe
+bağlı yayınlanmış slider gruplarının yayınlanmış slaytlarını düz liste olarak döndürür:
+
+```json
+{"sliders":[{"id":"slide-id","sortOrder":0,"image":{"id":"media-id","url":"https://cdn.example.com/event.jpg","alt":"Etkinlik","caption":null}}]}
+```
+
+Liste `sortOrder` artan sıradadır. Grup yayın aralığı, tenant/AVM kapsamı ve medya
+aktiflik/silinme kontrolleri uygulanır; görsel dili mevcut varsayılan dil yedeğini
+kullanır. Uygun slayt yoksa `[]` döner. Kapak (`image`, `coverMedia`) ve SEO görseli
+ayrı kalır; kapak görselinden slayt üretilmez. `/public/sliders` grup sözleşmesi değişmez.

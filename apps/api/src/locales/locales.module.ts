@@ -1,3 +1,4 @@
+import { PublicCacheModule } from '../public/cache/public-cache.module';
 import { Module } from '@nestjs/common';
 import { AccessModule } from '../access/access.module';
 import { AuditModule } from '../audit/audit.module';
@@ -7,7 +8,7 @@ import { LocalesController } from './locales.controller';
 import { SystemLocalesController } from './system-locales.controller';
 
 @Module({
-  imports: [AccessModule, AuditModule, CapabilitiesModule],
+  imports: [PublicCacheModule, AccessModule, AuditModule, CapabilitiesModule],
   controllers: [LocalesController, SystemLocalesController],
   providers: [LocalesService],
   exports: [LocalesService],

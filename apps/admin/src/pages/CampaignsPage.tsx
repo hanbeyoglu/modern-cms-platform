@@ -1,7 +1,9 @@
+import { LocalizedCoverFields } from '../components/LocalizedCoverFields';
 import { RichTextEditor } from '../components/RichTextEditor';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { toast } from 'sonner';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
@@ -19,6 +21,9 @@ import {
 } from '../lib/campaign-event-form-validation';
 import { DEFAULT_CONTENT_CHANNELS } from '../lib/content-channels';
 import { Button } from '../components/ui/Button';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { ListFilterBar } from '../components/ui/ListFilterBar';
+import { IconArchive, IconPencil, IconTrash } from '../components/ui/icons';
 import { LinkedSliderGroupsSection } from '../components/LinkedSliderGroupsSection';
 import {
   apiCampaignArchive,
@@ -45,31 +50,44 @@ import type {
 import { usePermission } from '../hooks/usePermission';
 import { useMallRequired } from '../hooks/useMallRequired';
 import { MallRequiredStates } from '../components/MallRequiredStates';
+import { EmptyState } from '../components/ui/EmptyState';
+import { FormSection } from '../components/FormSection';
+import { ListPagination } from '../components/ListPagination';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { confirmDiscardUnsavedChanges } from '../lib/unsaved-changes';
+import { getSaveActionLabel, getSaveSuccessMessage } from '../lib/publishing-workflow';
+import { describeSaveError, focusFirstField, scrollFormIntoView } from '../lib/form-focus';
 
-const STATUS_STYLE: Record<ContentStatus, { bg: string; color: string; label: string }> = {
-  DRAFT: { bg: '#f3f4f6', color: '#374151', label: 'Taslak' },
-  SCHEDULED: { bg: '#fef3c7', color: '#92400e', label: 'Zamanlanmış' },
-  PUBLISHED: { bg: '#d1fae5', color: '#065f46', label: 'Yayında' },
-  ARCHIVED: { bg: '#e5e7eb', color: '#6b7280', label: 'Arşiv' },
+const PAGE_SIZE = 20;
+
+const STATUS_FILTER_OPTIONS = [
+  { value: '', label: 'Aktif (arşiv hariç)' },
+  { value: 'DRAFT', label: 'Taslak' },
+  { value: 'SCHEDULED', label: 'Zamanlanmış' },
+  { value: 'PUBLISHED', label: 'Yayında' },
+  { value: 'ARCHIVED', label: 'Arşiv' },
+];
+
+const STATUS_STYLE: Record<ContentStatus, { bg: string; color: string; label: string; dot: string }> = {
+  DRAFT: { bg: '#f3f4f6', color: '#374151', label: 'Taslak', dot: '#9ca3af' },
+  SCHEDULED: { bg: '#fef3c7', color: '#92400e', label: 'Zamanlanmış', dot: '#f59e0b' },
+  PUBLISHED: { bg: '#d1fae5', color: '#065f46', label: 'Yayında', dot: '#10b981' },
+  ARCHIVED: { bg: '#e5e7eb', color: '#6b7280', label: 'Arşiv', dot: '#9ca3af' },
 };
 
 function StatusBadge({ status }: { status: ContentStatus }) {
   const c = STATUS_STYLE[status];
   return (
-    <span
-      style={{
-        fontSize: 11,
-        fontWeight: 600,
-        padding: '2px 7px',
-        borderRadius: 4,
-        background: c.bg,
-        color: c.color,
-      }}
-    >
+    <span className="cms-status-badge" style={{ background: c.bg, color: c.color }}>
+      <span className="cms-status-badge__dot" style={{ background: c.dot }} />
       {c.label}
     </span>
   );
 }
+
+type ConfirmState =
+  | { kind: 'delete'; id: string; title: string }
+  | { kind: 'archive'; id: string; title: string };
 
 function storeRowLabel(store: CmsCampaign['store']): string {
   if (!store) return '—';
@@ -208,7 +226,9 @@ export function CampaignsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<ContentStatus | ''>('');
+  const [searchInput, setSearchInput] = useState('');
   const [filterSearch, setFilterSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [mallStores, setMallStores] = useState<MallStore[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CmsCampaign | null>(null);
@@ -220,12 +240,20 @@ export function CampaignsPage() {
   const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
   const [i18nDirty, setI18nDirty] = useState(false);
   const [campaignFormDirty, setCampaignFormDirty] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
 
   const tenantId = mallCtx.status === 'ready' ? mallCtx.tenantId : '';
   const mallId = mallCtx.status === 'ready' ? mallCtx.mallId : '';
+  const canUpdate = can('campaign:update');
+  const canPublish = can('campaign:publish');
+  const canArchive = can('campaign:archive');
+  const canDelete = can('campaign:delete');
 
+  const listRequestRef = useRef(0);
   const loadCampaigns = useCallback(async () => {
     if (!accessToken || !tenantId) return;
+    const requestId = ++listRequestRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -233,16 +261,19 @@ export function CampaignsPage() {
         mallId,
         status: filterStatus || undefined,
         search: filterSearch || undefined,
-        limit: 50,
+        page,
+        limit: PAGE_SIZE,
       });
+      if (requestId !== listRequestRef.current) return;
       setItems(data.campaigns);
       setTotal(data.total);
     } catch (err) {
+      if (requestId !== listRequestRef.current) return;
       setError(err instanceof Error ? err.message : 'Kampanyalar yüklenemedi');
     } finally {
-      setLoading(false);
+      if (requestId === listRequestRef.current) setLoading(false);
     }
-  }, [accessToken, tenantId, mallId, filterStatus, filterSearch]);
+  }, [accessToken, tenantId, mallId, filterStatus, filterSearch, page]);
 
   const loadStores = useCallback(async () => {
     if (!accessToken || !tenantId || !mallId) {
@@ -260,6 +291,17 @@ export function CampaignsPage() {
   useEffect(() => {
     void loadCampaigns();
   }, [loadCampaigns]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const next = searchInput.trim();
+      setFilterSearch((prev) => {
+        if (prev !== next) setPage(1);
+        return next;
+      });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     void loadStores();
@@ -335,16 +377,65 @@ export function CampaignsPage() {
     })();
   }, [showForm, editing, accessToken, tenantId, mallId]);
 
+  const formDirty = showForm && (i18nDirty || campaignFormDirty);
+  useUnsavedChangesGuard('campaign-form', formDirty);
+
+  const formRef = useRef<HTMLDivElement>(null);
+  const basicSectionRef = useRef<HTMLDivElement>(null);
+  const focusPendingRef = useRef(false);
+
   useEffect(() => {
-    if (!showForm || (!i18nDirty && !campaignFormDirty)) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-    };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [showForm, i18nDirty, campaignFormDirty]);
+    if (!showForm) return;
+    focusPendingRef.current = true;
+    scrollFormIntoView(formRef.current);
+  }, [showForm, editing]);
+
+  useEffect(() => {
+    if (!showForm || !focusPendingRef.current) return;
+    const timer = window.setTimeout(() => {
+      focusFirstField(basicSectionRef.current, formRef.current);
+      if (contentLocaleTab) focusPendingRef.current = false;
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [showForm, editing, contentLocaleTab]);
+
+  // A new AVM/tenant scope must never receive a form filled for the previous one.
+  const scopeKeyRef = useRef(`${tenantId}:${mallId}`);
+  useEffect(() => {
+    const key = `${tenantId}:${mallId}`;
+    if (scopeKeyRef.current === key) return;
+    scopeKeyRef.current = key;
+    cancelForm();
+    setPage(1);
+  }, [tenantId, mallId]);
+
+  // Dashboard quick action: "?new=1" opens the create form once, then the flag is removed.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const newParamHandledRef = useRef(false);
+  useEffect(() => {
+    if (newParamHandledRef.current || searchParams.get('new') !== '1' || mallCtx.status !== 'ready') return;
+    newParamHandledRef.current = true;
+    openCreate();
+    const next = new URLSearchParams(searchParams);
+    next.delete('new');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, mallCtx.status]);
+
+  function requestCloseForm() {
+    if (formDirty && !confirmDiscardUnsavedChanges()) return;
+    cancelForm();
+  }
+
+  function clearFilters() {
+    setSearchInput('');
+    setFilterSearch('');
+    setFilterStatus('');
+    setPage(1);
+  }
 
   function openCreate() {
+    if (formDirty && !confirmDiscardUnsavedChanges()) return;
     setEditing(null);
     setForm(EMPTY);
     setFormError(null);
@@ -355,6 +446,11 @@ export function CampaignsPage() {
   }
 
   function openEdit(c: CmsCampaign) {
+    if (formDirty && editing?.id !== c.id && !confirmDiscardUnsavedChanges()) return;
+    if (formDirty && editing?.id === c.id) {
+      scrollFormIntoView(formRef.current);
+      return;
+    }
     setEditing(c);
     setForm(cToForm(c));
     setFormError(null);
@@ -448,54 +544,62 @@ export function CampaignsPage() {
         const updated = await apiCampaignUpdate(accessToken, tenantId, editing.id, payload, mallId);
         setItems((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
         await flushCampaignTranslations(updated.id);
-        toast.success('Kampanya güncellendi');
       } else {
         const created = await apiCampaignCreate(accessToken, tenantId, payload, mallId);
-        setItems((prev) => [created, ...prev]);
-        setTotal((t) => t + 1);
         await flushCampaignTranslations(created.id);
-        toast.success('Kampanya oluşturuldu');
       }
+      toast.success(getSaveSuccessMessage('Kampanya', form.status, form.publishStartAt));
       cancelForm();
+      void loadCampaigns();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Kayıt başarısız');
+      setFormError(describeSaveError(err));
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!accessToken || !tenantId) return;
-    if (!window.confirm('Bu kampanyayı silmek istediğinizden emin misiniz?')) return;
+    if (!accessToken || !tenantId || actionBusyId) return;
+    setActionBusyId(id);
     try {
       await apiCampaignDelete(accessToken, tenantId, id, mallId);
-      setItems((prev) => prev.filter((x) => x.id !== id));
-      setTotal((t) => t - 1);
       toast.success('Kampanya silindi');
+      setConfirm(null);
+      if (items.length === 1 && page > 1) setPage(page - 1);
+      else void loadCampaigns();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Silinemedi');
+    } finally {
+      setActionBusyId(null);
     }
   }
 
   async function handlePublish(id: string) {
-    if (!accessToken || !tenantId) return;
+    if (!accessToken || !tenantId || actionBusyId) return;
+    setActionBusyId(id);
     try {
       const updated = await apiCampaignPublish(accessToken, tenantId, id, mallId);
       setItems((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
       toast.success('Kampanya yayınlandı');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Yayınlanamadı');
+    } finally {
+      setActionBusyId(null);
     }
   }
 
   async function handleArchive(id: string) {
-    if (!accessToken || !tenantId) return;
+    if (!accessToken || !tenantId || actionBusyId) return;
+    setActionBusyId(id);
     try {
       const updated = await apiCampaignArchive(accessToken, tenantId, id, mallId);
       setItems((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
       toast.success('Kampanya arşivlendi');
+      setConfirm(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Arşivlenemedi');
+    } finally {
+      setActionBusyId(null);
     }
   }
 
@@ -515,6 +619,8 @@ export function CampaignsPage() {
     marginBottom: 3,
   };
 
+  const hasFilters = Boolean(filterSearch || searchInput.trim() || filterStatus);
+
   return (
     <MallRequiredStates title="Kampanyalar" status={mallCtx}>
     <PageContainer>
@@ -524,29 +630,24 @@ export function CampaignsPage() {
         action={<Button variant="primary" onClick={openCreate}>+ Yeni Kampanya</Button>}
       />
     <div style={{ fontSize: 13 }}>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
-        <input
-          type="text"
-          placeholder="Başlığa göre ara…"
-          value={filterSearch}
-          onChange={(e) => setFilterSearch(e.target.value)}
-          style={{ ...inputStyle, width: 200 }}
-        />
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as ContentStatus | '')}
-          style={inputStyle}
-        >
-          <option value="">Aktif (arşiv hariç)</option>
-          <option value="DRAFT">Taslak</option>
-          <option value="SCHEDULED">Zamanlanmış</option>
-          <option value="PUBLISHED">Yayında</option>
-          <option value="ARCHIVED">Arşiv</option>
-        </select>
-        <button type="button" onClick={() => void loadCampaigns()} style={inputStyle}>
-          Filtrele
-        </button>
-      </div>
+      <ListFilterBar
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+        searchLabel="Kampanyalar içinde ara"
+        statusValue={filterStatus}
+        onStatusChange={(value) => {
+          setFilterStatus(value as ContentStatus | '');
+          setPage(1);
+        }}
+        statusOptions={STATUS_FILTER_OPTIONS}
+        trailing={
+          hasFilters ? (
+            <Button variant="ghost" onClick={clearFilters}>
+              Filtreleri temizle
+            </Button>
+          ) : null
+        }
+      />
 
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
@@ -554,428 +655,474 @@ export function CampaignsPage() {
 
       {showForm && (
         <div
+          ref={formRef}
           style={{
             border: '1px solid #e5e7eb',
             borderRadius: 8,
-            padding: 16,
+            padding: '16px 16px 0',
             marginBottom: 20,
             background: '#fafafa',
+            scrollMarginTop: 16,
           }}
         >
           <h3 style={{ marginTop: 0 }}>{editing ? 'Kampanyayı düzenle' : 'Yeni kampanya'}</h3>
-          {formError && <p style={{ color: '#b91c1c' }}>{formError}</p>}
-          <div style={{ display: 'grid', gap: 10, maxWidth: 520 }}>
-            <div>
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  fontSize: 13,
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={form.sameImageForAllLocales}
+          <div style={{ display: 'grid', gap: 16, maxWidth: 760 }}>
+            <div ref={basicSectionRef}>
+            <FormSection title="Temel bilgiler">
+              {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
+                <MultilingualContentFields
+                  locales={tenantLocales}
+                  fields={CAMPAIGN_I18N_FIELDS}
+                  richTextFields={['description', 'terms']}
+                  activeLocaleId={contentLocaleTab}
+                  onTabChange={(id) => setContentLocaleTab(id)}
+                  defaultLocaleId={tenantLocales.find((l) => l.isDefault)?.id}
+                  getValue={(localeId, field) => {
+                    const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                    if (defaultLocaleId && localeId === defaultLocaleId) {
+                      return String(form[field as keyof FormState] ?? '');
+                    }
+                    return localeDrafts[localeId]?.[field] ?? '';
+                  }}
+                  setValue={(localeId, field, value) => {
+                    const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
+                    if (defaultLocaleId && localeId === defaultLocaleId) {
+                      setForm((prev) => ({ ...prev, [field]: value }));
+                      setCampaignFormDirty(true);
+                      return;
+                    }
+                    setLocaleDrafts((drafts) => ({
+                      ...drafts,
+                      [localeId]: { ...drafts[localeId], [field]: value },
+                    }));
+                    setI18nDirty(true);
+                  }}
+                  onCopyFromDefault={(targetId) => {
+                    setLocaleDrafts((drafts) => ({
+                      ...drafts,
+                      [targetId]: {
+                        ...drafts[targetId],
+                        title: form.title,
+                        shortDescription: form.shortDescription,
+                        description: form.description,
+                        terms: form.terms,
+                        buttonText: form.buttonText,
+                      },
+                    }));
+                    setI18nDirty(true);
+                  }}
                   disabled={saving}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setForm((prev) => {
-                      if (!checked) {
-                        return {
-                          ...prev,
-                          sameImageForAllLocales: false,
-                          defaultLocaleCoverImageId:
-                            prev.defaultLocaleCoverImageId || prev.sharedCoverImageId,
-                          defaultLocaleMobileCoverImageId:
-                            prev.defaultLocaleMobileCoverImageId || prev.sharedMobileCoverImageId,
-                        };
-                      }
-                      return { ...prev, sameImageForAllLocales: true };
-                    });
-                    setCampaignFormDirty(true);
-                  }}
+
                 />
-                Tüm diller için aynı kapak görselini kullan
-              </label>
-              {!form.sameImageForAllLocales && (
-                <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6b7280', lineHeight: 1.45 }}>
-                  Dil bazlı görsel kullanırsanız her dil için farklı kampanya bannerı yükleyebilirsiniz.
-                  <br />
-                  Eksik dil görsellerinde varsayılan dil veya ortak görsel kullanılır.
-                </p>
+              ) : (
+                <>
+                  <div>
+                    <label style={labelStyle}>Başlık *</label>
+                    <input
+                      style={inputStyle}
+                      value={form.title}
+                      onChange={(e) => {
+                        setForm({ ...form, title: e.target.value });
+                        setCampaignFormDirty(true);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Kısa açıklama</label>
+                    <input
+                      style={inputStyle}
+                      value={form.shortDescription}
+                      onChange={(e) => {
+                        setForm({ ...form, shortDescription: e.target.value });
+                        setCampaignFormDirty(true);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Açıklama</label>
+                    <RichTextEditor label="Açıklama" value={form.description} disabled={saving} onChange={(value) => { setForm({ ...form, description: value }); setCampaignFormDirty(true); }} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Şartlar</label>
+                    <RichTextEditor label="Şartlar" value={form.terms} disabled={saving} onChange={(value) => { setForm({ ...form, terms: value }); setCampaignFormDirty(true); }} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Buton metni</label>
+                    <input
+                      style={inputStyle}
+                      value={form.buttonText}
+                      onChange={(e) => {
+                        setForm({ ...form, buttonText: e.target.value });
+                        setCampaignFormDirty(true);
+                      }}
+                    />
+                  </div>
+                </>
               )}
-            </div>
-            {form.sameImageForAllLocales && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <ContextualMediaPicker
-                  context="CAMPAIGN_COVER"
-                  value={form.sharedCoverImageId}
-                  mallId={mallId}
-                  onChange={(id) => {
-                    setForm({ ...form, sharedCoverImageId: id });
+
+              <div>
+                <label style={labelStyle}>AVM mağazası</label>
+                <select
+                  style={inputStyle}
+                  value={form.storeId}
+                  onChange={(e) => {
+                    setForm({ ...form, storeId: e.target.value });
                     setCampaignFormDirty(true);
                   }}
-                  dimensionOverride={{
-                    width: parseOptionalDimension(form.coverMediaWidthOverride),
-                    height: parseOptionalDimension(form.coverMediaHeightOverride),
-                  }}
-                  onDimensionOverrideChange={(dimensions) => {
-                    setForm({
-                      ...form,
-                      coverMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
-                      coverMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
-                    });
-                    setCampaignFormDirty(true);
-                  }}
-                />
-                <ContextualMediaPicker
-                  context="CAMPAIGN_MOBILE_COVER"
-                  value={form.sharedMobileCoverImageId}
-                  mallId={mallId}
-                  onChange={(id) => {
-                    setForm({ ...form, sharedMobileCoverImageId: id });
-                    setCampaignFormDirty(true);
-                  }}
-                  dimensionOverride={{
-                    width: parseOptionalDimension(form.coverMediaWidthOverride),
-                    height: parseOptionalDimension(form.coverMediaHeightOverride),
-                  }}
-                  onDimensionOverrideChange={(dimensions) => {
-                    setForm({
-                      ...form,
-                      coverMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
-                      coverMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
-                    });
+                  disabled={!mallId}
+                >
+                  <option value="">—</option>
+                  {mallStores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.globalStore.name}
+                      {s.detailTitle ? ` — ${s.detailTitle}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Kupon kodu</label>
+                <input
+                  style={inputStyle}
+                  value={form.couponCode}
+                  onChange={(e) => {
+                    setForm({ ...form, couponCode: e.target.value });
                     setCampaignFormDirty(true);
                   }}
                 />
               </div>
-            )}
-            <div>
-              <label style={labelStyle}>AVM mağazası</label>
-              <select
-                style={inputStyle}
-                value={form.storeId}
-                onChange={(e) => {
-                  setForm({ ...form, storeId: e.target.value });
-                  setCampaignFormDirty(true);
-                }}
-                disabled={!mallId}
-              >
-                <option value="">—</option>
-                {mallStores.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.globalStore.name}
-                    {s.detailTitle ? ` — ${s.detailTitle}` : ''}
-                  </option>
-                ))}
-              </select>
+
+              <div>
+                <label style={labelStyle}>Bağlantı adresi</label>
+                <input
+                  style={inputStyle}
+                  value={form.linkUrl}
+                  onChange={(e) => {
+                    setForm({ ...form, linkUrl: e.target.value });
+                    setCampaignFormDirty(true);
+                  }}
+                />
+              </div>
+
+            </FormSection>
             </div>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <ContentChannelFields
-                channels={form.channels}
-                onChange={(channels) => {
-                  setForm({ ...form, channels });
-                  setCampaignFormDirty(true);
-                }}
-                labelStyle={labelStyle}
+            <FormSection title="Görseller">
+              <div>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontSize: 13,
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={form.sameImageForAllLocales}
+                    disabled={saving || (form.sameImageForAllLocales && !tenantLocales.some(l => l.isActive && l.isDefault))}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setForm((prev) => {
+                        if (!checked) {
+                          return {
+                            ...prev,
+                            sameImageForAllLocales: false,
+                            defaultLocaleCoverImageId:
+                              prev.defaultLocaleCoverImageId || prev.sharedCoverImageId,
+                            defaultLocaleMobileCoverImageId:
+                              prev.defaultLocaleMobileCoverImageId || prev.sharedMobileCoverImageId,
+                          };
+                        }
+                        return { ...prev, sameImageForAllLocales: true, sharedCoverImageId: prev.sharedCoverImageId || prev.defaultLocaleCoverImageId, sharedMobileCoverImageId: prev.sharedMobileCoverImageId || prev.defaultLocaleMobileCoverImageId };
+                      });
+                      setCampaignFormDirty(true);
+                    }}
+                  />
+                  Tüm diller için aynı kapak görselini kullan
+                </label>
+                {!tenantLocales.some(l => l.isActive && l.isDefault) && (
+                  <p role="status" style={{ fontSize: 12, color: '#6b7280' }}>
+                    Dil bazlı görseller için dil listesinin yüklenmesi ve aktif bir varsayılan dil tanımlanması gerekir. Ortak kapağı kullanmaya devam edebilirsiniz.
+                  </p>
+                )}
+                {!form.sameImageForAllLocales && (
+                  <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6b7280', lineHeight: 1.45 }}>
+                    Dil bazlı görsel kullanırsanız her dil için farklı kampanya bannerı yükleyebilirsiniz.
+                    <br />
+                    Eksik dil görsellerinde varsayılan dil veya ortak görsel kullanılır.
+                  </p>
+                )}
+              </div>
+
+              {form.sameImageForAllLocales && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 16 }}>
+                  <ContextualMediaPicker
+                    context="CAMPAIGN_COVER"
+                    disabled={saving}
+                    value={form.sharedCoverImageId}
+                    mallId={mallId}
+                    onChange={(id) => {
+                      setForm({ ...form, sharedCoverImageId: id });
+                      setCampaignFormDirty(true);
+                    }}
+                    dimensionOverride={{
+                      width: parseOptionalDimension(form.coverMediaWidthOverride),
+                      height: parseOptionalDimension(form.coverMediaHeightOverride),
+                    }}
+                    onDimensionOverrideChange={(dimensions) => {
+                      setForm({
+                        ...form,
+                        coverMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                        coverMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                      });
+                      setCampaignFormDirty(true);
+                    }}
+                  />
+                  <ContextualMediaPicker
+                    context="CAMPAIGN_MOBILE_COVER"
+                    disabled={saving}
+                    value={form.sharedMobileCoverImageId}
+                    mallId={mallId}
+                    onChange={(id) => {
+                      setForm({ ...form, sharedMobileCoverImageId: id });
+                      setCampaignFormDirty(true);
+                    }}
+                    dimensionOverride={{
+                      width: parseOptionalDimension(form.coverMediaWidthOverride),
+                      height: parseOptionalDimension(form.coverMediaHeightOverride),
+                    }}
+                    onDimensionOverrideChange={(dimensions) => {
+                      setForm({
+                        ...form,
+                        coverMediaWidthOverride: dimensions.width ? String(dimensions.width) : '',
+                        coverMediaHeightOverride: dimensions.height ? String(dimensions.height) : '',
+                      });
+                      setCampaignFormDirty(true);
+                    }}
+                  />
+                </div>
+              )}
+
+              {!form.sameImageForAllLocales && (
+                <LocalizedCoverFields
+                  locales={tenantLocales}
+                  disabled={saving}
+                  renderFields={(localeId) => {
+                          const defId = tenantLocales.find((l) => l.isDefault)?.id;
+                          const coverValue =
+                            defId && localeId === defId
+                              ? form.defaultLocaleCoverImageId
+                              : localeDrafts[localeId]?.coverImageId ?? '';
+                          const mobileValue =
+                            defId && localeId === defId
+                              ? form.defaultLocaleMobileCoverImageId
+                              : localeDrafts[localeId]?.mobileCoverImageId ?? '';
+                          return (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 16 }}>
+                              <ContextualMediaPicker
+                                context="CAMPAIGN_COVER"
+                    disabled={saving}
+                                value={coverValue}
+                                mallId={mallId}
+                                onChange={(mediaId) => {
+                                  if (defId && localeId === defId) {
+                                    setForm((prev) => ({
+                                      ...prev,
+                                      defaultLocaleCoverImageId: mediaId,
+                                    }));
+                                    setCampaignFormDirty(true);
+                                    return;
+                                  }
+                                  setLocaleDrafts((d) => ({
+                                    ...d,
+                                    [localeId]: { ...d[localeId], coverImageId: mediaId },
+                                  }));
+                                  setI18nDirty(true);
+                                }}
+                                dimensionOverride={{
+                                  width: parseOptionalDimension(form.coverMediaWidthOverride),
+                                  height: parseOptionalDimension(form.coverMediaHeightOverride),
+                                }}
+                                onDimensionOverrideChange={(dimensions) => {
+                                  setForm({
+                                    ...form,
+                                    coverMediaWidthOverride: dimensions.width
+                                      ? String(dimensions.width)
+                                      : '',
+                                    coverMediaHeightOverride: dimensions.height
+                                      ? String(dimensions.height)
+                                      : '',
+                                  });
+                                  setCampaignFormDirty(true);
+                                }}
+                              />
+                              <ContextualMediaPicker
+                                context="CAMPAIGN_MOBILE_COVER"
+                    disabled={saving}
+                                value={mobileValue}
+                                mallId={mallId}
+                                onChange={(mediaId) => {
+                                  if (defId && localeId === defId) {
+                                    setForm((prev) => ({
+                                      ...prev,
+                                      defaultLocaleMobileCoverImageId: mediaId,
+                                    }));
+                                    setCampaignFormDirty(true);
+                                    return;
+                                  }
+                                  setLocaleDrafts((d) => ({
+                                    ...d,
+                                    [localeId]: { ...d[localeId], mobileCoverImageId: mediaId },
+                                  }));
+                                  setI18nDirty(true);
+                                }}
+                                dimensionOverride={{
+                                  width: parseOptionalDimension(form.coverMediaWidthOverride),
+                                  height: parseOptionalDimension(form.coverMediaHeightOverride),
+                                }}
+                                onDimensionOverrideChange={(dimensions) => {
+                                  setForm({
+                                    ...form,
+                                    coverMediaWidthOverride: dimensions.width
+                                      ? String(dimensions.width)
+                                      : '',
+                                    coverMediaHeightOverride: dimensions.height
+                                      ? String(dimensions.height)
+                                      : '',
+                                  });
+                                  setCampaignFormDirty(true);
+                                }}
+                              />
+                            </div>
+                          );
+                        }}
+                />
+              )}
+
+            </FormSection>
+            <FormSection title="Kampanya tarihleri" description="Kampanyanın mağazada geçerli olduğu tarihler. Ziyaretçiye gösterilir; içeriğin sitede ne zaman görüneceğini belirlemez (bunu Yayın ayarları belirler).">
+              <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                <div>
+                  <label style={labelStyle}>Kampanya başlangıcı</label>
+                  <input
+                    type="datetime-local"
+                    style={inputStyle}
+                    value={form.campaignStartAt}
+                    onChange={(e) => {
+                      setForm({ ...form, campaignStartAt: e.target.value });
+                      setCampaignFormDirty(true);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Kampanya bitişi</label>
+                  <input
+                    type="datetime-local"
+                    style={inputStyle}
+                    value={form.campaignEndAt}
+                    onChange={(e) => {
+                      setForm({ ...form, campaignEndAt: e.target.value });
+                      setCampaignFormDirty(true);
+                    }}
+                  />
+                </div>
+              </div>
+
+            </FormSection>
+            <FormSection title="Yayın ayarları">
+              <div>
+                <PublishingWorkflowFields
+                  mode="page"
+                  status={form.status}
+                  publishAt={form.publishStartAt}
+                  unpublishAt={form.publishEndAt}
+                  onStatusChange={(status) => {
+                    setForm({ ...form, status });
+                    setCampaignFormDirty(true);
+                  }}
+                  onPublishAtChange={(publishStartAt) => {
+                    setForm({ ...form, publishStartAt });
+                    setCampaignFormDirty(true);
+                  }}
+                  onUnpublishAtChange={(publishEndAt) => {
+                    setForm({ ...form, publishEndAt });
+                    setCampaignFormDirty(true);
+                  }}
+                  scheduleHint="İçeriğin sitede ne zaman görünüp kaldırılacağını belirler; kampanya tarihlerinden bağımsızdır."
+                  labelStyle={labelStyle}
+                  inputStyle={inputStyle}
+                />
+              </div>
+
+              <div>
+                <ContentChannelFields
+                  channels={form.channels}
+                  onChange={(channels) => {
+                    setForm({ ...form, channels });
+                    setCampaignFormDirty(true);
+                  }}
+                  labelStyle={labelStyle}
+                  disabled={saving}
+                />
+              </div>
+
+            </FormSection>
+            <FormSection title="Gelişmiş ayarlar" description="Çoğu durumda değiştirmeniz gerekmez." collapsible>
+              <ContentSlugFields
+                toggleLabel="URL adını değiştir"
+                title={form.title}
+                slug={form.slug}
+                useCustomSlug={form.useCustomSlug}
+                persistedSlug={editing?.slug}
                 disabled={saving}
-              />
-            </div>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <PublishingWorkflowFields
-                mode="page"
-                status={form.status}
-                publishAt={form.publishStartAt}
-                unpublishAt={form.publishEndAt}
-                onStatusChange={(status) => {
-                  setForm({ ...form, status });
-                  setCampaignFormDirty(true);
-                }}
-                onPublishAtChange={(publishStartAt) => {
-                  setForm({ ...form, publishStartAt });
-                  setCampaignFormDirty(true);
-                }}
-                onUnpublishAtChange={(publishEndAt) => {
-                  setForm({ ...form, publishEndAt });
-                  setCampaignFormDirty(true);
-                }}
                 labelStyle={labelStyle}
                 inputStyle={inputStyle}
+                onUseCustomSlugChange={(useCustomSlug) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    useCustomSlug,
+                    slug: useCustomSlug && !prev.slug.trim() ? slugify(prev.title) : prev.slug,
+                  }));
+                  setCampaignFormDirty(true);
+                }}
+                onSlugChange={(slug) => {
+                  setForm((prev) => ({ ...prev, slug }));
+                  setCampaignFormDirty(true);
+                }}
               />
-            </div>
-            <div style={{ gridColumn: '1 / -1', display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
+
               <div>
-                <label style={labelStyle}>Kampanya başlangıcı</label>
+                <label style={labelStyle}>Sıralama (küçük sayı önce gösterilir)</label>
                 <input
-                  type="datetime-local"
+                  type="number"
+                  min={0}
                   style={inputStyle}
-                  value={form.campaignStartAt}
+                  value={form.sortOrder}
                   onChange={(e) => {
-                    setForm({ ...form, campaignStartAt: e.target.value });
+                    setForm({ ...form, sortOrder: e.target.value });
                     setCampaignFormDirty(true);
                   }}
                 />
               </div>
+
               <div>
-                <label style={labelStyle}>Kampanya bitişi</label>
-                <input
-                  type="datetime-local"
-                  style={inputStyle}
-                  value={form.campaignEndAt}
+                <label style={labelStyle}>Ek alanlar (JSON)</label>
+                <textarea
+                  style={{ ...inputStyle, minHeight: 100, fontFamily: 'monospace' }}
+                  value={form.dynamicJson}
                   onChange={(e) => {
-                    setForm({ ...form, campaignEndAt: e.target.value });
+                    setForm({ ...form, dynamicJson: e.target.value });
                     setCampaignFormDirty(true);
                   }}
                 />
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>
+                  Teknik kullanım içindir; boş bırakabilirsiniz.
+                </p>
               </div>
-            </div>
-            {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
-              <MultilingualContentFields
-                locales={tenantLocales}
-                fields={CAMPAIGN_I18N_FIELDS}
-                richTextFields={['description', 'terms']}
-                activeLocaleId={contentLocaleTab}
-                onTabChange={(id) => setContentLocaleTab(id)}
-                defaultLocaleId={tenantLocales.find((l) => l.isDefault)?.id}
-                getValue={(localeId, field) => {
-                  const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
-                  if (defaultLocaleId && localeId === defaultLocaleId) {
-                    return String(form[field as keyof FormState] ?? '');
-                  }
-                  return localeDrafts[localeId]?.[field] ?? '';
-                }}
-                setValue={(localeId, field, value) => {
-                  const defaultLocaleId = tenantLocales.find((l) => l.isDefault)?.id;
-                  if (defaultLocaleId && localeId === defaultLocaleId) {
-                    setForm((prev) => ({ ...prev, [field]: value }));
-                    setCampaignFormDirty(true);
-                    return;
-                  }
-                  setLocaleDrafts((drafts) => ({
-                    ...drafts,
-                    [localeId]: { ...drafts[localeId], [field]: value },
-                  }));
-                  setI18nDirty(true);
-                }}
-                onCopyFromDefault={(targetId) => {
-                  setLocaleDrafts((drafts) => ({
-                    ...drafts,
-                    [targetId]: {
-                      title: form.title,
-                      shortDescription: form.shortDescription,
-                      description: form.description,
-                      terms: form.terms,
-                      buttonText: form.buttonText,
-                    },
-                  }));
-                  setI18nDirty(true);
-                }}
-                disabled={saving}
-                renderTabExtra={
-                  !form.sameImageForAllLocales
-                    ? (localeId) => {
-                        const defId = tenantLocales.find((l) => l.isDefault)?.id;
-                        const coverValue =
-                          defId && localeId === defId
-                            ? form.defaultLocaleCoverImageId
-                            : localeDrafts[localeId]?.coverImageId ?? '';
-                        const mobileValue =
-                          defId && localeId === defId
-                            ? form.defaultLocaleMobileCoverImageId
-                            : localeDrafts[localeId]?.mobileCoverImageId ?? '';
-                        return (
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                            <ContextualMediaPicker
-                              context="CAMPAIGN_COVER"
-                              value={coverValue}
-                              mallId={mallId}
-                              onChange={(mediaId) => {
-                                if (defId && localeId === defId) {
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    defaultLocaleCoverImageId: mediaId,
-                                  }));
-                                  setCampaignFormDirty(true);
-                                  return;
-                                }
-                                setLocaleDrafts((d) => ({
-                                  ...d,
-                                  [localeId]: { ...d[localeId], coverImageId: mediaId },
-                                }));
-                                setI18nDirty(true);
-                              }}
-                              dimensionOverride={{
-                                width: parseOptionalDimension(form.coverMediaWidthOverride),
-                                height: parseOptionalDimension(form.coverMediaHeightOverride),
-                              }}
-                              onDimensionOverrideChange={(dimensions) => {
-                                setForm({
-                                  ...form,
-                                  coverMediaWidthOverride: dimensions.width
-                                    ? String(dimensions.width)
-                                    : '',
-                                  coverMediaHeightOverride: dimensions.height
-                                    ? String(dimensions.height)
-                                    : '',
-                                });
-                                setCampaignFormDirty(true);
-                              }}
-                            />
-                            <ContextualMediaPicker
-                              context="CAMPAIGN_MOBILE_COVER"
-                              value={mobileValue}
-                              mallId={mallId}
-                              onChange={(mediaId) => {
-                                if (defId && localeId === defId) {
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    defaultLocaleMobileCoverImageId: mediaId,
-                                  }));
-                                  setCampaignFormDirty(true);
-                                  return;
-                                }
-                                setLocaleDrafts((d) => ({
-                                  ...d,
-                                  [localeId]: { ...d[localeId], mobileCoverImageId: mediaId },
-                                }));
-                                setI18nDirty(true);
-                              }}
-                              dimensionOverride={{
-                                width: parseOptionalDimension(form.coverMediaWidthOverride),
-                                height: parseOptionalDimension(form.coverMediaHeightOverride),
-                              }}
-                              onDimensionOverrideChange={(dimensions) => {
-                                setForm({
-                                  ...form,
-                                  coverMediaWidthOverride: dimensions.width
-                                    ? String(dimensions.width)
-                                    : '',
-                                  coverMediaHeightOverride: dimensions.height
-                                    ? String(dimensions.height)
-                                    : '',
-                                });
-                                setCampaignFormDirty(true);
-                              }}
-                            />
-                          </div>
-                        );
-                      }
-                    : undefined
-                }
-              />
-            ) : (
-              <>
-                <div>
-                  <label style={labelStyle}>Başlık *</label>
-                  <input
-                    style={inputStyle}
-                    value={form.title}
-                    onChange={(e) => {
-                      setForm({ ...form, title: e.target.value });
-                      setCampaignFormDirty(true);
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Kısa açıklama</label>
-                  <input
-                    style={inputStyle}
-                    value={form.shortDescription}
-                    onChange={(e) => {
-                      setForm({ ...form, shortDescription: e.target.value });
-                      setCampaignFormDirty(true);
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Açıklama</label>
-                  <RichTextEditor label="Açıklama" value={form.description} disabled={saving} onChange={(value) => { setForm({ ...form, description: value }); setCampaignFormDirty(true); }} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Şartlar</label>
-                  <RichTextEditor label="Şartlar" value={form.terms} disabled={saving} onChange={(value) => { setForm({ ...form, terms: value }); setCampaignFormDirty(true); }} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Buton metni</label>
-                  <input
-                    style={inputStyle}
-                    value={form.buttonText}
-                    onChange={(e) => {
-                      setForm({ ...form, buttonText: e.target.value });
-                      setCampaignFormDirty(true);
-                    }}
-                  />
-                </div>
-              </>
-            )}
-            <ContentSlugFields
-              title={form.title}
-              slug={form.slug}
-              useCustomSlug={form.useCustomSlug}
-              persistedSlug={editing?.slug}
-              disabled={saving}
-              labelStyle={labelStyle}
-              inputStyle={inputStyle}
-              onUseCustomSlugChange={(useCustomSlug) => {
-                setForm((prev) => ({
-                  ...prev,
-                  useCustomSlug,
-                  slug: useCustomSlug && !prev.slug.trim() ? slugify(prev.title) : prev.slug,
-                }));
-                setCampaignFormDirty(true);
-              }}
-              onSlugChange={(slug) => {
-                setForm((prev) => ({ ...prev, slug }));
-                setCampaignFormDirty(true);
-              }}
-            />
-            <div>
-              <label style={labelStyle}>Kupon kodu</label>
-              <input
-                style={inputStyle}
-                value={form.couponCode}
-                onChange={(e) => {
-                  setForm({ ...form, couponCode: e.target.value });
-                  setCampaignFormDirty(true);
-                }}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Link URL</label>
-              <input
-                style={inputStyle}
-                value={form.linkUrl}
-                onChange={(e) => {
-                  setForm({ ...form, linkUrl: e.target.value });
-                  setCampaignFormDirty(true);
-                }}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Sıra</label>
-              <input
-                style={inputStyle}
-                value={form.sortOrder}
-                onChange={(e) => {
-                  setForm({ ...form, sortOrder: e.target.value });
-                  setCampaignFormDirty(true);
-                }}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>dynamicFieldsJson</label>
-              <textarea
-                style={{ ...inputStyle, minHeight: 100, fontFamily: 'monospace' }}
-                value={form.dynamicJson}
-                onChange={(e) => {
-                  setForm({ ...form, dynamicJson: e.target.value });
-                  setCampaignFormDirty(true);
-                }}
-              />
-            </div>
+
+            </FormSection>
             {editing && (
               <LinkedSliderGroupsSection
                 entityType="CAMPAIGN"
@@ -984,66 +1131,180 @@ export function CampaignsPage() {
               />
             )}
           </div>
-          <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-            <button type="button" disabled={saving} onClick={() => void handleSubmit()} style={{ padding: '6px 14px' }}>
-              {saving ? 'Kaydediliyor…' : 'Kaydet'}
-            </button>
-            <button type="button" onClick={cancelForm}>
-              İptal
-            </button>
+          <div
+            style={{
+              position: 'sticky',
+              bottom: 0,
+              marginTop: 16,
+              padding: '12px 0 16px',
+              background: '#fafafa',
+              borderTop: '1px solid #e5e7eb',
+              display: 'grid',
+              gap: 8,
+            }}
+          >
+            {formError && (
+              <p role="alert" style={{ margin: 0, color: '#b91c1c', fontSize: 13 }}>
+                {formError}
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Button
+                variant="primary"
+                disabled={saving}
+                onClick={() => void handleSubmit()}
+                style={{ whiteSpace: 'normal', maxWidth: '100%', textAlign: 'left' }}
+              >
+                {saving ? 'Kaydediliyor…' : getSaveActionLabel(form.status)}
+              </Button>
+              <Button disabled={saving} onClick={requestCloseForm}>
+                İptal
+              </Button>
+              {formDirty && !saving && (
+                <span style={{ fontSize: 12, color: '#b45309' }}>Kaydedilmemiş değişiklikler var</span>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+      {!loading && !error && items.length === 0 && !showForm && (
+        hasFilters ? (
+          <EmptyState
+            title="Eşleşen kampanya bulunamadı"
+            description="Arama metnini veya durum filtresini değiştirin."
+            action={<Button onClick={clearFilters}>Filtreleri temizle</Button>}
+          />
+        ) : (
+          <EmptyState
+            title="Henüz kampanya yok"
+            description="İlk kampanya kaydını oluşturarak başlayın."
+            action={
+              <Button variant="primary" onClick={openCreate}>
+                + Yeni Kampanya
+              </Button>
+            }
+          />
+        )
+      )}
+
+      {items.length > 0 && (
+      <div className="cms-data-table-wrap">
+      <table className="cms-data-table">
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #e5e7eb' }}>
-            <th style={{ padding: 8 }}>Başlık</th>
-            <th style={{ padding: 8 }}>Mağaza</th>
-            <th style={{ padding: 8 }}>Durum</th>
-            <th style={{ padding: 8 }}>İşlem</th>
+          <tr>
+            <th>Başlık</th>
+            <th>Mağaza</th>
+            <th>Durum</th>
+            <th style={{ textAlign: 'right' }}>İşlem</th>
           </tr>
         </thead>
         <tbody>
-          {items.map((c) => (
-            <tr key={c.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-              <td style={{ padding: 8 }}>
-                <strong>{c.title}</strong>
-                <div style={{ color: '#9ca3af', fontSize: 11 }}>{c.slug}</div>
+          {items.map((c) => {
+            const busy = actionBusyId === c.id;
+            const canShowPublish = canPublish && (c.status === 'DRAFT' || c.status === 'SCHEDULED');
+            const canShowArchive = canArchive && c.status !== 'ARCHIVED';
+            return (
+            <tr key={c.id}>
+              <td>
+                <strong style={{ color: '#111827' }}>{c.title}</strong>
+                <div style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>{c.slug}</div>
               </td>
-              <td style={{ padding: 8, color: '#6b7280' }}>
+              <td style={{ color: '#6b7280' }}>
                 {storeRowLabel(c.store)}
               </td>
-              <td style={{ padding: 8 }}>
+              <td>
                 <StatusBadge status={c.status} />
                 {c.status === 'SCHEDULED' && c.publishStartAt && (
-                  <div style={{ fontSize: 10, color: '#92400e', marginTop: 4 }}>
+                  <div style={{ fontSize: 11, color: '#92400e', marginTop: 4 }}>
                     Yayın: {new Date(c.publishStartAt).toLocaleString('tr-TR')}
                   </div>
                 )}
               </td>
-              <td style={{ padding: 8 }}>
-                <button type="button" onClick={() => openEdit(c)} style={{ marginRight: 6 }}>
-                  Düzenle
-                </button>
-                {c.status !== 'PUBLISHED' && (
-                  <button type="button" onClick={() => void handlePublish(c.id)} style={{ marginRight: 6 }}>
-                    Yayınla
-                  </button>
-                )}
-                {c.status !== 'ARCHIVED' && (
-                  <button type="button" onClick={() => void handleArchive(c.id)} style={{ marginRight: 6 }}>
-                    Arşiv
-                  </button>
-                )}
-                <button type="button" onClick={() => void handleDelete(c.id)}>
-                  Sil
-                </button>
+              <td>
+                <div className="cms-data-table__actions">
+                  {canUpdate && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => openEdit(c)}
+                    >
+                      <IconPencil />
+                      Düzenle
+                    </Button>
+                  )}
+                  {canShowPublish && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void handlePublish(c.id)}
+                    >
+                      Yayınla
+                    </Button>
+                  )}
+                  {canShowArchive && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => setConfirm({ kind: 'archive', id: c.id, title: c.title })}
+                    >
+                      <IconArchive />
+                      Arşivle
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="dangerSoft"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => setConfirm({ kind: 'delete', id: c.id, title: c.title })}
+                    >
+                      <IconTrash />
+                      Sil
+                    </Button>
+                  )}
+                </div>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
+      </div>
+      )}
+
+      <ListPagination
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        itemLabel="kampanya"
+        disabled={loading || Boolean(actionBusyId)}
+        onPageChange={setPage}
+      />
+
+      <ConfirmDialog
+        open={confirm !== null}
+        title={confirm?.kind === 'delete' ? 'Kampanyayı sil' : 'Kampanyayı arşivle'}
+        description={
+          confirm?.kind === 'delete'
+            ? `"${confirm.title}" kampanyasını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`
+            : `"${confirm?.title ?? ''}" kampanyasını arşivlemek istediğinizden emin misiniz? Ziyaretçi tarafında görünmez olur.`
+        }
+        confirmLabel={confirm?.kind === 'delete' ? 'Sil' : 'Arşivle'}
+        variant={confirm?.kind === 'delete' ? 'danger' : 'default'}
+        confirming={Boolean(confirm && actionBusyId === confirm.id)}
+        onCancel={() => {
+          if (!actionBusyId) setConfirm(null);
+        }}
+        onConfirm={() => {
+          if (!confirm) return;
+          if (confirm.kind === 'delete') void handleDelete(confirm.id);
+          else void handleArchive(confirm.id);
+        }}
+      />
     </div>
     </PageContainer>
     </MallRequiredStates>

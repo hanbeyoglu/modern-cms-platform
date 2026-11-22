@@ -6,6 +6,9 @@ import { usePermission } from '../hooks/usePermission';
 import { apiRolesList, apiRoleCreate, apiRoleClone, apiRoleDelete, type CmsRole } from '../lib/api';
 import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
+import { Button } from '../components/ui/Button';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { IconTrash } from '../components/ui/icons';
 
 export function RolesPage() {
   const { accessToken, user, tenants, activeTenantId } = useAuth();
@@ -19,6 +22,8 @@ export function RolesPage() {
   const [createName, setCreateName] = useState('');
   const [createDesc, setCreateDesc] = useState('');
   const [creating, setCreating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<CmsRole | null>(null);
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (!accessToken) return;
@@ -57,13 +62,18 @@ export function RolesPage() {
   };
 
   const handleDelete = async (role: CmsRole) => {
-    if (!accessToken) return;
-    if (!confirm(`"${role.name}" rolünü silmek istediğinizden emin misiniz?`)) return;
+    if (!accessToken || actionBusyId) return;
+    setActionBusyId(role.id);
     try {
       await apiRoleDelete(accessToken, role.id);
       toast.success('Rol silindi');
+      setConfirmDelete(null);
       load();
-    } catch (e) { toast.error((e as Error).message); }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setActionBusyId(null);
+    }
   };
 
   return (
@@ -116,23 +126,28 @@ export function RolesPage() {
       {loading ? (
         <div style={{ color: '#6b7280', fontSize: 13 }}>Yükleniyor…</div>
       ) : (
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <div className="cms-data-table-wrap">
+          <table className="cms-data-table">
             <thead>
-              <tr style={{ background: '#f9fafb' }}>
-                {['Rol Adı', 'Tür', 'İzin Sayısı', 'Kullanıcı', 'Durum', ''].map((h) => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>{h}</th>
-                ))}
+              <tr>
+                <th>Rol Adı</th>
+                <th>Tür</th>
+                <th>İzin Sayısı</th>
+                <th>Kullanıcı</th>
+                <th>Durum</th>
+                <th style={{ textAlign: 'right' }}>İşlem</th>
               </tr>
             </thead>
             <tbody>
-              {roles.map((r) => (
-                <tr key={r.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: '10px 14px' }}>
+              {roles.map((r) => {
+                const busy = actionBusyId === r.id;
+                return (
+                <tr key={r.id}>
+                  <td>
                     <div style={{ fontWeight: 500 }}>{r.name}</div>
                     <div style={{ fontSize: 11, color: '#9ca3af', fontFamily: 'monospace' }}>{r.code}</div>
                   </td>
-                  <td style={{ padding: '10px 14px' }}>
+                  <td>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <span style={{
                         fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
@@ -152,30 +167,58 @@ export function RolesPage() {
                       </span>
                     </div>
                   </td>
-                  <td style={{ padding: '10px 14px', color: '#374151' }}>{r.permissions.length}</td>
-                  <td style={{ padding: '10px 14px', color: '#374151' }}>{r.usageCount}</td>
-                  <td style={{ padding: '10px 14px' }}>
+                  <td style={{ color: '#374151' }}>{r.permissions.length}</td>
+                  <td style={{ color: '#374151' }}>{r.usageCount}</td>
+                  <td>
                     <span style={{ fontSize: 11, fontWeight: 600, color: r.isActive ? '#16a34a' : '#9ca3af' }}>
                       {r.isActive ? 'Aktif' : 'Pasif'}
                     </span>
                   </td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                      <button onClick={() => navigate(`/roles/${r.id}`)} style={{ padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: 5, fontSize: 12, cursor: 'pointer', background: '#fff' }}>Detay</button>
+                  <td>
+                    <div className="cms-data-table__actions">
+                      <Button variant="secondary" size="sm" disabled={busy} onClick={() => navigate(`/roles/${r.id}`)}>
+                        Detay
+                      </Button>
                       {can('role:create') && (
-                        <button onClick={() => handleClone(r)} style={{ padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: 5, fontSize: 12, cursor: 'pointer', background: '#fff' }}>Klonla</button>
+                        <Button variant="secondary" size="sm" disabled={busy} onClick={() => void handleClone(r)}>
+                          Klonla
+                        </Button>
                       )}
                       {can('role:delete') && !r.isSystem && (
-                        <button onClick={() => handleDelete(r)} style={{ padding: '4px 10px', border: '1px solid #fecaca', borderRadius: 5, fontSize: 12, cursor: 'pointer', background: '#fef2f2', color: '#dc2626' }}>Sil</button>
+                        <Button
+                          variant="dangerSoft"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => setConfirmDelete(r)}
+                        >
+                          <IconTrash />
+                          Sil
+                        </Button>
                       )}
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        title="Rolü sil"
+        description={`"${confirmDelete?.name ?? ''}" rolünü silmek istediğinizden emin misiniz?`}
+        confirmLabel="Sil"
+        variant="danger"
+        confirming={Boolean(confirmDelete && actionBusyId === confirmDelete.id)}
+        onCancel={() => {
+          if (!actionBusyId) setConfirmDelete(null);
+        }}
+        onConfirm={() => {
+          if (confirmDelete) void handleDelete(confirmDelete);
+        }}
+      />
     </PageContainer>
   );
 }

@@ -1,30 +1,36 @@
+import type { RefObject } from 'react';
 import { UserMenu } from './UserMenu';
 import { TenantMallSelector } from '../TenantMallSelector';
 import { NotificationBell } from './NotificationBell';
 import { GlobalSearch } from './GlobalSearch';
 
-export function Header() {
+interface HeaderProps {
+  menuOpen: boolean;
+  onMenuToggle: () => void;
+  menuButtonRef: RefObject<HTMLButtonElement>;
+}
+
+export function Header({ menuOpen, onMenuToggle, menuButtonRef }: HeaderProps) {
   return (
-    <header
-      style={{
-        height: 56,
-        borderBottom: '1px solid #e5e7eb',
-        background: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 24px',
-        gap: 16,
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
+    <header className="cms-header">
+      <div className="cms-header__start">
+        <button
+          ref={menuButtonRef}
+          type="button"
+          className="cms-menu-button"
+          aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
+          aria-expanded={menuOpen}
+          aria-controls="cms-sidebar"
+          onClick={onMenuToggle}
+        >
+          ☰
+        </button>
         <TenantMallSelector />
-        <GlobalSearch />
+        <div className="cms-hide-sm" style={{ flex: 1, minWidth: 0, display: 'flex' }}>
+          <GlobalSearch />
+        </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+      <div className="cms-header__end">
         <NotificationBell />
         <UserMenu />
       </div>

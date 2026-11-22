@@ -1,134 +1,225 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { contactMessagesCount } from '../../lib/api/contact-messages';
-import { NavLink } from 'react-router-dom';
-import { NAV_ITEMS, NAV_GROUPS, type NavItem } from '../../navigation/config';
+import {
+  NAV_GROUPS,
+  NAV_ITEMS,
+  NAV_SUBGROUP_DEFAULT_OPEN,
+  isNavItemActive,
+  isNavItemVisible,
+  type NavItem,
+} from '../../navigation/config';
 import { usePermission } from '../../hooks/usePermission';
 import { useCapability } from '../../hooks/useCapability';
 import { useAuth } from '../../auth/useAuth';
 import { isAuditEnabled } from '../../lib/feature-flags';
-import { BrandAvatar } from '../ui/BrandAvatar';
 import {
-  formatContextLabel,
-  resolveSidebarBrandImage,
-  resolveSidebarBrandName,
-} from '../../lib/branding';
+  isSectionOpen,
+  loadNavOpenState,
+  saveNavOpenState,
+  type NavOpenState,
+} from '../../lib/nav-preferences';
 
-const SIDEBAR_WIDTH = 220;
+const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function Sidebar() {
+interface SidebarProps {
+  /** Drawer mode (tablet/phone) is open. Ignored on desktop where the sidebar is always shown. */
+  open: boolean;
+  /** True below the desktop breakpoint, where the sidebar is a drawer. */
+  isDrawer: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ open, isDrawer, onClose }: SidebarProps) {
   const { can, canAny } = usePermission();
   const { has } = useCapability();
-  const { user, tenants, malls, activeTenantId, activeMallId } = useAuth();
+  const { user } = useAuth();
+  const { pathname } = useLocation();
+  const asideRef = useRef<HTMLElement>(null);
 
-  const activeTenant = tenants.find((tenant) => tenant.id === activeTenantId);
-  const activeMall = malls.find((mall) => mall.id === activeMallId);
-  const brandImageUrl = resolveSidebarBrandImage(activeTenant, activeMall);
-  const brandName = resolveSidebarBrandName(activeTenant, activeMall);
-  const contextLabel = formatContextLabel(activeTenant, activeMall);
-
-  const visibleItems = NAV_ITEMS.filter((item) => {
-    if (item.requiresAudit && !isAuditEnabled()) return false;
-    if (item.superAdminOnly && !user?.isSuperAdmin) return false;
-    if (item.anyPermission && item.anyPermission.length > 0) {
-      if (!canAny(...item.anyPermission)) return false;
-    } else if (item.permission !== null && !can(item.permission)) return false;
-    if (item.capability && !user?.isSuperAdmin && !has(item.capability)) return false;
-    return true;
-  });
+  const visibleItems = NAV_ITEMS.filter((item) =>
+    isNavItemVisible(item, {
+      isSuperAdmin: Boolean(user?.isSuperAdmin),
+      auditEnabled: isAuditEnabled(),
+      can,
+      canAny,
+      hasCapability: has,
+    }),
+  );
 
   const ungrouped = visibleItems.filter((item) => !item.group);
-  const grouped = NAV_GROUPS.map((group) => ({
-    group,
-    items: visibleItems.filter((item) => item.group === group),
+  const groups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: visibleItems.filter((item) => item.group === group.id),
   })).filter((g) => g.items.length > 0);
 
+  const activeItem = visibleItems.find((item) => isNavItemActive(item, pathname));
+
+  const [openState, setOpenState] = useState<NavOpenState>(() => loadNavOpenState(user?.id));
+  useEffect(() => {
+    setOpenState(loadNavOpenState(user?.id));
+  }, [user?.id]);
+
+  function setSection(key: string, value: boolean) {
+    setOpenState((prev) => {
+      const next = { ...prev, [key]: value };
+      saveNavOpenState(user?.id, next);
+      return next;
+    });
+  }
+
+  // The active page's group (and sub-group) always opens when you land on it.
+  useEffect(() => {
+    if (!activeItem?.group) return;
+    const groupCfg = NAV_GROUPS.find((g) => g.id === activeItem.group);
+    if (groupCfg && !isSectionOpen(openState, groupCfg.id, groupCfg.defaultOpen)) {
+      setSection(groupCfg.id, true);
+    }
+    if (activeItem.subgroup) {
+      const key = `${activeItem.group}/${activeItem.subgroup}`;
+      if (!isSectionOpen(openState, key, NAV_SUBGROUP_DEFAULT_OPEN)) setSection(key, true);
+    }
+    // Only react to navigation, not to manual toggles.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeItem?.id]);
+
+  // Drawer: move focus inside on open, lock it there, close with Escape.
+  useEffect(() => {
+    if (!isDrawer || !open) return;
+    const aside = asideRef.current;
+    const current = aside?.querySelector<HTMLElement>('[aria-current="page"]');
+    (current ?? aside?.querySelector<HTMLElement>(FOCUSABLE))?.focus();
+  }, [isDrawer, open]);
+
+  function onKeyDown(e: ReactKeyboardEvent<HTMLElement>) {
+    if (!isDrawer || !open) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const nodes = [...(asideRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])].filter(
+      (n) => n.offsetParent !== null,
+    );
+    if (nodes.length === 0) return;
+    const first = nodes[0]!;
+    const last = nodes[nodes.length - 1]!;
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  const hiddenDrawer = isDrawer && !open;
+
   return (
-    <aside
-      style={{
-        width: SIDEBAR_WIDTH,
-        minWidth: SIDEBAR_WIDTH,
-        borderRight: '1px solid #e5e7eb',
-        background: '#f9fafb',
-        display: 'flex',
-        flexDirection: 'column',
-        overflowY: 'auto',
-      }}
-    >
-      {/* Brand */}
+    <>
       <div
-        style={{
-          padding: '14px 18px 16px',
-          borderBottom: '1px solid #e5e7eb',
-          display: 'grid',
-          gap: 10,
-        }}
+        className={`cms-backdrop${isDrawer && open ? ' cms-backdrop--open' : ''}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside
+        ref={asideRef}
+        id="cms-sidebar"
+        className={`cms-sidebar${isDrawer && open ? ' cms-sidebar--open' : ''}`}
+        aria-label="Ana menü"
+        {...(isDrawer ? { role: 'dialog', 'aria-modal': open ? true : undefined } : {})}
+        aria-hidden={hiddenDrawer ? true : undefined}
+        onKeyDown={onKeyDown}
       >
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: 15,
-            color: '#111827',
-            letterSpacing: '-0.3px',
-          }}
-        >
-          CMS Admin
+        <div className="cms-sidebar__brand">
+          <span>CMS Admin</span>
+          <button
+            type="button"
+            className="cms-sidebar__close"
+            onClick={onClose}
+            aria-label="Menüyü kapat"
+            tabIndex={hiddenDrawer ? -1 : 0}
+          >
+            ✕
+          </button>
         </div>
-        {(activeTenant || activeMall) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-            <BrandAvatar
-              name={brandName || contextLabel}
-              imageUrl={brandImageUrl}
-              size={32}
-            />
-            <div style={{ minWidth: 0, display: 'grid', gap: 2 }}>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: '#374151',
-                  lineHeight: 1.3,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-                title={contextLabel}
-              >
-                {contextLabel}
-              </span>
-            </div>
+
+        <nav className="cms-nav" aria-label="Ana menü bağlantıları">
+          {ungrouped
+            .filter((item) => item.id !== 'account')
+            .map((item) => (
+              <SidebarItem key={item.id} item={item} pathname={pathname} onNavigate={onClose} />
+            ))}
+          {groups.map((group) => {
+            const isOpen = isSectionOpen(openState, group.id, group.defaultOpen);
+            const panelId = `cms-nav-${slug(group.id)}`;
+            return (
+              <div key={group.id} className="cms-nav__group">
+                <button
+                  type="button"
+                  className="cms-nav__group-toggle"
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                  onClick={() => setSection(group.id, !isOpen)}
+                >
+                  <span>{group.id}</span>
+                  <span className={`cms-nav__chevron${isOpen ? ' cms-nav__chevron--open' : ''}`} aria-hidden="true">
+                    ▶
+                  </span>
+                </button>
+                <div id={panelId} hidden={!isOpen}>
+                  <GroupItems
+                    groupId={group.id}
+                    items={group.items}
+                    pathname={pathname}
+                    openState={openState}
+                    onToggle={setSection}
+                    onNavigate={onClose}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </nav>
+
+        {ungrouped.some((item) => item.id === 'account') && (
+          <div className="cms-sidebar__footer">
+            {ungrouped
+              .filter((item) => item.id === 'account')
+              .map((item) => (
+                <SidebarItem key={item.id} item={item} pathname={pathname} onNavigate={onClose} />
+              ))}
           </div>
         )}
-      </div>
-
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: '8px 0' }}>
-        {ungrouped.map((item) => (
-          <SidebarItem key={item.id} id={item.id} icon={item.icon} label={item.label} href={item.href} />
-        ))}
-
-        {grouped.map(({ group, items }) => (
-          <div key={group}>
-            <div
-              style={{
-                padding: '12px 18px 4px',
-                fontSize: 10,
-                fontWeight: 700,
-                color: '#9ca3af',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}
-            >
-              {group}
-            </div>
-            <GroupNavItems items={items} />
-          </div>
-        ))}
-      </nav>
-    </aside>
+      </aside>
+    </>
   );
 }
 
-function GroupNavItems({ items }: { items: NavItem[] }) {
+function slug(value: string): string {
+  return value
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[^a-z0-9]+/g, '-');
+}
+
+function GroupItems({
+  groupId,
+  items,
+  pathname,
+  openState,
+  onToggle,
+  onNavigate,
+}: {
+  groupId: string;
+  items: NavItem[];
+  pathname: string;
+  openState: NavOpenState;
+  onToggle: (key: string, value: boolean) => void;
+  onNavigate: () => void;
+}) {
   const rootItems = items.filter((item) => !item.subgroup);
   const subgroups = [
     ...new Set(items.map((item) => item.subgroup).filter((s): s is string => Boolean(s))),
@@ -137,74 +228,65 @@ function GroupNavItems({ items }: { items: NavItem[] }) {
   return (
     <>
       {rootItems.map((item) => (
-        <SidebarItem key={item.id} id={item.id} icon={item.icon} label={item.label} href={item.href} />
+        <SidebarItem key={item.id} item={item} pathname={pathname} onNavigate={onNavigate} />
       ))}
-      {subgroups.map((subgroup) => (
-        <div key={subgroup}>
-          <div
-            style={{
-              padding: '8px 18px 4px 26px',
-              fontSize: 10,
-              fontWeight: 600,
-              color: '#b0b7c3',
-              letterSpacing: '0.3px',
-            }}
-          >
-            {subgroup}
+      {subgroups.map((subgroup) => {
+        const key = `${groupId}/${subgroup}`;
+        const isOpen = isSectionOpen(openState, key, NAV_SUBGROUP_DEFAULT_OPEN);
+        const panelId = `cms-nav-${slug(key)}`;
+        return (
+          <div key={subgroup}>
+            <button
+              type="button"
+              className="cms-nav__subgroup-toggle"
+              aria-expanded={isOpen}
+              aria-controls={panelId}
+              onClick={() => onToggle(key, !isOpen)}
+            >
+              <span>{subgroup}</span>
+              <span className={`cms-nav__chevron${isOpen ? ' cms-nav__chevron--open' : ''}`} aria-hidden="true">
+                ▶
+              </span>
+            </button>
+            <div id={panelId} hidden={!isOpen}>
+              {items
+                .filter((item) => item.subgroup === subgroup)
+                .map((item) => (
+                  <SidebarItem key={item.id} item={item} pathname={pathname} onNavigate={onNavigate} indent />
+                ))}
+            </div>
           </div>
-          {items
-            .filter((item) => item.subgroup === subgroup)
-            .map((item) => (
-              <SidebarItem
-                key={item.id}
-                id={item.id}
-                icon={item.icon}
-                label={item.label}
-                href={item.href}
-                indent
-              />
-            ))}
-        </div>
-      ))}
+        );
+      })}
     </>
   );
 }
 
 function SidebarItem({
-  id,
-  icon,
-  label,
-  href,
+  item,
+  pathname,
+  onNavigate,
   indent = false,
 }: {
-  id: string;
-  icon: string;
-  label: string;
-  href: string;
+  item: NavItem;
+  pathname: string;
+  onNavigate: () => void;
   indent?: boolean;
 }) {
+  const active = isNavItemActive(item, pathname);
   return (
-    <NavLink
-      to={href}
-      style={({ isActive }) => ({
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '8px 18px',
-        paddingLeft: indent ? 34 : 18,
-        fontSize: 13,
-        color: isActive ? '#2563eb' : '#374151',
-        background: isActive ? '#eff6ff' : 'transparent',
-        textDecoration: 'none',
-        borderRight: isActive ? '3px solid #2563eb' : '3px solid transparent',
-        fontWeight: isActive ? 600 : 400,
-        transition: 'background 0.1s',
-      })}
+    <Link
+      to={item.href}
+      className={`cms-nav__item${indent ? ' cms-nav__item--indent' : ''}`}
+      aria-current={active ? 'page' : undefined}
+      onClick={onNavigate}
     >
-      <span style={{ fontSize: 14, opacity: 0.8 }}>{icon}</span>
-      <span>{label}</span>
-      {id === 'contact-messages' && <ContactMessageBadge />}
-    </NavLink>
+      <span className="cms-nav__icon" aria-hidden="true">
+        {item.icon}
+      </span>
+      <span className="cms-nav__label">{item.label}</span>
+      {item.id === 'contact-messages' && <ContactMessageBadge />}
+    </Link>
   );
 }
 
@@ -217,13 +299,28 @@ function ContactMessageBadge() {
     setCount(null);
     if (!allowed || !accessToken || !activeTenantId || !activeMallId) return;
     let disposed = false;
-    const refresh = () => { void contactMessagesCount(accessToken, activeTenantId, activeMallId)
-      .then(data => { if (!disposed) setCount(data.count); })
-      .catch(() => { if (!disposed) setCount(null); }); };
+    const refresh = () => {
+      void contactMessagesCount(accessToken, activeTenantId, activeMallId)
+        .then((data) => {
+          if (!disposed) setCount(data.count);
+        })
+        .catch(() => {
+          if (!disposed) setCount(null);
+        });
+    };
     refresh();
     const timer = window.setInterval(refresh, 60000);
     window.addEventListener('cms:contact-messages-changed', refresh);
-    return () => { disposed = true; window.clearInterval(timer); window.removeEventListener('cms:contact-messages-changed', refresh); };
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      window.removeEventListener('cms:contact-messages-changed', refresh);
+    };
   }, [allowed, accessToken, activeTenantId, activeMallId]);
-  return count ? <span aria-label={`${count} yeni mesaj`} style={{ background: '#2563eb', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 11 }}>{count > 99 ? '99+' : count}</span> : null;
+  if (!count) return null;
+  return (
+    <span className="cms-nav__badge" aria-label={`${count} okunmamış mesaj`}>
+      {count > 99 ? '99+' : count}
+    </span>
+  );
 }

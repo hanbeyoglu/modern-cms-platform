@@ -7,160 +7,13 @@ import {
   persistAdminContext,
   persistTokens,
   type AuthContextValue,
-  type AuthState,
   type AuthUser,
 } from './auth-context';
 import { mallsFromMembership } from './mall-context';
-
-type Action =
-  | { type: 'SET_SESSION'; accessToken: string; refreshToken: string; email: string }
-  | { type: 'REFRESH_SESSION'; accessToken: string; refreshToken: string }
-  | { type: 'CLEAR_SESSION' }
-  | { type: 'SET_PROFILE'; user: AuthUser; tenants: Tenant[] }
-  | { type: 'SET_MALLS'; tenantId: string; malls: Mall[] }
-  | { type: 'SET_MALLS_FAILED'; tenantId: string; error: string }
-  | { type: 'CLEAR_TENANT_CONTEXT' }
-  | { type: 'SELECT_TENANT'; tenantId: string; malls?: Mall[] }
-  | { type: 'SELECT_MALL'; mallId: string | null }
-  | { type: 'PROFILE_LOADING'; loading: boolean };
-
-function isTenantSelectable(tenant: Tenant): boolean {
-  return tenant.status.toUpperCase() !== 'DISABLED';
-}
-
-function resolveActiveMallId(
-  malls: Mall[],
-  currentMallId: string | null,
-): string | null {
-  if (malls.length === 0) return null;
-
-  const validIds = new Set(malls.map((mall) => mall.id));
-  if (currentMallId && validIds.has(currentMallId)) {
-    return currentMallId;
-  }
-
-  if (malls.length === 1) {
-    return malls[0].id;
-  }
-
-  return null;
-}
-
-function reducer(state: AuthState, action: Action): AuthState {
-  switch (action.type) {
-    case 'REFRESH_SESSION':
-      return { ...state, accessToken: action.accessToken, refreshToken: action.refreshToken };
-    case 'SET_SESSION':
-      return {
-        ...state,
-        accessToken: action.accessToken,
-        refreshToken: action.refreshToken,
-        email: action.email,
-        user: null,
-        tenants: [],
-        activeTenantId: null,
-        malls: [],
-        activeMallId: null,
-        profileLoading: true,
-        mallsLoading: false,
-        mallsError: null,
-      };
-    case 'CLEAR_SESSION':
-      return {
-        accessToken: null,
-        refreshToken: null,
-        email: null,
-        user: null,
-        tenants: [],
-        activeTenantId: null,
-        malls: [],
-        activeMallId: null,
-        profileLoading: false,
-        mallsLoading: false,
-        mallsError: null,
-      };
-    case 'SET_PROFILE': {
-      const selectableTenants = action.tenants.filter(isTenantSelectable);
-      const existingTenant = selectableTenants.find((tenant) => tenant.id === state.activeTenantId);
-      const nextTenantId =
-        existingTenant?.id ??
-        (!action.user.isSuperAdmin && selectableTenants.length === 1 ? selectableTenants[0].id : null);
-      const tenantUnchanged = nextTenantId === state.activeTenantId;
-      const membershipMalls =
-        nextTenantId && !action.user.isSuperAdmin
-          ? mallsFromMembership(action.user, nextTenantId)
-          : null;
-      const nextMalls =
-        membershipMalls ??
-        (tenantUnchanged ? state.malls : []);
-      const preservedMallId = tenantUnchanged ? state.activeMallId : null;
-      return {
-        ...state,
-        user: action.user,
-        tenants: action.tenants,
-        activeTenantId: nextTenantId,
-        malls: nextMalls,
-        activeMallId: resolveActiveMallId(nextMalls, preservedMallId),
-        profileLoading: false,
-        mallsLoading: Boolean(nextTenantId && action.user.isSuperAdmin && nextMalls.length === 0),
-        mallsError: tenantUnchanged ? state.mallsError : null,
-      };
-    }
-    case 'SET_MALLS': {
-      if (action.tenantId !== state.activeTenantId) {
-        return state;
-      }
-      return {
-        ...state,
-        malls: action.malls,
-        activeMallId: resolveActiveMallId(action.malls, state.activeMallId),
-        mallsLoading: false,
-        mallsError: null,
-      };
-    }
-    case 'SET_MALLS_FAILED': {
-      if (action.tenantId !== state.activeTenantId) {
-        return state;
-      }
-      return {
-        ...state,
-        malls: [],
-        activeMallId: null,
-        mallsLoading: false,
-        mallsError: action.error,
-      };
-    }
-    case 'CLEAR_TENANT_CONTEXT':
-      return {
-        ...state,
-        activeTenantId: null,
-        malls: [],
-        activeMallId: null,
-        mallsLoading: false,
-        mallsError: null,
-      };
-    case 'SELECT_TENANT': {
-      const malls = action.malls ?? [];
-      return {
-        ...state,
-        activeTenantId: action.tenantId,
-        malls,
-        activeMallId: resolveActiveMallId(malls, state.activeMallId),
-        mallsLoading: action.malls === undefined && action.tenantId.length > 0,
-        mallsError: null,
-      };
-    }
-    case 'SELECT_MALL':
-      return { ...state, activeMallId: action.mallId };
-    case 'PROFILE_LOADING':
-      return { ...state, profileLoading: action.loading };
-    default:
-      return state;
-  }
-}
+import { authReducer } from './auth-reducer';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, initialAuthState);
+  const [state, dispatch] = useReducer(authReducer, undefined, initialAuthState);
 
   useLayoutEffect(() => {
     setApiContext(state.activeTenantId, state.activeMallId);
@@ -243,11 +96,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [state.malls, state.mallsLoading, state.activeMallId]);
 
   useEffect(() => {
+    // While a stored scope is still being verified, keep storage as it is.
+    if (state.pendingTenantId || state.pendingMallId) return;
     persistAdminContext({
       activeTenantId: state.activeTenantId,
       activeMallId: state.activeMallId,
     });
-  }, [state.activeTenantId, state.activeMallId]);
+  }, [state.activeTenantId, state.activeMallId, state.pendingTenantId, state.pendingMallId]);
 
   // Auto-logout on 401 from any API call
   useEffect(() => {

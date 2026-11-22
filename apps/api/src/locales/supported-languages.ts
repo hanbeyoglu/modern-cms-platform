@@ -12,8 +12,25 @@ export const OFFICIAL_SUPPORTED_LANGUAGES = [
   { code: 'zh', name: 'Chinese (Simplified)', nativeName: '中文', rtl: false },
 ] as const;
 
+/** Normalize query/header and stored language codes consistently. */
+export function normalizeLanguageCode(code: string): string {
+  return code.trim().toLowerCase().replace(/_/g, '-');
+}
+
+/** Known language directions cannot be accidentally overridden by a false checkbox. */
+export function localeDirection(code: string): boolean | undefined {
+  const parts = normalizeLanguageCode(code).split('-');
+  if (parts.includes('latn')) return false;
+  if (parts.includes('arab') || parts.includes('hebr')) return true;
+  if (['ar', 'fa', 'he', 'ur', 'ps', 'dv', 'yi', 'ug', 'sd'].includes(parts[0]!)) return true;
+  if (OFFICIAL_SUPPORTED_LANGUAGES.some(l => l.code === parts[0]) || parts[0] === 'ja') return false;
+  return undefined;
+}
+
 export function rtlForLocaleCode(code: string): boolean {
-  const c = code.toLowerCase().trim();
-  const hit = OFFICIAL_SUPPORTED_LANGUAGES.find((l) => l.code === c);
-  return hit?.rtl ?? c === 'ar';
+  return localeDirection(code) ?? false;
+}
+
+export function withLocaleDirection<T extends { code: string; rtl: boolean }>(locale: T): T {
+  return { ...locale, rtl: localeDirection(locale.code) ?? locale.rtl };
 }

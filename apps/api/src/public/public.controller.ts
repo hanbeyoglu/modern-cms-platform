@@ -129,7 +129,7 @@ export class PublicController {
   ): Promise<PublicEnvelope<PublicSiteConfig>> {
     const context = await this.ctx.resolve(tenantId, mallId, locale);
     const cacheKey =
-      `public:${context.tenantId}:${context.mallId ?? 'none'}:site-config` + lseg(context.locale?.code);
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:site-config:v2` + lseg(context.locale?.code);
 
     const cached = await this.cache.get<PublicEnvelope<PublicSiteConfig>>(cacheKey);
     if (cached) return cached;
@@ -403,7 +403,7 @@ export class PublicController {
 
   @Get('events/:slug')
   @ApiPublicOperation({ summary: 'public.event.getBySlug.summary',
-    description: 'Returns event detail including isFree, linked published slider groups with items, SEO metadata, cover media, and schedule.',
+    description: 'Returns event detail including isFree, ordered published event slides (id, sortOrder, image: { id, url, alt, caption }), SEO metadata, cover media, and schedule.',
     related: [SWAGGER_TAGS.EVENTS],
   })
   @ApiLocaleQuery()
@@ -417,7 +417,7 @@ export class PublicController {
   ) {
     const context = await this.ctx.resolve(tenantId, mallId, locale);
     const cacheKey =
-      `public:${context.tenantId}:${context.mallId ?? 'none'}:event:v2:${slug}` +
+      `public:${context.tenantId}:${context.mallId ?? 'none'}:event:v3:${slug}` +
       lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);

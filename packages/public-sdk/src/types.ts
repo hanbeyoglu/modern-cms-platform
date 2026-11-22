@@ -123,8 +123,14 @@ export interface CmsSlider {
   targetDevice: string;
 }
 
+export interface CmsEventSlide {
+  id: string;
+  sortOrder: number;
+  image: { id: string; url: string; alt: string | null; caption: string | null };
+}
+
 export interface CmsEventDetail extends CmsEvent {
-  sliders: CmsSlider[];
+  sliders: CmsEventSlide[];
 }
 
 export interface CmsEvent {

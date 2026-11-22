@@ -33,7 +33,7 @@ export function RichTextEditor({ value, onChange, disabled = false, label = 'Met
     editorProps: { attributes: { role: 'textbox', 'aria-label': label, 'aria-multiline': 'true' } },
     onUpdate: ({ editor: current }) => onChange(current.isEmpty ? '' : DOMPurify.sanitize(current.getHTML())),
   });
-  useEffect(() => { editor?.setEditable(!disabled); }, [editor, disabled]);
+  useEffect(() => { editor?.setEditable(!disabled, false); }, [editor, disabled]);
   useEffect(() => {
     if (!editor) return;
     const content = editorContent(value);

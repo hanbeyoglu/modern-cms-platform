@@ -438,13 +438,16 @@ export function WorkspacePage() {
   const tenantGridRef = useRef<HTMLDivElement>(null);
   const mallGridRef = useRef<HTMLDivElement>(null);
 
-  // Switch to mall step when tenant becomes active
+  // Advance only when the active tenant changes, not when the user goes back.
+  const previousTenantId = useRef(activeTenantId);
   useEffect(() => {
-    if (activeTenantId && step === 'tenant') {
+    const changed = previousTenantId.current !== activeTenantId;
+    previousTenantId.current = activeTenantId;
+    if (changed && activeTenantId) {
       setStep('mall');
       setSearch('');
     }
-  }, [activeTenantId, step]);
+  }, [activeTenantId]);
 
   // Auto-advance single tenant (non-super-admins)
   useEffect(() => {
@@ -455,7 +458,7 @@ export function WorkspacePage() {
 
   // Auto-advance single mall
   useEffect(() => {
-    if (mallsLoading || activeMallId) return;
+    if (step !== 'mall' || mallsLoading || activeMallId) return;
     if (malls.length === 1) {
       const mall = malls[0]!;
       const activeTenant = tenants.find((t) => t.id === activeTenantId);
@@ -471,7 +474,7 @@ export function WorkspacePage() {
       }
       void navigate('/dashboard', { replace: true });
     }
-  }, [malls, mallsLoading, activeMallId, activeTenantId, tenants, navigate, selectMall]);
+  }, [step, malls, mallsLoading, activeMallId, activeTenantId, tenants, navigate, selectMall]);
 
   const activeTenant = tenants.find((t) => t.id === activeTenantId);
 

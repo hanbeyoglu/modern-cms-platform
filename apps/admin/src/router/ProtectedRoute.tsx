@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { isMallScopedPath } from '../navigation/mall-scoped';
+import { isPlatformPath } from '../navigation/config';
 
 export function ProtectedRoute() {
   const {
@@ -34,6 +35,12 @@ export function ProtectedRoute() {
 
   if (!accessToken) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Platform pages (e.g. Müşteriler / tenant management) do not depend on a workspace;
+  // their PermissionGate (superAdminOnly) still decides access.
+  if (isPlatformPath(location.pathname)) {
+    return <Outlet />;
   }
 
   const isTenantRoute = location.pathname === '/select-tenant';

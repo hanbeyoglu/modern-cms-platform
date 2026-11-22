@@ -1,4 +1,5 @@
 import { sanitizeRichText } from '../common/utils/rich-text';
+import { publishWindow } from '../common/publish-window';
 import {
   BadRequestException,
   Injectable,
@@ -517,6 +518,9 @@ export class CampaignsService {
       deletedAt: null,
       ...mallScope,
       ...(query.status ? { status: query.status } : { status: { not: 'ARCHIVED' } }),
+      ...(query.visibleNow === 'true'
+        ? { status: 'PUBLISHED' as const, AND: publishWindow(new Date()) }
+        : {}),
       ...(query.storeId ? { storeId: query.storeId } : {}),
       ...(query.search ? { title: { contains: query.search, mode: 'insensitive' as const } } : {}),
       ...(query.startFrom || query.startTo

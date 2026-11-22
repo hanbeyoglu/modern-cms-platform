@@ -90,7 +90,7 @@ export class PublicSiteConfigDto {
     example: [{ code: 'tr', default: true }, { code: 'en', default: false }],
     description: 'Active languages for the current location (mall-scoped when x-mall-id is set).',
   })
-  languages!: Array<{ code: string; default: boolean }>;
+  languages!: Array<{ code: string; default: boolean; rtl: boolean }>;
 
   @ApiPropertyOptional({ example: 'tr', nullable: true })
   defaultLocale!: string | null;

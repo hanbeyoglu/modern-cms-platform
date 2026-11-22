@@ -8,6 +8,9 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { ListFilterBar } from '../components/ui/ListFilterBar';
+import { IconPencil, IconTrash } from '../components/ui/icons';
 import { ContentSlugFields } from '../components/ContentSlugFields';
 import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import { SocialLinksEditor } from '../components/SocialLinksEditor';
@@ -27,16 +30,24 @@ import {
   type StoreStatus,
 } from '../lib/api';
 
-const STORE_STATUS: Record<StoreStatus, { label: string; bg: string; color: string }> = {
-  ACTIVE: { label: 'Aktif', bg: '#d1fae5', color: '#065f46' },
-  PASSIVE: { label: 'Pasif', bg: '#f3f4f6', color: '#374151' },
-  ARCHIVED: { label: 'Arşiv', bg: '#e5e7eb', color: '#6b7280' },
+const STORE_STATUS: Record<StoreStatus, { label: string; bg: string; color: string; dot: string }> = {
+  ACTIVE: { label: 'Aktif', bg: '#d1fae5', color: '#065f46', dot: '#10b981' },
+  PASSIVE: { label: 'Pasif', bg: '#f3f4f6', color: '#374151', dot: '#9ca3af' },
+  ARCHIVED: { label: 'Arşiv', bg: '#e5e7eb', color: '#6b7280', dot: '#9ca3af' },
 };
+
+const STATUS_FILTER_OPTIONS = [
+  { value: '', label: 'Tüm durumlar' },
+  { value: 'ACTIVE', label: 'Aktif' },
+  { value: 'PASSIVE', label: 'Pasif' },
+  { value: 'ARCHIVED', label: 'Arşiv' },
+];
 
 function StatusBadge({ status }: { status: StoreStatus }) {
   const s = STORE_STATUS[status];
   return (
-    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: s.bg, color: s.color }}>
+    <span className="cms-status-badge" style={{ background: s.bg, color: s.color }}>
+      <span className="cms-status-badge__dot" style={{ background: s.dot }} />
       {s.label}
     </span>
   );
@@ -68,6 +79,8 @@ export function GlobalStoresPage() {
   const [socialLinks, setSocialLinks] = useState<StoreSocialLink[]>([]);
   const [duplicateStoreId, setDuplicateStoreId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
   const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
   const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
@@ -278,15 +291,18 @@ export function GlobalStoresPage() {
   }
 
   async function remove(id: string) {
-    if (!accessToken || !tenantId) return;
-    if (!window.confirm('Global mağazayı silmek istiyor musunuz?')) return;
+    if (!accessToken || !tenantId || actionBusyId) return;
+    setActionBusyId(id);
     try {
       await apiGlobalStoreDelete(accessToken, tenantId, id);
       setItems((prev) => prev.filter((x) => x.id !== id));
       setTotal((t) => t - 1);
       toast.success('Mağaza silindi');
+      setConfirmDelete(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Silme hatası');
+    } finally {
+      setActionBusyId(null);
     }
   }
 
@@ -309,29 +325,28 @@ export function GlobalStoresPage() {
     <div style={{ fontSize: 13 }}>
       {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-        <input
-          placeholder="Ada göre ara"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ padding: 5, border: '1px solid #d1d5db', borderRadius: 4, width: 160 }}
-        />
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as StoreStatus | '')} style={{ padding: 5, borderRadius: 4 }}>
-          <option value="">Tüm durumlar</option>
-          <option value="ACTIVE">Aktif</option>
-          <option value="PASSIVE">Pasif</option>
-          <option value="ARCHIVED">Arşiv</option>
-        </select>
-        <button type="button" onClick={() => void load()}>
-          Filtrele
-        </button>
-        <span style={{ color: '#6b7280' }}>{total} kayıt</span>
-        {!canWrite && (
-          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>
-            Salt okunur — Global mağaza yönetimi yalnızca Super Admin yetkisine sahiptir
-          </span>
-        )}
-      </div>
+      <ListFilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchLabel="Global mağazalarda ara"
+        searchPlaceholder="Ada göre ara"
+        statusValue={filterStatus}
+        onStatusChange={(value) => setFilterStatus(value as StoreStatus | '')}
+        statusOptions={STATUS_FILTER_OPTIONS}
+        trailing={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => void load()}>
+              Filtrele
+            </Button>
+            <span style={{ color: '#6b7280', fontSize: 12 }}>{total} kayıt</span>
+            {!canWrite && (
+              <span style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>
+                Salt okunur — yalnızca Super Admin
+              </span>
+            )}
+          </>
+        }
+      />
 
       {showForm && canWrite && (
         <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, marginBottom: 16, background: '#fafafa' }}>
@@ -452,51 +467,78 @@ export function GlobalStoresPage() {
       {loading ? (
         <p style={{ color: '#6b7280' }}>Yükleniyor…</p>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="cms-data-table-wrap">
+        <table className="cms-data-table">
           <thead>
-            <tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}>
-              <th style={{ padding: 8 }}>Mağaza</th>
-              <th style={{ padding: 8 }}>İletişim</th>
-              <th style={{ padding: 8 }}>Durum</th>
-              <th style={{ padding: 8 }} />
+            <tr>
+              <th>Mağaza</th>
+              <th>İletişim</th>
+              <th>Durum</th>
+              <th style={{ textAlign: 'right' }}>İşlem</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((g) => (
-              <tr key={g.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: 8 }}>
+            {items.map((g) => {
+              const busy = actionBusyId === g.id;
+              return (
+              <tr key={g.id}>
+                <td>
                   <div style={{ fontWeight: 600 }}>{g.name}</div>
                   <div style={{ fontSize: 11, color: '#6b7280' }}>{g.slug}</div>
                   {g.logoMedia && (
                     <img src={g.logoMedia.publicUrl} alt="" style={{ width: 48, height: 48, objectFit: 'cover', marginTop: 4, borderRadius: 4 }} />
                   )}
                 </td>
-                <td style={{ padding: 8, fontSize: 12, color: '#4b5563' }}>
+                <td style={{ fontSize: 12, color: '#4b5563' }}>
                   {g.phone ? <span>{g.phone}</span> : null}
                   {g.phone && g.email ? <br /> : null}
                   {g.email ? <a href={`mailto:${g.email}`}>{g.email}</a> : null}
                   {!g.phone && !g.email ? '—' : null}
                 </td>
-                <td style={{ padding: 8 }}>
+                <td>
                   <StatusBadge status={g.status} />
                 </td>
-                <td style={{ padding: 8 }}>
+                <td>
                   {canWrite && (
-                    <>
-                      <button type="button" onClick={() => openEdit(g)} style={{ marginRight: 6, fontSize: 12 }}>
+                    <div className="cms-data-table__actions">
+                      <Button variant="secondary" size="sm" disabled={busy} onClick={() => openEdit(g)}>
+                        <IconPencil />
                         Düzenle
-                      </button>
-                      <button type="button" onClick={() => void remove(g.id)} style={{ fontSize: 12, color: '#b91c1c' }}>
+                      </Button>
+                      <Button
+                        variant="dangerSoft"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => setConfirmDelete({ id: g.id, name: g.name })}
+                      >
+                        <IconTrash />
                         Sil
-                      </button>
-                    </>
+                      </Button>
+                    </div>
                   )}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
+        </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        title="Global mağazayı sil"
+        description={`"${confirmDelete?.name ?? ''}" mağazasını silmek istediğinizden emin misiniz?`}
+        confirmLabel="Sil"
+        variant="danger"
+        confirming={Boolean(confirmDelete && actionBusyId === confirmDelete.id)}
+        onCancel={() => {
+          if (!actionBusyId) setConfirmDelete(null);
+        }}
+        onConfirm={() => {
+          if (confirmDelete) void remove(confirmDelete.id);
+        }}
+      />
     </div>
     </PageContainer>
   );

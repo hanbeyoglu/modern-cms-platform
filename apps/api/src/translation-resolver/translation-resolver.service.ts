@@ -1,3 +1,4 @@
+import { normalizeLanguageCode, withLocaleDirection } from '../locales/supported-languages';
 import { Injectable } from '@nestjs/common';
 import type { Locale, LocalizedContent, LocalizedEntityType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -27,7 +28,7 @@ export class TranslationResolverService {
 
     const normalized = this.normalizeLocaleCode(requestedLocaleCode);
     if (normalized) {
-      const locale = activeLocales.find((l) => l.code === normalized);
+      const locale = activeLocales.find((l) => normalizeLanguageCode(l.code) === normalized);
       if (locale) return locale;
     }
 
@@ -42,15 +43,16 @@ export class TranslationResolverService {
   /** Safe for untrusted query/header values (no throw). */
   normalizeLocaleCode(requestedLocaleCode?: string): string | undefined {
     if (!requestedLocaleCode || typeof requestedLocaleCode !== 'string') return undefined;
-    const t = requestedLocaleCode.trim().toLowerCase();
+    const t = normalizeLanguageCode(requestedLocaleCode);
     if (!t) return undefined;
     return t.slice(0, 32);
   }
 
   async getDefaultLocale(tenantId: string): Promise<Locale | null> {
-    return this.prisma.locale.findFirst({
+    const locale = await this.prisma.locale.findFirst({
       where: { tenantId, isDefault: true, isActive: true },
     });
+    return locale ? withLocaleDirection(locale) : null;
   }
 
   async getTranslationsForEntity(
@@ -88,10 +90,11 @@ export class TranslationResolverService {
 
   /** Active locales for forms and public language switchers (Sprint 21). */
   async getActiveLocalesOrdered(tenantId: string): Promise<Locale[]> {
-    return this.prisma.locale.findMany({
+    const rows = await this.prisma.locale.findMany({
       where: { tenantId, isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
     });
+    return rows.map(withLocaleDirection);
   }
 
   /**

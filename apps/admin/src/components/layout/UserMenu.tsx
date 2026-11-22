@@ -12,7 +12,7 @@ export function UserMenu() {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <div style={{ textAlign: 'right' }}>
+      <div className="cms-hide-sm" style={{ textAlign: 'right' }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{displayName}</div>
         {!user?.isSuperAdmin && membership?.role.name && (
           <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 500 }}>{membership.role.name}</div>

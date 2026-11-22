@@ -1,4 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { withLocaleDirection } from '../locales/supported-languages';
+import { PublicCacheService } from '../public/cache/public-cache.service';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { Locale, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
@@ -11,9 +13,11 @@ export type LocationLocaleRow = Locale & {
 
 @Injectable()
 export class MallLocalesService {
+  private readonly logger = new Logger(MallLocalesService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly cache: PublicCacheService,
   ) {}
 
   async assertMall(tenantId: string, mallId: string) {
@@ -27,7 +31,7 @@ export class MallLocalesService {
 
   /**
    * Read-only: system-active locales with per-location activation.
-   * Missing MallLocale → locationActive=false (default locale is always active).
+   * Missing MallLocale → inherit system activation (default locale is always active).
    */
   async listForLocation(tenantId: string, mallId: string): Promise<LocationLocaleRow[]> {
     const mall = await this.assertMall(tenantId, mallId);
@@ -47,7 +51,7 @@ export class MallLocalesService {
     const defaultLocale = systemLocales.find((l) => l.isDefault);
 
     return systemLocales.map((locale) => ({
-      ...locale,
+      ...withLocaleDirection(locale),
       locationActive: this.resolveLocationActive(locale, defaultLocale, mallMap.get(locale.id)),
     }));
   }
@@ -63,7 +67,7 @@ export class MallLocalesService {
       where: { tenantId, isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
     });
-    if (!mallId || systemLocales.length === 0) return systemLocales;
+    if (!mallId || systemLocales.length === 0) return systemLocales.map(withLocaleDirection);
 
     const mallLocales = await this.prisma.mallLocale.findMany({
       where: { mallId, tenantId },
@@ -74,7 +78,7 @@ export class MallLocalesService {
 
     return systemLocales.filter((locale) =>
       this.resolveLocationActive(locale, defaultLocale, mallMap.get(locale.id)),
-    );
+    ).map(withLocaleDirection);
   }
 
   async updateForLocation(
@@ -111,9 +115,15 @@ export class MallLocalesService {
       }
     }
 
-    const resolvedActive = new Set<string>();
-    if (defaultLocale) resolvedActive.add(defaultLocale.id);
-    for (const id of enableIds) resolvedActive.add(id);
+    const current = await this.prisma.mallLocale.findMany({
+      where: { mallId, tenantId: mall.tenantId },
+      select: { localeId: true, isActive: true },
+    });
+    const overrides = new Map(current.map(row => [row.localeId, row.isActive]));
+    for (const item of dto.locales) overrides.set(item.localeId, item.isActive);
+    const resolvedActive = new Set(systemLocales.filter(locale =>
+      this.resolveLocationActive(locale, defaultLocale, overrides.get(locale.id)),
+    ).map(locale => locale.id));
 
     if (resolvedActive.size < 1) {
       throw new BadRequestException('Lokasyonda en az bir dil aktif kalmalıdır.');
@@ -128,7 +138,11 @@ export class MallLocalesService {
         }),
       ),
       ...disableIds.map((localeId) =>
-        this.prisma.mallLocale.deleteMany({ where: { mallId, localeId } }),
+        this.prisma.mallLocale.upsert({
+          where: { mallId_localeId: { mallId, localeId } },
+          create: { tenantId: mall.tenantId, mallId, localeId, isActive: false },
+          update: { isActive: false },
+        }),
       ),
     ]);
 
@@ -145,6 +159,8 @@ export class MallLocalesService {
       },
     });
 
+    try { await this.cache.invalidateTenant(mall.tenantId); }
+    catch { this.logger.warn('Location locale public cache invalidation failed'); }
     return this.listForLocation(mall.tenantId, mallId);
   }
 
@@ -154,6 +170,6 @@ export class MallLocalesService {
     mallActive: boolean | undefined,
   ): boolean {
     if (defaultLocale && locale.id === defaultLocale.id) return true;
-    return mallActive === true;
+    return mallActive !== false;
   }
 }

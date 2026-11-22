@@ -75,7 +75,7 @@ test('public event list and detail expose free and paid admission', async () => 
 test('event detail includes its scoped published slider groups and image slides', async () => {
   const { PublicContentService } = require('../dist/public/public-content.service');
   const event = { id: 'event-1', title: 'Event', isFree: false, sameImageForAllLocales: true, sharedCoverImage: null, translations: [], publishStartAt: null, publishEndAt: null, eventStartAt: null, eventEndAt: null, publishedAt: null };
-  const image = { id: 'image', publicUrl: 'https://cdn.example.com/event.jpg', mimeType: 'image/jpeg', width: 1920, height: 800 };
+  const image = { id: 'image', publicUrl: 'https://cdn.example.com/event.jpg', mimeType: 'image/jpeg', width: 1920, height: 800, tenantId: 'tenant', mallId: 'mall', deletedAt: null, status: 'ACTIVE', caption: 'Caption' };
   const slides = ['DRAFT', 'PUBLISHED'].map((status, i) => ({ id: `slide-${i}`, status, title: 'Slide title', sameImageForAllLocales: true, sharedImage: image, sharedMobileImage: null, translations: [], sortOrder: i }));
   const content = new PublicContentService({
     event: { findFirst: async () => event },
@@ -96,9 +96,7 @@ test('event detail includes its scoped published slider groups and image slides'
   const result = await content.getEventBySlug({ tenantId: 'tenant', mallId: 'mall', slug: 'event' });
   assert.equal(result.isFree, false);
   assert.equal(result.sliders.length, 1);
-  assert.equal(result.sliders[0].items.length, 1);
-  assert.equal(result.sliders[0].items[0].title, 'Slide title');
-  assert.equal(result.sliders[0].items[0].image.url, image.publicUrl);
+  assert.deepEqual(result.sliders[0], { id: 'slide-1', sortOrder: 1, image: { id: 'image', url: image.publicUrl, alt: '', caption: 'Caption' } });
 });
 
 test('a missing event does not fetch or expose slider groups', async () => {

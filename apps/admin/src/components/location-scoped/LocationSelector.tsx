@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '../../auth/useAuth';
+import { confirmDiscardUnsavedChanges } from '../../lib/unsaved-changes';
 
 const fieldStyle: React.CSSProperties = {
   display: 'grid',
@@ -79,6 +80,7 @@ export function LocationSelector() {
         <select
           value={activeMallId ?? ''}
           onChange={(e) => {
+            if (!confirmDiscardUnsavedChanges()) return;
             selectMall(e.target.value || null);
             setQuery('');
           }}

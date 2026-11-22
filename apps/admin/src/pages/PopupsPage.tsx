@@ -13,6 +13,9 @@ import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import { validateRangeSchedule } from '../lib/publishing-workflow';
 import { DEFAULT_CONTENT_CHANNELS, formatChannels } from '../lib/content-channels';
 import { Button } from '../components/ui/Button';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { ListFilterBar } from '../components/ui/ListFilterBar';
+import { IconArchive, IconPencil, IconTrash } from '../components/ui/icons';
 import {
   apiPopupArchive,
   apiPopupCreate,
@@ -28,21 +31,34 @@ import {
 import { usePermission } from '../hooks/usePermission';
 import { useMallRequired } from '../hooks/useMallRequired';
 
-const STATUS_STYLE: Record<PopupStatus, { bg: string; color: string; label: string }> = {
-  DRAFT: { bg: '#f3f4f6', color: '#374151', label: 'Taslak' },
-  SCHEDULED: { bg: '#fef3c7', color: '#92400e', label: 'Zamanlanmış' },
-  PUBLISHED: { bg: '#d1fae5', color: '#065f46', label: 'Yayında' },
-  ARCHIVED: { bg: '#e5e7eb', color: '#6b7280', label: 'Arşiv' },
+const STATUS_FILTER_OPTIONS = [
+  { value: '', label: 'Tüm durumlar' },
+  { value: 'DRAFT', label: 'Taslak' },
+  { value: 'SCHEDULED', label: 'Zamanlanmış' },
+  { value: 'PUBLISHED', label: 'Yayında' },
+  { value: 'ARCHIVED', label: 'Arşiv' },
+];
+
+const STATUS_STYLE: Record<PopupStatus, { bg: string; color: string; label: string; dot: string }> = {
+  DRAFT: { bg: '#f3f4f6', color: '#374151', label: 'Taslak', dot: '#9ca3af' },
+  SCHEDULED: { bg: '#fef3c7', color: '#92400e', label: 'Zamanlanmış', dot: '#f59e0b' },
+  PUBLISHED: { bg: '#d1fae5', color: '#065f46', label: 'Yayında', dot: '#10b981' },
+  ARCHIVED: { bg: '#e5e7eb', color: '#6b7280', label: 'Arşiv', dot: '#9ca3af' },
 };
 
 function StatusBadge({ status }: { status: PopupStatus }) {
   const c = STATUS_STYLE[status];
   return (
-    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: c.bg, color: c.color }}>
+    <span className="cms-status-badge" style={{ background: c.bg, color: c.color }}>
+      <span className="cms-status-badge__dot" style={{ background: c.dot }} />
       {c.label}
     </span>
   );
 }
+
+type ConfirmState =
+  | { kind: 'delete'; id: string; title: string }
+  | { kind: 'archive'; id: string; title: string };
 
 type FormState = {
   title: string;
@@ -131,6 +147,8 @@ export function PopupsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<PopupStatus | ''>('');
   const [filterSearch, setFilterSearch] = useState('');
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CmsPopup | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -249,37 +267,47 @@ export function PopupsPage() {
   }
 
   async function handlePublish(id: string) {
-    if (!accessToken || !tenantId) return;
+    if (!accessToken || !tenantId || actionBusyId) return;
+    setActionBusyId(id);
     try {
       const u = await apiPopupPublish(accessToken, tenantId, id);
       setRows((prev) => prev.map((r) => (r.id === u.id ? u : r)));
       toast.success('Popup yayınlandı');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Yayınlanamadı');
+    } finally {
+      setActionBusyId(null);
     }
   }
 
   async function handleArchive(id: string) {
-    if (!accessToken || !tenantId) return;
+    if (!accessToken || !tenantId || actionBusyId) return;
+    setActionBusyId(id);
     try {
       const u = await apiPopupArchive(accessToken, tenantId, id);
       setRows((prev) => prev.map((r) => (r.id === u.id ? u : r)));
       toast.success('Popup arşivlendi');
+      setConfirm(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Arşivlenemedi');
+    } finally {
+      setActionBusyId(null);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!accessToken || !tenantId) return;
-    if (!window.confirm('Bu popup silinsin mi?')) return;
+    if (!accessToken || !tenantId || actionBusyId) return;
+    setActionBusyId(id);
     try {
       await apiPopupDelete(accessToken, tenantId, id);
       setRows((prev) => prev.filter((r) => r.id !== id));
       setTotal((t) => t - 1);
       toast.success('Popup silindi');
+      setConfirm(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Silinemedi');
+    } finally {
+      setActionBusyId(null);
     }
   }
 
@@ -305,29 +333,19 @@ export function PopupsPage() {
         }
       />
       <div style={{ fontSize: 13 }}>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-          <input
-            type="text"
-            placeholder="Başlığa göre ara…"
-            value={filterSearch}
-            onChange={(e) => setFilterSearch(e.target.value)}
-            style={{ ...inputStyle, width: 200 }}
-          />
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as PopupStatus | '')}
-            style={inputStyle}
-          >
-            <option value="">Tüm durumlar</option>
-            <option value="DRAFT">Taslak</option>
-            <option value="SCHEDULED">Zamanlanmış</option>
-            <option value="PUBLISHED">Yayında</option>
-            <option value="ARCHIVED">Arşiv</option>
-          </select>
-          <Button variant="secondary" onClick={() => void load()}>
-            Filtrele
-          </Button>
-        </div>
+        <ListFilterBar
+          searchValue={filterSearch}
+          onSearchChange={setFilterSearch}
+          searchLabel="Popuplar içinde ara"
+          statusValue={filterStatus}
+          onStatusChange={(value) => setFilterStatus(value as PopupStatus | '')}
+          statusOptions={STATUS_FILTER_OPTIONS}
+          trailing={
+            <Button variant="secondary" size="sm" onClick={() => void load()}>
+              Filtrele
+            </Button>
+          }
+        />
 
         {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
         {loading && <LoadingState />}
@@ -416,48 +434,94 @@ export function PopupsPage() {
         )}
 
         {rows.length > 0 && (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="cms-data-table-wrap">
+          <table className="cms-data-table">
             <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ padding: 8 }}>Başlık</th>
-                <th style={{ padding: 8 }}>Kanallar</th>
-                <th style={{ padding: 8 }}>Durum</th>
-                <th style={{ padding: 8 }}>İşlem</th>
+              <tr>
+                <th>Başlık</th>
+                <th>Kanallar</th>
+                <th>Durum</th>
+                <th style={{ textAlign: 'right' }}>İşlem</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((p) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: 8 }}>{p.title}</td>
-                  <td style={{ padding: 8, color: '#6b7280', fontSize: 12 }}>{formatChannels(p.channels)}</td>
-                  <td style={{ padding: 8 }}>
+              {rows.map((p) => {
+                const busy = actionBusyId === p.id;
+                return (
+                <tr key={p.id}>
+                  <td>{p.title}</td>
+                  <td style={{ color: '#6b7280', fontSize: 12 }}>{formatChannels(p.channels)}</td>
+                  <td>
                     <StatusBadge status={p.status} />
                   </td>
-                  <td style={{ padding: 8, whiteSpace: 'nowrap' }}>
-                    <Button variant="ghost" onClick={() => { setEditing(p); setForm(toForm(p)); setShowForm(true); }}>
-                      Düzenle
-                    </Button>
-                    {can('popup:publish') && p.status !== 'PUBLISHED' && (
-                      <Button variant="ghost" onClick={() => void handlePublish(p.id)}>
-                        Yayınla
+                  <td>
+                    <div className="cms-data-table__actions">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => { setEditing(p); setForm(toForm(p)); setShowForm(true); }}
+                      >
+                        <IconPencil />
+                        Düzenle
                       </Button>
-                    )}
-                    {can('popup:publish') && p.status !== 'ARCHIVED' && (
-                      <Button variant="ghost" onClick={() => void handleArchive(p.id)}>
-                        Arşivle
-                      </Button>
-                    )}
-                    {can('popup:delete') && (
-                      <Button variant="ghost" onClick={() => void handleDelete(p.id)}>
-                        Sil
-                      </Button>
-                    )}
+                      {can('popup:publish') && (p.status === 'DRAFT' || p.status === 'SCHEDULED') && (
+                        <Button variant="secondary" size="sm" disabled={busy} onClick={() => void handlePublish(p.id)}>
+                          Yayınla
+                        </Button>
+                      )}
+                      {can('popup:publish') && p.status !== 'ARCHIVED' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => setConfirm({ kind: 'archive', id: p.id, title: p.title })}
+                        >
+                          <IconArchive />
+                          Arşivle
+                        </Button>
+                      )}
+                      {can('popup:delete') && (
+                        <Button
+                          variant="dangerSoft"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => setConfirm({ kind: 'delete', id: p.id, title: p.title })}
+                        >
+                          <IconTrash />
+                          Sil
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
+          </div>
         )}
+
+        <ConfirmDialog
+          open={confirm !== null}
+          title={confirm?.kind === 'delete' ? 'Popup sil' : 'Popup arşivle'}
+          description={
+            confirm?.kind === 'delete'
+              ? `"${confirm.title}" popup kaydını silmek istediğinizden emin misiniz?`
+              : `"${confirm?.title ?? ''}" popup kaydını arşivlemek istediğinizden emin misiniz?`
+          }
+          confirmLabel={confirm?.kind === 'delete' ? 'Sil' : 'Arşivle'}
+          variant={confirm?.kind === 'delete' ? 'danger' : 'default'}
+          confirming={Boolean(confirm && actionBusyId === confirm.id)}
+          onCancel={() => {
+            if (!actionBusyId) setConfirm(null);
+          }}
+          onConfirm={() => {
+            if (!confirm) return;
+            if (confirm.kind === 'delete') void handleDelete(confirm.id);
+            else void handleArchive(confirm.id);
+          }}
+        />
       </div>
     </PageContainer>
   );

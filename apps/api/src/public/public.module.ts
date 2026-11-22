@@ -6,7 +6,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { SearchModule } from '../search/search.module';
 import { TranslationResolverModule } from '../translation-resolver/translation-resolver.module';
 import { MediaModule } from '../media/media.module';
-import { PublicCacheService } from './cache/public-cache.service';
+import { PublicCacheModule } from './cache/public-cache.module';
 import { PublicContentService } from './public-content.service';
 import { PublicContextService } from './public-context.service';
 import { PublicController } from './public.controller';
@@ -15,9 +15,9 @@ import { DeveloperApiModule } from '../developer-api/developer-api.module';
 import { PublicApiKeyGuard } from './guards/public-api-key.guard';
 
 @Module({
-  imports: [ContactMessagesModule, PrismaModule, TranslationResolverModule, MallLocalesModule, SearchModule, MediaModule, DeveloperApiModule],
+  imports: [PublicCacheModule, ContactMessagesModule, PrismaModule, TranslationResolverModule, MallLocalesModule, SearchModule, MediaModule, DeveloperApiModule],
   controllers: [PublicController, PublicContactMessagesController],
-  providers: [ContactRateLimitGuard, PublicContextService, PublicContentService, PublicCacheService, PublicApiKeyGuard],
-  exports: [PublicCacheService],
+  providers: [ContactRateLimitGuard, PublicContextService, PublicContentService, PublicApiKeyGuard],
+  exports: [PublicCacheModule],
 })
 export class PublicModule {}

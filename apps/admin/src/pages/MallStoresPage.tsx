@@ -10,6 +10,8 @@ import { LinkedSliderGroupsSection } from '../components/LinkedSliderGroupsSecti
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { IconPencil, IconTrash } from '../components/ui/icons';
 import { GlobalStoreSearchSelect } from '../components/GlobalStoreSearchSelect';
 import { WorkingHoursEditor } from '../components/WorkingHoursEditor';
 import {
@@ -42,16 +44,17 @@ import {
   type WorkingHoursSchedule,
 } from '../lib/working-hours';
 
-const STORE_STATUS: Record<StoreStatus, { label: string; bg: string; color: string }> = {
-  ACTIVE: { label: 'Aktif', bg: '#d1fae5', color: '#065f46' },
-  PASSIVE: { label: 'Pasif', bg: '#f3f4f6', color: '#374151' },
-  ARCHIVED: { label: 'Arşiv', bg: '#e5e7eb', color: '#6b7280' },
+const STORE_STATUS: Record<StoreStatus, { label: string; bg: string; color: string; dot: string }> = {
+  ACTIVE: { label: 'Aktif', bg: '#d1fae5', color: '#065f46', dot: '#10b981' },
+  PASSIVE: { label: 'Pasif', bg: '#f3f4f6', color: '#374151', dot: '#9ca3af' },
+  ARCHIVED: { label: 'Arşiv', bg: '#e5e7eb', color: '#6b7280', dot: '#9ca3af' },
 };
 
 function StatusBadge({ status }: { status: StoreStatus }) {
   const s = STORE_STATUS[status];
   return (
-    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: s.bg, color: s.color }}>
+    <span className="cms-status-badge" style={{ background: s.bg, color: s.color }}>
+      <span className="cms-status-badge__dot" style={{ background: s.dot }} />
       {s.label}
     </span>
   );
@@ -181,6 +184,8 @@ export function MallStoresPage() {
   const [isSoon, setIsSoon] = useState(false);
   const [searchTagsText, setSearchTagsText] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState<{ id: string; name: string } | null>(null);
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [tenantLocales, setTenantLocales] = useState<CmsLocale[]>([]);
   const [contentLocaleTab, setContentLocaleTab] = useState<string | null>(null);
   const [localeDrafts, setLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
@@ -463,15 +468,18 @@ export function MallStoresPage() {
   }
 
   async function remove(id: string) {
-    if (!accessToken || !tenantId || !mallId) return;
-    if (!window.confirm('Bu AVM atamasını kaldırmak istiyor musunuz?')) return;
+    if (!accessToken || !tenantId || !mallId || actionBusyId) return;
+    setActionBusyId(id);
     try {
       await apiMallStoreDelete(accessToken, tenantId, mallId, id);
       setItems((prev) => prev.filter((x) => x.id !== id));
       setTotal((t) => t - 1);
       toast.success('AVM ataması kaldırıldı');
+      setConfirmRemove(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Silme hatası');
+    } finally {
+      setActionBusyId(null);
     }
   }
 
@@ -769,21 +777,50 @@ export function MallStoresPage() {
                   <StatusBadge status={m.status} />
                 </td>
                 <td style={{ padding: 8 }}>
-                  <button type="button" onClick={() => openEdit(m)} style={{ fontSize: 12, marginRight: 4 }}>
-                    Düzenle
-                  </button>
-                  <button type="button" onClick={() => void toggleFeature(m)} style={{ fontSize: 12, marginRight: 4 }}>
-                    {m.isFeatured ? 'Öne çıkarma' : 'Öne çıkar'}
-                  </button>
-                  <button type="button" onClick={() => void remove(m.id)} style={{ fontSize: 12, color: '#b91c1c' }}>
-                    Kaldır
-                  </button>
+                  <div className="cms-data-table__actions" style={{ justifyContent: 'flex-start' }}>
+                    <Button variant="secondary" size="sm" disabled={actionBusyId === m.id} onClick={() => openEdit(m)}>
+                      <IconPencil />
+                      Düzenle
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={actionBusyId === m.id}
+                      onClick={() => void toggleFeature(m)}
+                    >
+                      {m.isFeatured ? 'Öne çıkarma' : 'Öne çıkar'}
+                    </Button>
+                    <Button
+                      variant="dangerSoft"
+                      size="sm"
+                      disabled={actionBusyId === m.id}
+                      onClick={() => setConfirmRemove({ id: m.id, name: m.globalStore.name })}
+                    >
+                      <IconTrash />
+                      Kaldır
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+
+      <ConfirmDialog
+        open={confirmRemove !== null}
+        title="AVM atamasını kaldır"
+        description={`"${confirmRemove?.name ?? ''}" mağazasının AVM atamasını kaldırmak istediğinizden emin misiniz?`}
+        confirmLabel="Kaldır"
+        variant="danger"
+        confirming={Boolean(confirmRemove && actionBusyId === confirmRemove.id)}
+        onCancel={() => {
+          if (!actionBusyId) setConfirmRemove(null);
+        }}
+        onConfirm={() => {
+          if (confirmRemove) void remove(confirmRemove.id);
+        }}
+      />
     </div>
     </LocationScopedModuleShell>
   );

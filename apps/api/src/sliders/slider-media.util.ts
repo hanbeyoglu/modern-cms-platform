@@ -3,6 +3,7 @@ export type SliderMediaRow = {
   publicUrl: string;
   storageKey?: string | null;
   originalName: string;
+  caption?: string | null;
   mimeType: string;
   width?: number | null;
   height?: number | null;

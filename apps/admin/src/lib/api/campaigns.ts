@@ -107,6 +107,8 @@ export async function apiCampaignsList(
     startTo?: string;
     endFrom?: string;
     endTo?: string;
+    /** Only campaigns visitors can see right now (PUBLISHED + publish window). */
+    visibleNow?: boolean;
     page?: number;
     limit?: number;
   },
@@ -121,6 +123,7 @@ export async function apiCampaignsList(
   if (opts?.startTo) params.set('startTo', opts.startTo);
   if (opts?.endFrom) params.set('endFrom', opts.endFrom);
   if (opts?.endTo) params.set('endTo', opts.endTo);
+  if (opts?.visibleNow) params.set('visibleNow', 'true');
   if (opts?.page) params.set('page', String(opts.page));
   appendLimitParam(params, opts?.limit);
   const qs = params.toString();

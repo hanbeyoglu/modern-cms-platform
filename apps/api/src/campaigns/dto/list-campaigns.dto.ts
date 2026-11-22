@@ -52,4 +52,9 @@ export class ListCampaignsDto {
   @IsOptional()
   @IsDateString()
   endTo?: string;
+
+  /** "true" → only campaigns visitors can see right now (PUBLISHED + publish window), as in the public API. */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  visibleNow?: 'true' | 'false';
 }

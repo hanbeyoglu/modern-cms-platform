@@ -1,0 +1,285 @@
+{
+  "contact-messages": {
+    "href": "/contact-messages",
+    "permission": "contact-message:read",
+    "anyPermission": null,
+    "capability": null,
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "dashboard": {
+    "href": "/dashboard",
+    "permission": null,
+    "anyPermission": null,
+    "capability": null,
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "notifications": {
+    "href": "/notifications",
+    "permission": "notification:read",
+    "anyPermission": null,
+    "capability": "notifications",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "search": {
+    "href": "/search",
+    "permission": "search:global",
+    "anyPermission": null,
+    "capability": "search",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "media": {
+    "href": "/media",
+    "permission": "media:read",
+    "anyPermission": null,
+    "capability": "media",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "media-guidelines": {
+    "href": "/media/guidelines",
+    "permission": "media:read",
+    "anyPermission": null,
+    "capability": "media",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "sliders": {
+    "href": "/sliders",
+    "permission": "slider:read",
+    "anyPermission": null,
+    "capability": "sliders",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "analytics": {
+    "href": "/analytics",
+    "permission": "analytics:view",
+    "anyPermission": null,
+    "capability": "analytics",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "events": {
+    "href": "/events",
+    "permission": "event:read",
+    "anyPermission": null,
+    "capability": "events",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "campaigns": {
+    "href": "/campaigns",
+    "permission": "campaign:read",
+    "anyPermission": null,
+    "capability": "campaigns",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "popups": {
+    "href": "/popups",
+    "permission": "popup:read",
+    "anyPermission": null,
+    "capability": "popups",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "pages": {
+    "href": "/pages",
+    "permission": "page:read",
+    "anyPermission": null,
+    "capability": "pages",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "movies": {
+    "href": "/movies",
+    "permission": "movie:read",
+    "anyPermission": null,
+    "capability": "cinema",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "movie-categories": {
+    "href": "/movie-categories",
+    "permission": "movie:read",
+    "anyPermission": null,
+    "capability": "cinema",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "tmdb-hub": {
+    "href": "/tmdb-hub",
+    "permission": "movie:read",
+    "anyPermission": null,
+    "capability": "cinema",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "global-stores": {
+    "href": "/global-stores",
+    "permission": "global-store:read",
+    "anyPermission": null,
+    "capability": "stores",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "mall-stores": {
+    "href": "/mall-stores",
+    "permission": "mall-store:read",
+    "anyPermission": null,
+    "capability": "stores",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "store-categories": {
+    "href": "/store-categories",
+    "permission": "store-category:read",
+    "anyPermission": null,
+    "capability": "stores",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "floors": {
+    "href": "/floors",
+    "permission": null,
+    "anyPermission": [
+      "location:read",
+      "mall-store:read"
+    ],
+    "capability": "stores",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "services": {
+    "href": "/services",
+    "permission": "service:read",
+    "anyPermission": null,
+    "capability": "location_services",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "cinemas": {
+    "href": "/cinemas",
+    "permission": "cinema:read",
+    "anyPermission": null,
+    "capability": "cinema",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "restaurants": {
+    "href": "/restaurants",
+    "permission": "location:read",
+    "anyPermission": null,
+    "capability": "stores",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "tenants": {
+    "href": "/tenants",
+    "permission": "tenant:read",
+    "anyPermission": null,
+    "capability": null,
+    "superAdminOnly": true,
+    "requiresAudit": false
+  },
+  "system-languages": {
+    "href": "/system/localization/languages",
+    "permission": "system-language:read",
+    "anyPermission": null,
+    "capability": "localization",
+    "superAdminOnly": true,
+    "requiresAudit": false
+  },
+  "capabilities": {
+    "href": "/capabilities",
+    "permission": "capability:read",
+    "anyPermission": null,
+    "capability": null,
+    "superAdminOnly": true,
+    "requiresAudit": false
+  },
+  "audit-logs": {
+    "href": "/audit-logs",
+    "permission": "audit:read",
+    "anyPermission": null,
+    "capability": null,
+    "superAdminOnly": false,
+    "requiresAudit": true
+  },
+  "locations": {
+    "href": "/locations",
+    "permission": "location:read",
+    "anyPermission": null,
+    "capability": null,
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "users": {
+    "href": "/users",
+    "permission": "user:read",
+    "anyPermission": null,
+    "capability": null,
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "roles": {
+    "href": "/roles",
+    "permission": "role:read",
+    "anyPermission": null,
+    "capability": null,
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "settings-general": {
+    "href": "/settings/general",
+    "permission": "settings:read",
+    "anyPermission": null,
+    "capability": null,
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "settings-movie-providers": {
+    "href": "/settings/movie-providers",
+    "permission": "settings:read",
+    "anyPermission": null,
+    "capability": "cinema",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "settings-security": {
+    "href": "/settings/security",
+    "permission": "settings:read",
+    "anyPermission": null,
+    "capability": null,
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "settings-developer-api": {
+    "href": "/settings/developer-api",
+    "permission": "settings:read",
+    "anyPermission": null,
+    "capability": null,
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "settings-languages": {
+    "href": "/settings/languages",
+    "permission": "location:read",
+    "anyPermission": null,
+    "capability": "localization",
+    "superAdminOnly": false,
+    "requiresAudit": false
+  },
+  "account": {
+    "href": "/account",
+    "permission": null,
+    "anyPermission": null,
+    "capability": null,
+    "superAdminOnly": false,
+    "requiresAudit": false
+  }
+}

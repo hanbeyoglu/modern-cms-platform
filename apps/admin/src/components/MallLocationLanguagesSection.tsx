@@ -120,11 +120,12 @@ export function MallLocationLanguagesSection({
     <div>
       {showScopeHint ? (
         <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280', maxWidth: 640 }}>
-          Sistemde aktif olan diller listelenir. Bu ekranda yalnızca seçili lokasyon için hangi dillerin
+          Sistemde aktif olan diller varsayılan olarak web sitesinde desteklenir. Bu ekranda seçili lokasyon için hangi dillerin
           aktif olacağını yönetirsiniz. Pasif diller içerik formlarında ve public API&apos;de görünmez.
         </p>
       ) : null}
 
+      {!showScopeHint && <p style={{ fontSize: 13, color: '#6b7280' }}>Burada aktif olan diller web sitesinin dil seçicisinde görünür. Sistemde yeni aktif edilen diller, AVM için ayrıca kapatılmadıkça otomatik desteklenir.</p>}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>

@@ -4,6 +4,10 @@ import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
 import { PublishingWorkflowFields } from '../components/PublishingWorkflowFields';
 import { ContentSlugFields } from '../components/ContentSlugFields';
+import { Button } from '../components/ui/Button';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { ListFilterBar } from '../components/ui/ListFilterBar';
+import { IconArchive, IconPencil, IconTrash } from '../components/ui/icons';
 import { contentSlugForPayload, slugify } from '../lib/slugify';
 import { validatePageSchedule } from '../lib/publishing-workflow';
 import {
@@ -25,12 +29,17 @@ const STATUS_LABELS: Record<PageStatus, string> = {
   ARCHIVED: 'Arşiv',
 };
 
-const STATUS_COLORS: Record<PageStatus, string> = {
-  DRAFT: '#6b7280',
-  SCHEDULED: '#d97706',
-  PUBLISHED: '#16a34a',
-  ARCHIVED: '#9ca3af',
+const STATUS_STYLE: Record<PageStatus, { bg: string; color: string; label: string; dot: string }> = {
+  DRAFT: { bg: '#f3f4f6', color: '#374151', label: 'Taslak', dot: '#9ca3af' },
+  SCHEDULED: { bg: '#fef3c7', color: '#92400e', label: 'Zamanlanmış', dot: '#f59e0b' },
+  PUBLISHED: { bg: '#d1fae5', color: '#065f46', label: 'Yayında', dot: '#10b981' },
+  ARCHIVED: { bg: '#e5e7eb', color: '#6b7280', label: 'Arşiv', dot: '#9ca3af' },
 };
+
+const STATUS_FILTER_OPTIONS = [
+  { value: '', label: 'Aktif (arşiv hariç)' },
+  ...(Object.keys(STATUS_LABELS) as PageStatus[]).map((s) => ({ value: s, label: STATUS_LABELS[s] })),
+];
 
 const TYPE_LABELS: Record<PageType, string> = {
   ABOUT: 'Hakkımızda',
@@ -92,7 +101,12 @@ export function PagesPage() {
   const [formState, setFormState] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<
+    | { kind: 'delete'; id: string; title: string }
+    | { kind: 'archive'; id: string; title: string }
+    | null
+  >(null);
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
 
   const loadPages = useCallback(async () => {
     if (!accessToken || !activeTenantId) return;
@@ -165,36 +179,46 @@ export function PagesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!accessToken || !activeTenantId) return;
+    if (!accessToken || !activeTenantId || actionBusyId) return;
+    setActionBusyId(id);
     try {
       await apiPageDelete(accessToken, activeTenantId, id, activeMallId ?? undefined);
       toast.success('Sayfa silindi');
-      setDeleteConfirmId(null);
+      setConfirm(null);
       void loadPages();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Silinemedi');
+    } finally {
+      setActionBusyId(null);
     }
   }
 
   async function handlePublish(id: string) {
-    if (!accessToken || !activeTenantId) return;
+    if (!accessToken || !activeTenantId || actionBusyId) return;
+    setActionBusyId(id);
     try {
       await apiPagePublish(accessToken, activeTenantId, id, activeMallId ?? undefined);
       toast.success('Sayfa yayınlandı');
       void loadPages();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Yayınlanamadı');
+    } finally {
+      setActionBusyId(null);
     }
   }
 
   async function handleArchive(id: string) {
-    if (!accessToken || !activeTenantId) return;
+    if (!accessToken || !activeTenantId || actionBusyId) return;
+    setActionBusyId(id);
     try {
       await apiPageArchive(accessToken, activeTenantId, id, activeMallId ?? undefined);
       toast.success('Sayfa arşivlendi');
+      setConfirm(null);
       void loadPages();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Arşivlenemedi');
+    } finally {
+      setActionBusyId(null);
     }
   }
 
@@ -214,35 +238,48 @@ export function PagesPage() {
             {total} sayfa
           </p>
         </div>
-        <button
+        <Button
+          variant="primary"
           onClick={() => { setShowForm(true); setFormState(EMPTY_FORM); }}
-          style={btnStyle('#2563eb')}
         >
           + Yeni Sayfa
-        </button>
+        </Button>
       </div>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-        <input
-          placeholder="Başlık veya slug ara…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={inputStyle({ width: 200 })}
-        />
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as PageStatus | '')} style={inputStyle()}>
-          <option value="">Aktif (arşiv hariç)</option>
-          {(Object.keys(STATUS_LABELS) as PageStatus[]).map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-          ))}
-        </select>
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value as PageType | '')} style={inputStyle()}>
-          <option value="">Tüm Tipler</option>
-          {(Object.keys(TYPE_LABELS) as PageType[]).map((t) => (
-            <option key={t} value={t}>{TYPE_LABELS[t]}</option>
-          ))}
-        </select>
-      </div>
+      <ListFilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchLabel="Sayfalar içinde ara"
+        searchPlaceholder="Başlık veya slug ara…"
+        statusValue={filterStatus}
+        onStatusChange={(value) => setFilterStatus(value as PageStatus | '')}
+        statusOptions={STATUS_FILTER_OPTIONS}
+        trailing={
+          <select
+            aria-label="Tip filtresi"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as PageType | '')}
+            className="cms-list-filters__status cms-list-filters__input"
+            style={{
+              height: 34,
+              padding: '0 10px',
+              fontSize: 13,
+              border: '1px solid #e5e7eb',
+              borderRadius: 6,
+              background: '#fff',
+              color: '#374151',
+              fontFamily: 'inherit',
+              width: 'auto',
+              minWidth: 140,
+            }}
+          >
+            <option value="">Tüm Tipler</option>
+            {(Object.keys(TYPE_LABELS) as PageType[]).map((t) => (
+              <option key={t} value={t}>{TYPE_LABELS[t]}</option>
+            ))}
+          </select>
+        }
+      />
 
       {/* Create form */}
       {showForm && (
@@ -335,71 +372,114 @@ export function PagesPage() {
           Sayfa bulunamadı.
         </div>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <div className="cms-data-table-wrap">
+        <table className="cms-data-table">
           <thead>
-            <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={thStyle}>Başlık</th>
-              <th style={thStyle}>Slug</th>
-              <th style={thStyle}>Tip</th>
-              <th style={thStyle}>Durum</th>
-              <th style={thStyle}>Blok</th>
-              <th style={thStyle}>Tarih</th>
-              <th style={thStyle}>İşlemler</th>
+            <tr>
+              <th>Başlık</th>
+              <th>Slug</th>
+              <th>Tip</th>
+              <th>Durum</th>
+              <th>Blok</th>
+              <th>Tarih</th>
+              <th style={{ textAlign: 'right' }}>İşlemler</th>
             </tr>
           </thead>
           <tbody>
-            {pages.map((p) => (
-              <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={tdStyle}>
+            {pages.map((p) => {
+              const busy = actionBusyId === p.id;
+              const status = STATUS_STYLE[p.status];
+              return (
+              <tr key={p.id}>
+                <td>
                   <button
+                    type="button"
                     onClick={() => navigate(`/pages/${p.id}`)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', fontWeight: 600, padding: 0, fontSize: 13 }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', fontWeight: 600, padding: 0, fontSize: 13, fontFamily: 'inherit' }}
                   >
                     {p.title}
                   </button>
                 </td>
-                <td style={{ ...tdStyle, color: '#6b7280', fontFamily: 'monospace', fontSize: 12 }}>{p.slug}</td>
-                <td style={tdStyle}>
+                <td style={{ color: '#6b7280', fontFamily: 'monospace', fontSize: 12 }}>{p.slug}</td>
+                <td>
                   <span style={badgeStyle('#e5e7eb', '#374151')}>
                     {p.type === 'CUSTOM' ? p.customTypeLabel || TYPE_LABELS[p.type] : TYPE_LABELS[p.type]}
                   </span>
                 </td>
-                <td style={tdStyle}>
-                  <span style={badgeStyle(STATUS_COLORS[p.status] + '22', STATUS_COLORS[p.status])}>
-                    {STATUS_LABELS[p.status]}
+                <td>
+                  <span className="cms-status-badge" style={{ background: status.bg, color: status.color }}>
+                    <span className="cms-status-badge__dot" style={{ background: status.dot }} />
+                    {status.label}
                   </span>
                   {p.status === 'SCHEDULED' && p.publishAt && (
-                    <div style={{ fontSize: 10, color: '#92400e', marginTop: 4 }}>
+                    <div style={{ fontSize: 11, color: '#92400e', marginTop: 4 }}>
                       Yayın: {new Date(p.publishAt).toLocaleString('tr-TR')}
                     </div>
                   )}
                 </td>
-                <td style={tdStyle}>{p.blocks.length}</td>
-                <td style={{ ...tdStyle, color: '#6b7280' }}>{new Date(p.createdAt).toLocaleDateString('tr-TR')}</td>
-                <td style={tdStyle}>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => navigate(`/pages/${p.id}`)} style={smallBtn('#2563eb')}>Düzenle</button>
-                    {p.status !== 'PUBLISHED' && p.status !== 'ARCHIVED' && (
-                      <button onClick={() => handlePublish(p.id)} style={smallBtn('#16a34a')}>Yayınla</button>
+                <td>{p.blocks.length}</td>
+                <td style={{ color: '#6b7280' }}>{new Date(p.createdAt).toLocaleDateString('tr-TR')}</td>
+                <td>
+                  <div className="cms-data-table__actions">
+                    <Button variant="secondary" size="sm" disabled={busy} onClick={() => navigate(`/pages/${p.id}`)}>
+                      <IconPencil />
+                      Düzenle
+                    </Button>
+                    {(p.status === 'DRAFT' || p.status === 'SCHEDULED') && (
+                      <Button variant="secondary" size="sm" disabled={busy} onClick={() => void handlePublish(p.id)}>
+                        Yayınla
+                      </Button>
                     )}
                     {p.status !== 'ARCHIVED' && (
-                      <button onClick={() => handleArchive(p.id)} style={smallBtn('#6b7280')}>Arşivle</button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => setConfirm({ kind: 'archive', id: p.id, title: p.title })}
+                      >
+                        <IconArchive />
+                        Arşivle
+                      </Button>
                     )}
-                    {deleteConfirmId === p.id ? (
-                      <>
-                        <button onClick={() => handleDelete(p.id)} style={smallBtn('#dc2626')}>Evet, Sil</button>
-                        <button onClick={() => setDeleteConfirmId(null)} style={smallBtn('#6b7280')}>İptal</button>
-                      </>
-                    ) : (
-                      <button onClick={() => setDeleteConfirmId(p.id)} style={smallBtn('#dc2626')}>Sil</button>
-                    )}
+                    <Button
+                      variant="dangerSoft"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => setConfirm({ kind: 'delete', id: p.id, title: p.title })}
+                    >
+                      <IconTrash />
+                      Sil
+                    </Button>
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
+        </div>
       )}
+
+      <ConfirmDialog
+        open={confirm !== null}
+        title={confirm?.kind === 'delete' ? 'Sayfayı sil' : 'Sayfayı arşivle'}
+        description={
+          confirm?.kind === 'delete'
+            ? `"${confirm.title}" sayfasını silmek istediğinizden emin misiniz?`
+            : `"${confirm?.title ?? ''}" sayfasını arşivlemek istediğinizden emin misiniz?`
+        }
+        confirmLabel={confirm?.kind === 'delete' ? 'Sil' : 'Arşivle'}
+        variant={confirm?.kind === 'delete' ? 'danger' : 'default'}
+        confirming={Boolean(confirm && actionBusyId === confirm.id)}
+        onCancel={() => {
+          if (!actionBusyId) setConfirm(null);
+        }}
+        onConfirm={() => {
+          if (!confirm) return;
+          if (confirm.kind === 'delete') void handleDelete(confirm.id);
+          else void handleArchive(confirm.id);
+        }}
+      />
     </div>
   );
 }
@@ -415,19 +495,6 @@ function btnStyle(bg: string): React.CSSProperties {
     padding: '8px 16px',
     cursor: 'pointer',
     fontSize: 13,
-    fontWeight: 500,
-  };
-}
-
-function smallBtn(color: string): React.CSSProperties {
-  return {
-    background: 'none',
-    border: `1px solid ${color}`,
-    borderRadius: 4,
-    color,
-    padding: '3px 8px',
-    cursor: 'pointer',
-    fontSize: 12,
     fontWeight: 500,
   };
 }
@@ -459,21 +526,6 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 600,
   color: '#374151',
   marginBottom: 4,
-};
-
-const thStyle: React.CSSProperties = {
-  padding: '10px 12px',
-  textAlign: 'left',
-  fontSize: 12,
-  fontWeight: 600,
-  color: '#6b7280',
-  textTransform: 'uppercase',
-  letterSpacing: '0.4px',
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: '10px 12px',
-  verticalAlign: 'middle',
 };
 
 function badgeStyle(bg: string, color: string): React.CSSProperties {

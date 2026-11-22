@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type { Locale, User } from '@prisma/client';
@@ -10,23 +11,27 @@ import { AuditLogService } from '../audit/audit.service';
 import type { CreateLocaleDto } from './dto/create-locale.dto';
 import type { UpdateLocaleDto } from './dto/update-locale.dto';
 import type { ListLocalesDto } from './dto/list-locales.dto';
-import { rtlForLocaleCode } from './supported-languages';
+import { localeDirection, normalizeLanguageCode, withLocaleDirection } from './supported-languages';
+import { PublicCacheService } from '../public/cache/public-cache.service';
 
 @Injectable()
 export class LocalesService {
+  private readonly logger = new Logger(LocalesService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly cache: PublicCacheService,
   ) {}
 
   async list(tenantId: string, query: ListLocalesDto): Promise<Locale[]> {
-    return this.prisma.locale.findMany({
+    const rows = await this.prisma.locale.findMany({
       where: {
         tenantId,
         ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
       },
       orderBy: [{ sortOrder: 'asc' }, { isDefault: 'desc' }, { code: 'asc' }],
     });
+    return rows.map(withLocaleDirection);
   }
 
   async findOne(id: string, tenantId: string): Promise<Locale> {
@@ -34,7 +39,7 @@ export class LocalesService {
   }
 
   async create(dto: CreateLocaleDto, user: User, tenantId: string): Promise<Locale> {
-    const code = dto.code.toLowerCase().trim();
+    const code = normalizeLanguageCode(dto.code);
 
     const conflict = await this.prisma.locale.findUnique({
       where: { tenantId_code: { tenantId, code } },
@@ -44,6 +49,9 @@ export class LocalesService {
     }
 
     const isDefault = dto.isDefault ?? false;
+    if (isDefault && dto.isActive === false) {
+      throw new BadRequestException('Varsayılan dil aktif olmalıdır.');
+    }
 
     if (isDefault) {
       await this.prisma.locale.updateMany({
@@ -67,7 +75,7 @@ export class LocalesService {
         isDefault,
         isActive: dto.isActive ?? true,
         sortOrder: nextOrder,
-        rtl: dto.rtl ?? rtlForLocaleCode(code),
+        rtl: localeDirection(code) ?? dto.rtl ?? false,
       },
     });
 
@@ -80,7 +88,8 @@ export class LocalesService {
       after: { code: locale.code, name: locale.name, isDefault: locale.isDefault },
     });
 
-    return locale;
+    await this.invalidate(tenantId);
+    return withLocaleDirection(locale);
   }
 
   async update(id: string, dto: UpdateLocaleDto, user: User, tenantId: string): Promise<Locale> {
@@ -101,7 +110,7 @@ export class LocalesService {
     }
 
     if (dto.code !== undefined) {
-      const code = dto.code.toLowerCase().trim();
+      const code = normalizeLanguageCode(dto.code);
       if (code !== existing.code) {
         const conflict = await this.prisma.locale.findUnique({
           where: { tenantId_code: { tenantId, code } },
@@ -112,7 +121,7 @@ export class LocalesService {
       }
     }
 
-    const nextCode = dto.code !== undefined ? dto.code.toLowerCase().trim() : existing.code;
+    const nextCode = dto.code !== undefined ? normalizeLanguageCode(dto.code) : existing.code;
     const locale = await this.prisma.locale.update({
       where: { id },
       data: {
@@ -121,8 +130,7 @@ export class LocalesService {
         ...(dto.nativeName !== undefined && { nativeName: dto.nativeName }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
-        ...(dto.rtl !== undefined && { rtl: dto.rtl }),
-        ...(dto.code !== undefined && { rtl: rtlForLocaleCode(nextCode) }),
+        rtl: localeDirection(nextCode) ?? dto.rtl ?? existing.rtl,
       },
     });
 
@@ -136,7 +144,8 @@ export class LocalesService {
       after: { code: locale.code, name: locale.name, isActive: locale.isActive },
     });
 
-    return locale;
+    await this.invalidate(tenantId);
+    return withLocaleDirection(locale);
   }
 
   // Deactivation instead of hard delete to preserve LocalizedContent referential integrity.
@@ -182,6 +191,7 @@ export class LocalesService {
       before: { code: existing.code, isDefault: existing.isDefault, isActive: existing.isActive },
       after: { isActive: false },
     });
+    await this.invalidate(tenantId);
   }
 
   async setDefault(id: string, user: User, tenantId: string): Promise<Locale> {
@@ -216,7 +226,8 @@ export class LocalesService {
       after: { isDefault: true },
     });
 
-    return updated;
+    await this.invalidate(tenantId);
+    return withLocaleDirection(updated);
   }
 
   /** Persist tab / switcher order for active languages. */
@@ -256,7 +267,13 @@ export class LocalesService {
       after: { orderedIds: unique },
     });
 
+    await this.invalidate(tenantId);
     return this.list(tenantId, {});
+  }
+
+  private async invalidate(tenantId: string): Promise<void> {
+    try { await this.cache.invalidateTenant(tenantId); }
+    catch { this.logger.warn('Locale public cache invalidation failed'); }
   }
 
   private async assertExists(id: string, tenantId: string): Promise<Locale> {
@@ -264,6 +281,6 @@ export class LocalesService {
       where: { id, tenantId },
     });
     if (!locale) throw new NotFoundException('Locale not found');
-    return locale;
+    return withLocaleDirection(locale);
   }
 }

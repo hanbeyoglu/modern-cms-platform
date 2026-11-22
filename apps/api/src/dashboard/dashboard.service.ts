@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { publishWindow } from '../common/publish-window';
 
 type DashboardTimelineItem = {
   id: string;
@@ -19,6 +20,16 @@ type UpcomingContentItem = {
   href: string;
 };
 
+/**
+ * Campaigns and events may be tenant-wide (mallId = null). The public API and the
+ * admin lists show those in every AVM of the tenant, so dashboard counts for an
+ * AVM must include them too. Sliders, popups, stores and services stay AVM-only,
+ * matching their public endpoints.
+ */
+export function campaignEventMallScope(mallId?: string) {
+  return mallId !== undefined ? { OR: [{ mallId }, { mallId: null }] } : {};
+}
+
 @Injectable()
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
@@ -27,10 +38,7 @@ export class DashboardService {
     const now = new Date();
     const mallFilter = mallId !== undefined ? { mallId } : {};
     const tenantMallFilter = { tenantId, ...mallFilter, deletedAt: null };
-    const publishContentWindow = {
-      OR: [{ publishStartAt: null }, { publishStartAt: { lte: now } }],
-      AND: [{ OR: [{ publishEndAt: null }, { publishEndAt: { gte: now } }] }],
-    };
+    const contentScope = campaignEventMallScope(mallId);
     const sliderPopupWindow = {
       OR: [{ startAt: null }, { startAt: { lte: now } }],
       AND: [{ OR: [{ endAt: null }, { endAt: { gte: now } }] }],
@@ -51,10 +59,21 @@ export class DashboardService {
         where: { tenantId, ...mallFilter, status: 'ACTIVE', deletedAt: null },
       }),
       this.prisma.campaign.count({
-        where: { ...tenantMallFilter, status: 'PUBLISHED', ...publishContentWindow },
+        where: {
+          tenantId,
+          deletedAt: null,
+          status: 'PUBLISHED',
+          AND: [contentScope, ...publishWindow(now)],
+        },
       }),
       this.prisma.event.count({
-        where: { ...tenantMallFilter, status: { in: ['PUBLISHED', 'SCHEDULED'] }, eventStartAt: { gt: now } },
+        where: {
+          tenantId,
+          deletedAt: null,
+          ...contentScope,
+          status: { in: ['PUBLISHED', 'SCHEDULED'] },
+          eventStartAt: { gt: now },
+        },
       }),
       this.prisma.slider.count({
         where: { ...tenantMallFilter, status: 'PUBLISHED', ...sliderPopupWindow },
@@ -89,15 +108,16 @@ export class DashboardService {
     // Content-based activity feed (not audit logs). Used when AUDIT_ENABLED=false.
     const mallFilter = mallId !== undefined ? { mallId } : {};
     const tenantMallFilter = { tenantId, ...mallFilter, deletedAt: null };
+    const contentFilter = { tenantId, deletedAt: null, ...campaignEventMallScope(mallId) };
     const [campaigns, events, sliders, popups, pages, media, services, stores] = await Promise.all([
       this.prisma.campaign.findMany({
-        where: tenantMallFilter,
+        where: contentFilter,
         select: { id: true, title: true, status: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
         take: 4,
       }),
       this.prisma.event.findMany({
-        where: tenantMallFilter,
+        where: contentFilter,
         select: { id: true, title: true, status: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
         take: 4,
@@ -169,10 +189,11 @@ export class DashboardService {
   ): Promise<UpcomingContentItem[]> {
     const mallFilter = mallId !== undefined ? { mallId } : {};
     const tenantMallFilter = { tenantId, ...mallFilter, deletedAt: null };
+    const contentFilter = { tenantId, deletedAt: null, ...campaignEventMallScope(mallId) };
     const [campaigns, events, sliders, popups, pages] = await Promise.all([
       this.prisma.campaign.findMany({
         where: {
-          ...tenantMallFilter,
+          ...contentFilter,
           status: { in: ['PUBLISHED', 'SCHEDULED'] },
           campaignStartAt: { gt: now },
         },
@@ -182,7 +203,7 @@ export class DashboardService {
       }),
       this.prisma.event.findMany({
         where: {
-          ...tenantMallFilter,
+          ...contentFilter,
           status: { in: ['PUBLISHED', 'SCHEDULED'] },
           eventStartAt: { gt: now },
         },

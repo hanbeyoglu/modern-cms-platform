@@ -1,6 +1,6 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'danger' | 'dangerSoft' | 'ghost';
 type Size = 'sm' | 'md';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -26,6 +26,11 @@ const VARIANT_STYLES: Record<Variant, React.CSSProperties> = {
     color: '#b91c1c',
     border: '1px solid #fecaca',
   },
+  dangerSoft: {
+    background: 'transparent',
+    color: '#dc2626',
+    border: '1px solid transparent',
+  },
   ghost: {
     background: 'transparent',
     color: '#374151',
@@ -34,23 +39,35 @@ const VARIANT_STYLES: Record<Variant, React.CSSProperties> = {
 };
 
 const SIZE_STYLES: Record<Size, React.CSSProperties> = {
-  sm: { fontSize: 11, padding: '3px 8px' },
-  md: { fontSize: 13, padding: '6px 14px' },
+  sm: { fontSize: 12, padding: '5px 10px', minHeight: 30 },
+  md: { fontSize: 13, padding: '6px 14px', minHeight: 34 },
 };
 
-export function Button({
-  variant = 'secondary',
-  size = 'md',
-  loading = false,
-  disabled,
-  children,
-  style,
-  ...rest
-}: ButtonProps) {
+const VARIANT_CLASS: Partial<Record<Variant, string>> = {
+  dangerSoft: 'cms-btn-danger-soft',
+  ghost: 'cms-btn-ghost',
+};
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    variant = 'secondary',
+    size = 'md',
+    loading = false,
+    disabled,
+    children,
+    style,
+    className,
+    ...rest
+  },
+  ref,
+) {
+  const variantClass = VARIANT_CLASS[variant];
   return (
     <button
+      ref={ref}
       type="button"
       disabled={disabled || loading}
+      className={[variantClass, className].filter(Boolean).join(' ') || undefined}
       style={{
         ...VARIANT_STYLES[variant],
         ...SIZE_STYLES[size],
@@ -60,6 +77,11 @@ export function Button({
         fontFamily: 'inherit',
         fontWeight: 500,
         whiteSpace: 'nowrap',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        boxSizing: 'border-box',
         ...style,
       }}
       {...rest}
@@ -67,4 +89,4 @@ export function Button({
       {loading ? '…' : children}
     </button>
   );
-}
+});

@@ -225,7 +225,7 @@ export function SystemLanguagesPage() {
     <PageContainer>
       <PageHeader
         title="Sistem Dilleri"
-        subtitle="Tenant genelinde kullanılabilir resmi dilleri yönetin. Lokasyon yöneticileri yalnızca aktif dilleri açıp kapatabilir."
+        subtitle="Aktif diller web sitesinin desteklediği dillerdir. AVM için ayrıca pasifleştirilen diller o sitede gösterilmez."
         action={
           canCreate ? (
             <Button variant="primary" onClick={() => openCreate()}>
@@ -413,7 +413,12 @@ export function SystemLanguagesPage() {
                 <input
                   value={form.code}
                   disabled={!!editing}
-                  onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    const base = code.trim().toLowerCase().replace(/_/g, '-').split('-')[0];
+                    const suggestion = CATALOG_SUGGESTIONS.find(l => l.code === base);
+                    setForm(f => ({ ...f, code, rtl: ['ar', 'fa', 'he', 'ur', 'ps', 'dv', 'yi', 'ug', 'sd'].includes(base ?? '') || (suggestion?.rtl ?? false) }));
+                  }}
                   placeholder="tr"
                   style={{ display: 'block', width: '100%', marginTop: 4, padding: 8, borderRadius: 6, border: '1px solid #d1d5db' }}
                 />
@@ -442,6 +447,7 @@ export function SystemLanguagesPage() {
                 />
                 Sağdan sola (RTL)
               </label>
+              <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>Bilinen dillerin yönü API tarafından dil koduna göre doğrulanır. Arapça RTL, Türkçe ve İngilizce LTR döner.</p>
               {!editing ? (
                 <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input

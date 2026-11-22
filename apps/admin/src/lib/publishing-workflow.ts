@@ -65,3 +65,46 @@ export function primaryScheduleForPublished(current: string): string {
   if (current.trim()) return current;
   return toDatetimeLocalValue(new Date().toISOString());
 }
+
+/** Primary form button label — tells the editor what saving will do. */
+export function getSaveActionLabel(status: PublishWorkflowStatus): string {
+  switch (status) {
+    case 'DRAFT':
+      return 'Taslak olarak kaydet';
+    case 'SCHEDULED':
+      return 'Kaydet ve zamanla';
+    case 'PUBLISHED':
+      return 'Kaydet ve yayınla';
+    case 'ARCHIVED':
+      return 'Kaydet ve arşivle';
+  }
+}
+
+function formatScheduleDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+/** Success toast text describing the resulting public visibility. */
+export function getSaveSuccessMessage(
+  entityLabel: string,
+  status: PublishWorkflowStatus,
+  publishAt?: string | null,
+): string {
+  switch (status) {
+    case 'DRAFT':
+      return `${entityLabel} taslak olarak kaydedildi — sitede görünmez.`;
+    case 'SCHEDULED': {
+      const at = formatScheduleDate(publishAt);
+      return at
+        ? `${entityLabel} kaydedildi — ${at} tarihinde otomatik yayına girecek.`
+        : `${entityLabel} kaydedildi ve zamanlandı.`;
+    }
+    case 'PUBLISHED':
+      return `${entityLabel} kaydedildi ve sitede yayında.`;
+    case 'ARCHIVED':
+      return `${entityLabel} kaydedildi ve arşivlendi — sitede görünmez.`;
+  }
+}

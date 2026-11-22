@@ -9,6 +9,8 @@ type Props = {
   persistedSlug?: string;
   onUseCustomSlugChange: (useCustomSlug: boolean) => void;
   onSlugChange: (slug: string) => void;
+  /** Label of the collapsible custom-slug toggle. */
+  toggleLabel?: string;
   disabled?: boolean;
   labelStyle?: CSSProperties;
   inputStyle?: CSSProperties;
@@ -38,6 +40,7 @@ export function ContentSlugFields({
   persistedSlug,
   onUseCustomSlugChange,
   onSlugChange,
+  toggleLabel = 'Gelişmiş ayarlar',
   disabled,
   labelStyle = defaultLabelStyle,
   inputStyle = defaultInputStyle,
@@ -58,7 +61,7 @@ export function ContentSlugFields({
       </p>
       <details style={{ fontSize: 13 }}>
         <summary style={{ cursor: disabled ? 'not-allowed' : 'pointer', fontWeight: 600, color: '#374151' }}>
-          Gelişmiş ayarlar
+          {toggleLabel}
         </summary>
         <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
           <label

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { isLocalLikeMediaUrl } from '../media/media-url';
 import { resolveMovieTrailer } from './movie-trailer.util';
 import { Prisma, type MovieListingStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -56,6 +57,10 @@ const MEDIA_SELECT = {
   width: true,
   height: true,
   dominantColor: true,
+  tenantId: true,
+  mallId: true,
+  deletedAt: true,
+  status: true,
 } as const;
 
 const PUBLISH_WINDOW_FILTER = (now: Date) => ({
@@ -119,6 +124,7 @@ export class PublicContentService {
     limit?: number;
     localeId?: string;
     defaultLocaleId?: string | null;
+    eventGallery?: boolean;
     /** @deprecated No longer filtered; kept for query compat */
     targetDevice?: string;
   }): Promise<PublicSlider[]> {
@@ -131,11 +137,13 @@ export class PublicContentService {
         ...(opts.mallId !== undefined ? { mallId: opts.mallId } : {}),
         ...(opts.placement
           ? {
-              placementType:
-                opts.placement as Prisma.EnumSliderPlacementTypeFilter['equals'],
+              placementType: opts.placement as Prisma.EnumSliderPlacementTypeFilter['equals'],
             }
           : {}),
         ...(opts.entityId ? { linkedEntityId: opts.entityId } : {}),
+        ...(opts.eventGallery
+          ? { linkedEntityType: 'EVENT' as const, mallId: opts.mallId ?? null }
+          : {}),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(opts.channel ? { channels: { has: opts.channel as any } } : {}),
         AND: [
@@ -160,13 +168,42 @@ export class PublicContentService {
         },
       },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }],
-      take: opts.limit ?? 10,
+      take: opts.eventGallery ? undefined : (opts.limit ?? 10),
     });
 
     const localeId = opts.localeId ?? null;
     const defaultLocaleId = opts.defaultLocaleId ?? null;
 
-    let sliders = rows.map((s) => mapSliderGroup(s, localeId, defaultLocaleId));
+    const usableMedia = (media: (typeof rows)[number]['items'][number]['sharedImage']) =>
+      media &&
+      (!opts.eventGallery ||
+        (media.tenantId === opts.tenantId &&
+          (media.mallId === null || media.mallId === opts.mallId) &&
+          media.deletedAt === null &&
+          media.status === 'ACTIVE'))
+        ? media
+        : null;
+    let sliders = rows.map((s) =>
+      mapSliderGroup(
+        opts.eventGallery
+          ? {
+              ...s,
+              items: s.items.map((item) => ({
+                ...item,
+                sharedImage: usableMedia(item.sharedImage),
+                sharedMobileImage: usableMedia(item.sharedMobileImage),
+                translations: item.translations.map((tr) => ({
+                  ...tr,
+                  image: usableMedia(tr.image),
+                  mobileImage: usableMedia(tr.mobileImage),
+                })),
+              })),
+            }
+          : s,
+        localeId,
+        defaultLocaleId,
+      ),
+    );
     if (!localeId || sliders.length === 0) return sliders;
 
     const groupIds = sliders.map((s) => s.id);
@@ -261,9 +298,7 @@ export class PublicContentService {
   }): Promise<PublicEventDetail | null> {
     const now = new Date();
     const mallScope: Prisma.EventWhereInput =
-      opts.mallId !== undefined
-        ? { OR: [{ mallId: opts.mallId }, { mallId: null }] }
-        : {};
+      opts.mallId !== undefined ? { OR: [{ mallId: opts.mallId }, { mallId: null }] } : {};
 
     const row = await this.prisma.event.findFirst({
       where: {
@@ -278,16 +313,31 @@ export class PublicContentService {
     });
     if (!row) return null;
 
+    const groups = await this.getSliders({
+      tenantId: opts.tenantId,
+      mallId: opts.mallId ?? row.mallId ?? undefined,
+      placement: 'EVENT',
+      eventGallery: true,
+      entityId: row.id,
+      localeId: opts.localeId,
+      defaultLocaleId: opts.defaultLocaleId,
+    });
     const event: PublicEventDetail = {
       ...mapEvent(row, opts.localeId ?? null, opts.defaultLocaleId ?? null),
-      sliders: await this.getSliders({
-        tenantId: opts.tenantId,
-        mallId: opts.mallId,
-        placement: 'EVENT',
-        entityId: row.id,
-        localeId: opts.localeId,
-        defaultLocaleId: opts.defaultLocaleId,
-      }),
+      sliders: groups
+        .flatMap((group) => group.items)
+        .filter((item) => item.image && !isLocalLikeMediaUrl(item.image.url))
+        .map((item) => ({
+          id: item.id,
+          sortOrder: item.sortOrder,
+          image: {
+            id: item.image!.id,
+            url: item.image!.url,
+            alt: item.image!.alt,
+            caption: item.image!.caption,
+          },
+        }))
+        .sort((a, b) => a.sortOrder - b.sortOrder),
     };
     if (!opts.localeId) return event;
 
@@ -1198,6 +1248,7 @@ function toSliderTranslationRows(
           publicUrl: m.publicUrl,
           storageKey: m.storageKey ?? null,
           originalName: m.altText ?? '',
+          caption: m.caption,
           mimeType: m.mimeType ?? '',
           width: m.width,
           height: m.height,
@@ -1249,6 +1300,7 @@ function mapSliderItem(
         publicUrl: item.sharedImage.publicUrl,
         storageKey: item.sharedImage.storageKey ?? null,
         originalName: item.sharedImage.altText ?? '',
+        caption: item.sharedImage.caption,
         mimeType: item.sharedImage.mimeType ?? '',
         width: item.sharedImage.width,
         height: item.sharedImage.height,
@@ -1260,6 +1312,7 @@ function mapSliderItem(
         publicUrl: item.sharedMobileImage.publicUrl,
         storageKey: item.sharedMobileImage.storageKey ?? null,
         originalName: item.sharedMobileImage.altText ?? '',
+        caption: item.sharedMobileImage.caption,
         mimeType: item.sharedMobileImage.mimeType ?? '',
         width: item.sharedMobileImage.width,
         height: item.sharedMobileImage.height,
@@ -1299,6 +1352,7 @@ function mapSliderItem(
           storageKey: desktop.storageKey ?? null,
           mimeType: desktop.mimeType,
           altText: desktop.originalName,
+          caption: desktop.caption,
           width: desktop.width,
           height: desktop.height,
         }
@@ -1316,6 +1370,7 @@ function mapSliderItem(
           storageKey: mobile.storageKey ?? null,
           mimeType: mobile.mimeType,
           altText: mobile.originalName,
+          caption: mobile.caption,
           width: mobile.width,
           height: mobile.height,
         }
