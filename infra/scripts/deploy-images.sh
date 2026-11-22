@@ -27,7 +27,7 @@ if [ ${#services[@]} -gt 0 ]; then
   if [[ " ${services[*]} " == *' api '* || " ${services[*]} " == *' worker '* ]]; then
     "${compose[@]}" --profile tools pull migrate
     "${compose[@]}" up -d --wait postgres redis
-    "${compose[@]}" --profile tools run --rm --no-deps --no-build migrate
+    "${compose[@]}" --profile tools run --rm --no-deps migrate
   fi
   "${compose[@]}" up -d --no-deps --no-build --wait --wait-timeout 180 "${services[@]}"
 fi

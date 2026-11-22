@@ -21,7 +21,7 @@ test('full deployment builds serially, migrates without rebuilding, then replace
   const result = deploy();
   assert.equal(result.status, 0, result.stderr);
   const actions = result.calls.map(s => s.replace(/^.*docker-compose.prod.yml /, ''));
-  assert.deepEqual(actions, ['config --quiet', '--progress plain build api', '--progress plain build worker', '--progress plain build admin', 'up -d --wait postgres redis', '--profile tools build migrate', '--profile tools run --rm --no-deps --no-build migrate', 'up -d --no-deps --no-build --wait --wait-timeout 180 api worker admin', 'ps']);
+  assert.deepEqual(actions, ['config --quiet', '--progress plain build api', '--progress plain build worker', '--progress plain build admin', 'up -d --wait postgres redis', '--profile tools build migrate', '--profile tools run --rm --no-deps migrate', 'up -d --no-deps --no-build --wait --wait-timeout 180 api worker admin', 'ps']);
 });
 test('admin-only deploy does not build backend images or migrate', () => {
   const result = deploy(['admin']);
@@ -29,7 +29,7 @@ test('admin-only deploy does not build backend images or migrate', () => {
   assert.equal(result.calls.some(s => s.includes('build api') || s.includes('build worker') || s.includes('migrate')), false);
 });
 test('failed builds or migrations never replace application containers', () => {
-  for (const fail of ['build worker', 'run --rm --no-deps --no-build migrate']) {
+  for (const fail of ['build worker', 'run --rm --no-deps migrate']) {
     const result = deploy([], fail);
     assert.equal(result.status, 17);
     assert.equal(result.calls.some(s => s.includes('up -d --no-deps')), false);

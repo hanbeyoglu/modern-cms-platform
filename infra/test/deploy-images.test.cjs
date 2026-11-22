@@ -25,7 +25,7 @@ test('registry deployment pulls, migrates and waits for health without building'
   assert.equal(result.status, 0, result.stderr);
   assert.ok(result.calls.some(s => s.includes('pull api worker')));
   assert.ok(result.calls.some(s => s.includes('pull migrate')));
-  assert.ok(result.calls.some(s => s.includes('run --rm --no-deps --no-build migrate')));
+  assert.ok(result.calls.some(s => s.includes('run --rm --no-deps migrate')));
   assert.ok(result.calls.some(s => s.includes('--wait-timeout 180 api worker')));
   assert.ok(!result.calls.some(s => /(?:^| )build(?: |$)/.test(s)));
   assert.equal(result.recorded, true);
@@ -48,4 +48,17 @@ test('documentation-only release does not change application containers', () => 
   assert.equal(result.status, 0, result.stderr);
   assert.ok(!result.calls.some(s => /pull|\bup\b/.test(s)));
   assert.equal(result.recorded, true);
+});
+
+test('migration flags in both scripts are accepted by the Compose CLI parser', (t) => {
+  // Parse real script flags without accessing a daemon or production resources.
+  for (const script of ['deploy-images.sh', 'deploy-prod.sh']) {
+    const source = fs.readFileSync(path.join(root, 'infra/scripts', script), 'utf8');
+    const match = source.match(/--profile tools run (.+) migrate/);
+    assert.ok(match, script);
+    const flags = match[1].trim().split(/\s+/);
+    const result = spawnSync('docker', ['compose', 'run', ...flags, '--help'], { encoding: 'utf8' });
+    if (result.error?.code === 'ENOENT') { t.skip('Docker CLI is unavailable'); return; }
+    assert.equal(result.status, 0, result.stderr);
+  }
 });

@@ -29,7 +29,7 @@ done
 if [ "$needs_migration" = true ]; then
   "${compose[@]}" up -d --wait postgres redis
   "${compose[@]}" --profile tools build migrate
-  "${compose[@]}" --profile tools run --rm --no-deps --no-build migrate
+  "${compose[@]}" --profile tools run --rm --no-deps migrate
 fi
 
 # Replace application containers only after every build and migration succeeds.
