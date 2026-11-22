@@ -1,21 +1,42 @@
 # syntax=docker/dockerfile:1
-FROM node:20-bookworm-slim AS build
+FROM node:20-bookworm-slim AS dependencies
 WORKDIR /app
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate \
+  && pnpm config set store-dir /pnpm/store
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
+# Source-only edits must not invalidate dependency installation.
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/admin/package.json ./apps/admin/
+COPY apps/api/package.json ./apps/api/
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/config/package.json ./packages/config/
+COPY packages/content-scheduling/package.json ./packages/content-scheduling/
+COPY packages/mail/package.json ./packages/mail/
+COPY packages/movie-providers/package.json ./packages/movie-providers/
+COPY packages/notifications/package.json ./packages/notifications/
+COPY packages/public-sdk/package.json ./packages/public-sdk/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/ui/package.json ./packages/ui/
+
+RUN --mount=type=cache,id=modern-cms-pnpm,target=/pnpm/store \
+  PRISMA_SKIP_POSTINSTALL_GENERATE=true pnpm install --frozen-lockfile
+
+FROM dependencies AS build
+COPY turbo.json ./
 COPY packages ./packages
 COPY apps ./apps
 
-RUN pnpm install --frozen-lockfile
-RUN pnpm turbo run build --filter=@modern-cms/worker
+# Reuse unchanged workspace outputs across API/worker builds; limit memory pressure.
+RUN --mount=type=cache,id=modern-cms-turbo,target=/turbo-cache,sharing=locked \
+  pnpm turbo run build --filter=@modern-cms/worker --concurrency=1 --cache-dir=/turbo-cache
 
-RUN pnpm --filter @modern-cms/worker deploy --prod /deploy \
+RUN --mount=type=cache,id=modern-cms-pnpm,target=/pnpm/store \
+  pnpm --filter @modern-cms/worker deploy --prod /deploy \
   && rm -rf /deploy/src \
   && find /deploy -name "*.tsbuildinfo" -delete
 
@@ -26,6 +47,7 @@ RUN set -eux; \
   test -n "${SRC}" && test -n "${DST}"; \
   rm -rf "${DST}"; \
   cp -a "${SRC}" "${DST}"
+
 
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app

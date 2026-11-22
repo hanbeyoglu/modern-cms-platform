@@ -14,3 +14,6 @@ apps/api/openapi
 # Runtime credentials; keep only example templates under version control.
 .env.*
 !.env*.example
+
+# Server deployment state
+/.deploy/

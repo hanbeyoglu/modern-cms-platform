@@ -73,6 +73,9 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Deployment workflow tests
+        run: pnpm test:infra
+
       - name: Prisma Client generate (monorepo)
         run: pnpm db:generate
 
@@ -133,4 +136,14 @@ jobs:
         run: docker compose -f docker-compose.yml config >/dev/null
 
       - name: Docker Compose config (prod example)
-        run: docker compose --env-file .env.production.example -f docker-compose.prod.yml config >/dev/null
+        env:
+          API_BASE_URL: https://cms-api.example.com
+          VITE_API_URL: https://cms-api.example.com
+          DATABASE_URL: postgresql://cms:cms@postgres:5432/cms
+          REDIS_URL: redis://redis:6379
+          POSTGRES_USER: cms
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: cms
+          JWT_SECRET: ci-only-jwt-secret-at-least-32-characters
+          JWT_REFRESH_SECRET: ci-only-refresh-secret-at-least-32-characters
+        run: docker compose --env-file /dev/null -f docker-compose.prod.yml config --quiet

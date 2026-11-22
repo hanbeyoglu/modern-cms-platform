@@ -3,11 +3,12 @@
   "tasks": {
     "db:generate": {
       "cache": false,
-      "inputs": ["$TURBO_DEFAULT$"]
+      "inputs": ["prisma/schema.prisma", "package.json"]
     },
     "build": {
       "dependsOn": ["@modern-cms/api#db:generate", "^build"],
-      "outputs": ["dist/**", "build/**", "openapi/**"]
+      "outputs": ["dist/**", "build/**", "openapi/**"],
+      "env": ["VITE_API_URL"]
     },
     "dev": {
       "cache": false,

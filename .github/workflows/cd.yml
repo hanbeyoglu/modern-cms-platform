@@ -1,0 +1,201 @@
+name: Production deployment
+
+on:
+  workflow_run:
+    workflows: ['Build and test']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: Rebuild all images (also use after changing build variables)
+        type: boolean
+        default: true
+
+# Never cancel migrations or an active production update.
+concurrency:
+  group: modern-cms-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    if: >-
+      vars.CMS_DEPLOY_ENABLED == 'true' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      eligible: ${{ steps.gate.outputs.eligible }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      build: ${{ steps.plan.outputs.build }}
+      sha: ${{ steps.gate.outputs.sha }}
+      prefix: ${{ steps.gate.outputs.prefix }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require tested current main commit
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          current=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [[ "$TARGET_SHA" != "$current" ]]; then
+            echo 'A newer main commit exists; this deployment is skipped.'
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          count=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$TARGET_SHA&event=push&status=success&per_page=1" --jq '.workflow_runs | length')
+          [[ "$count" -gt 0 ]] || { echo 'This commit must pass Build and test first.' >&2; exit 1; }
+          echo 'eligible=true' >> "$GITHUB_OUTPUT"
+          echo "sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - name: Load last successful deployment (not previous push)
+        if: steps.gate.outputs.eligible == 'true'
+        shell: bash
+        run: |
+          mkdir -p previous
+          runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/cd.yml/runs?status=success&per_page=20" --jq '.workflow_runs[] | select(.head_branch == "main") | .id')
+          for previous_run in $runs; do
+            if gh run download "$previous_run" --repo "$GITHUB_REPOSITORY" --name deployment-state --dir previous; then
+              break
+            fi
+            rm -f previous/release.json
+          done
+          if [[ ! -f previous/release.json ]]; then echo 'No deployment state; all images will be built.'; fi
+      - name: Plan changed services
+        id: plan
+        if: steps.gate.outputs.eligible == 'true'
+        env:
+          IMAGE_PREFIX: ${{ steps.gate.outputs.prefix }}
+        run: >-
+          python3 infra/scripts/release-plan.py
+          --prefix "$IMAGE_PREFIX" --sha "$TARGET_SHA"
+          --previous previous/release.json --output release.json
+          --github-output "$GITHUB_OUTPUT"
+          ${{ github.event_name == 'workflow_dispatch' && inputs.force_all && '--force-all' || '' }}
+      - uses: actions/upload-artifact@v4
+        if: steps.gate.outputs.eligible == 'true'
+        with:
+          name: release-plan
+          path: release.json
+          retention-days: 7
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build timestamp
+        id: time
+        run: echo "value=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+      - name: Build and publish immutable image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ matrix.image }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.plan.outputs.sha }}
+          cache-from: type=gha,scope=cms-${{ matrix.service }}
+          cache-to: type=gha,scope=cms-${{ matrix.service }},mode=max
+          build-args: |
+            GIT_SHA=${{ needs.plan.outputs.sha }}
+            BUILD_TIME=${{ steps.time.outputs.value }}
+            APP_VERSION=${{ needs.plan.outputs.sha }}
+            VITE_API_URL=${{ vars.CMS_PUBLIC_API_URL || 'https://cms-api.hanbeyoglu.com' }}
+
+  deploy:
+    needs: [plan, build]
+    if: >-
+      always() && needs.plan.result == 'success' &&
+      needs.plan.outputs.eligible == 'true' &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-plan
+      - name: Configure verified SSH connection
+        env:
+          SSH_KEY: ${{ secrets.CMS_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.CMS_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${SSH_KEY:?Set CMS_SSH_PRIVATE_KEY}"
+          : "${KNOWN_HOSTS:?Set CMS_SSH_KNOWN_HOSTS}"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+      - name: Pull images, migrate and update server
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.CMS_SSH_HOST }}
+          SSH_USER: ${{ secrets.CMS_SSH_USER }}
+          SSH_PORT: ${{ vars.CMS_SSH_PORT || '22' }}
+          DEPLOY_PATH: ${{ vars.CMS_DEPLOY_PATH || '/home/ubuntu/apps/modern-cms-platform' }}
+          TARGET_SHA: ${{ needs.plan.outputs.sha }}
+          IMAGE_PREFIX: ${{ needs.plan.outputs.prefix }}
+        run: |
+          set -euo pipefail
+          : "${SSH_HOST:?Set CMS_SSH_HOST}"
+          : "${SSH_USER:?Set CMS_SSH_USER}"
+          [[ "$SSH_USER" =~ ^[a-zA-Z0-9_-]+$ && "$SSH_HOST" =~ ^[a-zA-Z0-9.:-]+$ && "$SSH_PORT" =~ ^[0-9]+$ ]] || exit 1
+          ssh_opts=(-p "$SSH_PORT" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes)
+          destination="$SSH_USER@$SSH_HOST"
+          release_file=$(ssh "${ssh_opts[@]}" "$destination" 'mktemp /tmp/modern-cms-release.XXXXXX.json')
+          [[ "$release_file" =~ ^/tmp/modern-cms-release\.[a-zA-Z0-9]+\.json$ ]] || exit 1
+          ssh "${ssh_opts[@]}" "$destination" "cat > '$release_file'" < release.json
+          printf -v command 'bash -s -- %q %q %q %q' "$DEPLOY_PATH" "$TARGET_SHA" "$release_file" "$IMAGE_PREFIX"
+          ssh "${ssh_opts[@]}" "$destination" "$command" <<'REMOTE'
+          set -euo pipefail
+          deploy_dir=$1; target_sha=$2; release_file=$3; image_prefix=$4
+          trap 'rm -f "$release_file"' EXIT
+          cd "$deploy_dir"
+          git diff --quiet && git diff --cached --quiet || { echo 'Server checkout has uncommitted changes' >&2; exit 1; }
+          git fetch origin main
+          git merge-base --is-ancestor "$target_sha" origin/main
+          git checkout --detach "$target_sha"
+          CMS_IMAGE_PREFIX="$image_prefix" bash infra/scripts/deploy-images.sh "$release_file"
+          REMOTE
+      - name: Save successful deployment for next change comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-state
+          path: release.json
+          retention-days: 90

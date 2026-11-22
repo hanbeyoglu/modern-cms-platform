@@ -11,3 +11,8 @@
 /storage
 /apps/api/storage
 apps/api/openapi
+
+**/.pnpm-store
+**/.cache
+
+/.deploy

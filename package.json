@@ -28,7 +28,9 @@
     "backup:postgres": "bash infra/scripts/backup-postgres.sh",
     "restore:postgres": "bash infra/scripts/restore-postgres.sh",
     "backup:prune": "bash infra/scripts/prune-backups.sh",
-    "test": "turbo build --filter=@modern-cms/api && pnpm --filter @modern-cms/api test && pnpm --filter @modern-cms/admin test"
+    "test": "turbo build --filter=@modern-cms/api && pnpm --filter @modern-cms/api test && pnpm --filter @modern-cms/admin test",
+    "deploy:prod": "bash infra/scripts/deploy-prod.sh",
+    "test:infra": "node --test infra/test/*.test.cjs && python3 -B -m unittest discover -s infra/test -p \"*_test.py\""
   },
   "devDependencies": {
     "prettier": "^3.4.2",

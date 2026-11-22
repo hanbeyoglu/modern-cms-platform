@@ -102,3 +102,116 @@ API ayaktayken:
 ```bash
 curl -sS http://localhost:4000/health
 ```
+
+## Sunucuda güncelleme
+
+```bash
+git pull --ff-only
+bash infra/scripts/deploy-prod.sh
+```
+
+Komut API, worker ve admin imajlarını sırayla derler; bekleyen migration’ları
+uygular ve yalnızca başarıdan sonra uygulama container’larını günceller.
+Derleme sırasında mevcut uygulamalar çalışmaya devam eder. Güncelleme sonrası
+sağlık kontrolleri beklenir; otomatik geri alma yapılmaz.
+
+Sadece panel veya API değiştiyse ilgili servisi seçebilirsiniz:
+
+```bash
+bash infra/scripts/deploy-prod.sh admin
+bash infra/scripts/deploy-prod.sh api
+```
+
+API/worker güncellemelerinde migration hedefi otomatik çalışır. Bu hedef uygulamayı
+derlemez; yalnızca Prisma ve migration dosyalarını içerir. İlk kurulumda PostgreSQL
+ve Redis yapılandırması hazır olmalıdır. Farklı ortam dosyası için `CMS_ENV_FILE`
+kullanılabilir; varsayılan `.env.production` değeridir.
+
+Bağımlılıklar kaynak koddan önce kurulur. BuildKit, pnpm paket deposunu ve Turbo
+çıktılarını sonraki build’ler için saklar; ortak paketler değişmediyse tekrar
+derlenmez. Prisma üretiminin bağımlılık hesabı şema ve paket tanımıyla sınırlıdır;
+API kaynak değişiklikleri ortak paketlerin önbelleğini gereksiz yere bozmaz. İlk build ve bağımlılık değişiklikleri daha uzun sürebilir.
+`docker builder prune` / `docker buildx prune` önbellekleri silebilir; rutin
+güncellemenin parçası olarak kullanmayın. Bu düzenleme ilk kez uygulandığında
+önbellekler yeniden oluşur. İmajlar hâlâ sunucuda derlenir; tam build süresi
+sunucunun CPU, bellek ve disk durumuna bağlıdır.
+
+## GitHub Actions ile otomatik yayın
+
+`.github/workflows/cd.yml`, `main` dalındaki **Build and test** başarılı olduktan
+sonra çalışır. Docker imajları GitHub Actions’ta üretilip GHCR’ye commit SHA etiketiyle
+gönderilir. Sunucu imajları indirir; uygulama build’i yapmaz.
+
+| Değişiklik | Üretilen imajlar |
+|---|---|
+| Admin / UI | Admin |
+| API kaynakları | API + migration aracı |
+| Worker kaynakları | Worker + migration aracı |
+| Prisma şeması / migration | API, worker, migration aracı |
+| Paylaşılan paket | Paketi kullanan uygulamalar |
+| Lockfile, ortak config, Docker/deploy altyapısı | Tümü |
+| Yalnızca doküman | İmaj üretilmez |
+
+Karşılaştırma önceki push’a göre değil, son başarılı yayının artifact’ine göre
+yapılır. Böylece atlanan/başarısız commit’lerin değişiklikleri kaybolmaz. Değişmeyen
+servisler önceki SHA etiketli imajlarını korur. İlk yayında veya state artifact’i
+bulunamazsa bütün imajlar üretilir. Birden fazla yayın aynı anda çalışmaz.
+
+### Bir defalık yapılandırma
+
+1. Repository **Settings → Secrets and variables → Actions** altında secrets ekleyin
+   (alternatif: `production` environment secrets):
+
+   | Secret | Değer |
+   |---|---|
+   | `CMS_SSH_HOST` | `46.224.155.63` |
+   | `CMS_SSH_USER` | `ubuntu` |
+   | `CMS_SSH_PRIVATE_KEY` | Bu yayın için oluşturulmuş ayrı SSH anahtarının private kısmı |
+   | `CMS_SSH_KNOWN_HOSTS` | Sunucunun güvenilir kaynaktan doğrulanmış SSH host key kaydı |
+
+   Public anahtarı sunucuda `ubuntu` kullanıcısının `~/.ssh/authorized_keys`
+   dosyasına ekleyin. `CMS_SSH_KNOWN_HOSTS` satırı örneği:
+   `46.224.155.63 ssh-ed25519 AAAA...` — gerçek sunucu host key’ini kullanın.
+   Host key denetimi kapatılmaz.
+
+2. Sunucuda deploy kullanıcısının Docker erişimi, `python3`, `flock`, GitHub’dan
+   repo fetch yetkisi, mevcut checkout ve `.env.production` dosyası bulunmalıdır.
+   Ortam dosyası ve SMTP/R2/database şifreleri GitHub’a taşınmaz.
+
+3. GHCR imajları private ise sunucuda `read:packages` yetkili token ile bir defa
+   oturum açın. API token’ı veya SSH private key’ini sohbete/repo dosyalarına yazmayın:
+
+   ```bash
+   read -rsp 'GHCR read:packages token: ' GHCR_TOKEN
+   printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u hanbeyoglu --password-stdin
+   unset GHCR_TOKEN
+   ```
+
+   İmajlar GitHub `GITHUB_TOKEN` ile yayınlanır; registry’ye yazma yetkili ayrı
+   uzun ömürlü token gerekmez. Sunucudaki token yalnızca okumalıdır.
+
+4. Repository **Variables** altında:
+
+   | Variable | Değer |
+   |---|---|
+   | `CMS_DEPLOY_ENABLED` | Kurulum bitince `true` |
+   | `CMS_PUBLIC_API_URL` | `https://cms-api.hanbeyoglu.com` |
+   | `CMS_DEPLOY_PATH` | `/home/ubuntu/apps/modern-cms-platform` (varsayılan) |
+   | `CMS_SSH_PORT` | `22` (varsayılan) |
+
+   `production` environment approval kuralı açıksa otomatik yayın o onayı bekler.
+   İlk çalıştırma için değişiklikleri `main` dalına push edin; CI geçince CD başlar.
+   Actions → **Production deployment → Run workflow** da kullanılabilir; seçilen
+   commit’in CI’ı geçmiş olmalıdır. Build değişkeni değiştiğinde bu ekrandaki
+   `force_all` seçeneğiyle bütün imajları yeniden üretin.
+
+Yayın script’i `infra/scripts/deploy-images.sh`; doğrulama/planlama
+`infra/scripts/release-plan.py` dosyasındadır. Checkout tam yayın commit’ine
+`detached HEAD` olarak geçirilir. Sunucuda elle kaynak düzenlemeyin; gerektiğinde
+manuel akışa dönmek için temiz checkout’ta `git switch main && git pull --ff-only`
+kullanın. Sağlık kontrolü veya migration hatası başarılı yayın olarak kaydedilmez.
+`.deploy/current.json` ve `.deploy/previous.json` son imaj referanslarını tutar;
+veritabanı migration’ları otomatik geri alınmaz.
+
+Yerel doğrulama: `pnpm test:infra`. GitHub secrets/variables eklenmeden ve GHCR
+sunucu erişimi kurulmadan canlı otomatik yayın başlamaz.
