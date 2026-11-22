@@ -3,7 +3,9 @@ import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import type { MediaAsset, MediaAssetStatus, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -16,6 +18,7 @@ import {
   MAX_FILE_SIZE_BYTES,
 } from './constants/media.constants';
 import { resolveMediaStorageFolder } from './constants/media-storage-folders';
+import { isLocalLikeMediaUrl } from './media-url';
 import type { ListMediaDto } from './dto/list-media.dto';
 import type { UpdateMediaDto } from './dto/update-media.dto';
 import type { MoveMediaDto } from './dto/move-media.dto';
@@ -73,6 +76,8 @@ export interface MediaUsage {
 
 @Injectable()
 export class MediaService {
+  private readonly logger = new Logger(MediaService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageProvider,
@@ -86,6 +91,9 @@ export class MediaService {
     tenantId: string,
     options: UploadOptions,
   ): Promise<MediaAssetResponse> {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('Dosya zorunludur');
+    }
     this.validateFile(file);
 
     if (options.folderId) {
@@ -103,12 +111,34 @@ export class MediaService {
     const storageFolder = resolveMediaStorageFolder(options.usageContext, options.storageCategory);
     const key = this.buildStorageKey(tenant.slug, storageFolder, fileName);
 
-    const { publicUrl } = await this.storage.upload({
-      key,
-      buffer: processed.buffer,
-      mimeType: processed.mimeType,
-      originalName: file.originalname,
-    });
+    let publicUrl: string;
+    try {
+      const uploaded = await this.storage.upload({
+        key,
+        buffer: processed.buffer,
+        mimeType: processed.mimeType,
+        originalName: file.originalname,
+      });
+      publicUrl = uploaded.publicUrl;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'unknown';
+      this.logger.error(`[service=api] [op=media.upload] storage failed key=${key}: ${message}`);
+      throw new ServiceUnavailableException(
+        'Medya depolama servisine yükleme başarısız oldu. Lütfen tekrar deneyin.',
+      );
+    }
+
+    if (this.storage.kind === 'object' && isLocalLikeMediaUrl(publicUrl)) {
+      this.logger.error(`[service=api] [op=media.upload] object storage returned local URL for key=${key}`);
+      try {
+        await this.storage.delete(key);
+      } catch {
+        // best-effort cleanup
+      }
+      throw new ServiceUnavailableException(
+        'Medya depolama servisi geçersiz bir genel URL üretti. Yükleme iptal edildi.',
+      );
+    }
 
     const asset = await this.prisma.mediaAsset.create({
       data: {
@@ -615,6 +645,11 @@ export class MediaService {
   }
 
   private toResponse(asset: MediaAsset): MediaAssetResponse {
+    const publicUrl =
+      this.storage.kind === 'object'
+        ? this.storage.getPublicUrl(asset.storageKey)
+        : asset.publicUrl;
+
     return {
       id: asset.id,
       tenantId: asset.tenantId,
@@ -629,7 +664,7 @@ export class MediaService {
       height: asset.height,
       durationSeconds: asset.durationSeconds,
       storageKey: asset.storageKey,
-      publicUrl: asset.publicUrl,
+      publicUrl,
       altText: asset.altText,
       caption: asset.caption,
       description: asset.description,

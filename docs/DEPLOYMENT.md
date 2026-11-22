@@ -88,11 +88,25 @@ pnpm restore:postgres -- backups/postgres/<dosya>.sql.gz
 
 Üretimde restore öncesi ek yedek alın; mümkünse yazma trafiğini durdurun.
 
-## Medya (`storage/`)
+## Medya (`storage/` → R2)
 
-- **Yerel disk:** API `STORAGE_ROOT` (varsayılan `storage/`) altındaki dosyalar DB kayıtlarıyla ilişkilidir. Yedek: veritabanı ile birlikte bu dizinin kopyalanması (rsync, volume anlık görüntüsü).
-- **Cloudflare R2:** Bucket yaşam döngüsü veya replikasyon; DB yedeği URL’leri korur, nesne içeriği ayrı yedeklenmelidir.
-- **CDN:** Admin SPA ve API `/uploads` önünde CDN kullanılıyorsa purge / TTL stratejisi tanımlayın.
+- **Tek upload kapısı:** Tüm admin görselleri `POST /media/upload` → `MediaService` → `StorageProvider` (R2 veya yerel) üzerinden akar. Etkinlik, slider, kampanya, mağaza, hizmet, film, sinema vb. ayrı dosya yüklemez; yalnızca `mediaId` FK atar.
+- **Üretim:** `R2_*` zorunludur (`NODE_ENV=production`). Acil yerel disk için `MEDIA_ALLOW_LOCAL_STORAGE=true`.
+- **Yerel disk (dev):** `STORAGE_ROOT` + `API_BASE_URL/uploads/...`. R2 yapılandırılınca static `/uploads` kapanır.
+- **Eski localhost / `/uploads` kayıtları:** Silinmez. Önce rapor, sonra taşı:
+
+```bash
+# Hangi kayıtlar taşınmalı?
+pnpm --filter @modern-cms/api media:migrate-to-r2 -- --dry-run
+
+# Dosyaları R2'ye yükle + publicUrl güncelle (yerel dosyalar kalır)
+pnpm --filter @modern-cms/api media:migrate-to-r2
+
+# Başarılı taşıma sonrası yerel kopyayı silmek için:
+pnpm --filter @modern-cms/api media:migrate-to-r2 -- --delete-local
+```
+
+- **CDN / R2:** `R2_PUBLIC_URL` tarayıcıdan erişilebilir kalıcı base olmalıdır.
 
 ## Operasyonel uyarılar (özet)
 

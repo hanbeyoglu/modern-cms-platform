@@ -1,6 +1,7 @@
 export type CoverMediaRow = {
   id: string;
   publicUrl: string;
+  storageKey?: string | null;
   originalName: string;
   mimeType: string;
   width?: number | null;

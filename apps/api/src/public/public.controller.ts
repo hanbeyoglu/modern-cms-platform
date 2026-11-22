@@ -18,6 +18,7 @@ import { PublicContentService } from './public-content.service';
 import { PublicContextService, type PublicContext } from './public-context.service';
 import { PublicSearchService } from '../search/public-search.service';
 import { MediaGuidelinesService } from '../media/media-guidelines.service';
+import { MediaUrlResolver } from '../media/media-url.resolver';
 import {
   makeEnvelope,
   buildPaginationMeta,
@@ -108,6 +109,7 @@ export class PublicController {
     private readonly mediaGuidelines: MediaGuidelinesService,
     private readonly prisma: PrismaService,
     private readonly mallLocales: MallLocalesService,
+    private readonly mediaUrls: MediaUrlResolver,
   ) {}
 
   // ── Site Config ───────────────────────────────────────────────────────────
@@ -142,13 +144,40 @@ export class PublicController {
       const mall = await this.prisma.mall.findFirst({
         where: { id: context.mallId, deletedAt: null, isPublic: true },
         include: {
-          logoMedia: { select: { id: true, publicUrl: true, mimeType: true, altText: true, caption: true, width: true, height: true, dominantColor: true } },
-          coverMedia: { select: { id: true, publicUrl: true, mimeType: true, altText: true, caption: true, width: true, height: true, dominantColor: true } },
+          logoMedia: { select: { id: true, publicUrl: true, storageKey: true, mimeType: true, altText: true, caption: true, width: true, height: true, dominantColor: true } },
+          coverMedia: { select: { id: true, publicUrl: true, storageKey: true, mimeType: true, altText: true, caption: true, width: true, height: true, dominantColor: true } },
         },
       });
       if (mall) {
         const hasAddress = mall.addressLine1 || mall.city || mall.country;
         const hasCoords = mall.latitude != null && mall.longitude != null;
+        const toPublicMedia = (
+          media: {
+            id: string;
+            publicUrl: string;
+            storageKey: string;
+            mimeType: string | null;
+            altText: string | null;
+            caption: string | null;
+            width: number | null;
+            height: number | null;
+            dominantColor: string | null;
+          } | null,
+        ) =>
+          media
+            ? {
+                id: media.id,
+                url: this.mediaUrls.resolve(media.publicUrl, media.storageKey),
+                mimeType: media.mimeType ?? null,
+                alt: media.altText ?? null,
+                caption: media.caption ?? null,
+                width: media.width ?? null,
+                height: media.height ?? null,
+                widthOverride: null,
+                heightOverride: null,
+                dominantColor: media.dominantColor ?? null,
+              }
+            : null;
         location = {
           id: mall.id,
           type: mall.type,
@@ -158,12 +187,8 @@ export class PublicController {
           websiteUrl: mall.websiteUrl,
           phone: mall.phone,
           supportEmail: mall.supportEmail,
-          logo: mall.logoMedia
-            ? { id: mall.logoMedia.id, url: mall.logoMedia.publicUrl, mimeType: mall.logoMedia.mimeType ?? null, alt: mall.logoMedia.altText ?? null, caption: mall.logoMedia.caption ?? null, width: mall.logoMedia.width ?? null, height: mall.logoMedia.height ?? null, widthOverride: null, heightOverride: null, dominantColor: mall.logoMedia.dominantColor ?? null }
-            : null,
-          cover: mall.coverMedia
-            ? { id: mall.coverMedia.id, url: mall.coverMedia.publicUrl, mimeType: mall.coverMedia.mimeType ?? null, alt: mall.coverMedia.altText ?? null, caption: mall.coverMedia.caption ?? null, width: mall.coverMedia.width ?? null, height: mall.coverMedia.height ?? null, widthOverride: null, heightOverride: null, dominantColor: mall.coverMedia.dominantColor ?? null }
-            : null,
+          logo: toPublicMedia(mall.logoMedia),
+          cover: toPublicMedia(mall.coverMedia),
           address: hasAddress
             ? {
                 line1: mall.addressLine1,

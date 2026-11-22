@@ -4,6 +4,8 @@ import { StorageProvider, type UploadInput, type UploadResult } from './storage.
 
 @Injectable()
 export class R2StorageProvider extends StorageProvider {
+  readonly kind = 'object' as const;
+
   constructor(private readonly r2: R2Service) {
     super();
   }

@@ -20,6 +20,7 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "demo:seed": "tsx prisma/demo-seed.ts",
+    "media:migrate-to-r2": "tsx scripts/migrate-local-media-to-r2.ts",
     "test": "node --test test/*.test.cjs"
   },
   "prisma": {

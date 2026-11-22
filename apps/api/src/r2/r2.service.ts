@@ -6,6 +6,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { shouldInitializeInfrastructure } from '../common/app-mode';
+import { isObjectStorageConfigured } from '../media/object-storage.config';
 
 export interface R2UploadInput {
   key: string;
@@ -55,13 +56,7 @@ export class R2Service implements OnModuleInit {
   }
 
   isConfigured(): boolean {
-    return Boolean(
-      this.config.get<string>('R2_ACCOUNT_ID')?.trim() &&
-        this.config.get<string>('R2_BUCKET_NAME')?.trim() &&
-        this.config.get<string>('R2_ACCESS_KEY_ID')?.trim() &&
-        this.config.get<string>('R2_SECRET_ACCESS_KEY')?.trim() &&
-        this.config.get<string>('R2_PUBLIC_URL')?.trim(),
-    );
+    return isObjectStorageConfigured(this.config);
   }
 
   getPublicUrl(key: string): string {

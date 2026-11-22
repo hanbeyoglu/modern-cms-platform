@@ -6,6 +6,8 @@ export const MEDIA_STORAGE_FOLDERS = [
   'stores',
   'services',
   'pages',
+  'movies',
+  'cinemas',
 ] as const;
 
 export type MediaStorageFolder = (typeof MEDIA_STORAGE_FOLDERS)[number];
@@ -21,12 +23,13 @@ export const USAGE_CONTEXT_TO_STORAGE_FOLDER: Record<string, MediaStorageFolder>
   CAMPAIGN_COVER: 'campaigns',
   CAMPAIGN_MOBILE_COVER: 'campaigns',
   POPUP_IMAGE: 'pages',
-  MOVIE_POSTER: 'campaigns',
+  MOVIE_POSTER: 'movies',
   STORE_LOGO: 'stores',
   LOCATION_LOGO: 'logos',
   LOCATION_COVER: 'logos',
   SERVICE_ICON: 'services',
   SERVICE_COVER: 'services',
+  CINEMA_LOGO: 'cinemas',
 };
 
 export function resolveMediaStorageFolder(

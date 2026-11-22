@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { resolveMovieTrailer } from './movie-trailer.util';
 import { Prisma, type MovieListingStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { MediaUrlResolver } from '../media/media-url.resolver';
 import {
   TranslationResolverService,
   type EntityTranslationMap,
@@ -48,6 +49,7 @@ import {
 const MEDIA_SELECT = {
   id: true,
   publicUrl: true,
+  storageKey: true,
   mimeType: true,
   altText: true,
   caption: true,
@@ -97,7 +99,14 @@ export class PublicContentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly resolver: TranslationResolverService,
-  ) {}
+    mediaUrls?: MediaUrlResolver,
+  ) {
+    if (mediaUrls) {
+      setPublicMediaUrlResolver((publicUrl, storageKey) =>
+        mediaUrls.resolve(publicUrl, storageKey),
+      );
+    }
+  }
 
   // ── Sliders ──────────────────────────────────────────────────────────────
 
@@ -675,7 +684,7 @@ export class PublicContentService {
         select: {
           id: true, title: true, slug: true, description: true, listingStatus: true,
           durationMinutes: true, releaseDate: true, ticketUrl: true, trailerUrl: true, posterPath: true,
-          posterMedia: { select: { id: true, publicUrl: true, altText: true } },
+          posterMedia: { select: { id: true, publicUrl: true, storageKey: true, altText: true } },
           categories: {
             where: { category: { tenantId: opts.tenantId } },
             select: { category: { select: { id: true, name: true, slug: true } } },
@@ -712,7 +721,7 @@ export class PublicContentService {
         posterPath: movie.posterPath,
         poster: movie.posterMedia ? {
           id: movie.posterMedia.id,
-          url: movie.posterMedia.publicUrl,
+          url: resolvePublicMediaUrl(movie.posterMedia.publicUrl, movie.posterMedia.storageKey),
           alt: movie.posterMedia.altText,
         } : null,
         categories: movie.categories.map(({ category }) => ({
@@ -1111,6 +1120,7 @@ export class PublicContentService {
 type RichMediaRow = {
   id: string;
   publicUrl: string;
+  storageKey?: string | null;
   mimeType?: string | null;
   altText?: string | null;
   caption?: string | null;
@@ -1119,6 +1129,18 @@ type RichMediaRow = {
   dominantColor?: string | null;
 } | null;
 
+type PublicMediaUrlResolverFn = (publicUrl: string, storageKey?: string | null) => string;
+
+let publicMediaUrlResolver: PublicMediaUrlResolverFn | null = null;
+
+function setPublicMediaUrlResolver(fn: PublicMediaUrlResolverFn): void {
+  publicMediaUrlResolver = fn;
+}
+
+function resolvePublicMediaUrl(publicUrl: string, storageKey?: string | null): string {
+  return publicMediaUrlResolver ? publicMediaUrlResolver(publicUrl, storageKey) : publicUrl;
+}
+
 function toMediaAsset(
   m: RichMediaRow,
   overrides?: { width?: number | null; height?: number | null },
@@ -1126,7 +1148,7 @@ function toMediaAsset(
   if (!m) return null;
   return {
     id: m.id,
-    url: m.publicUrl,
+    url: resolvePublicMediaUrl(m.publicUrl, m.storageKey),
     mimeType: m.mimeType ?? null,
     width: m.width ?? null,
     height: m.height ?? null,
@@ -1174,6 +1196,7 @@ function toSliderTranslationRows(
       ? {
           id: m.id,
           publicUrl: m.publicUrl,
+          storageKey: m.storageKey ?? null,
           originalName: m.altText ?? '',
           mimeType: m.mimeType ?? '',
           width: m.width,
@@ -1224,6 +1247,7 @@ function mapSliderItem(
     ? {
         id: item.sharedImage.id,
         publicUrl: item.sharedImage.publicUrl,
+        storageKey: item.sharedImage.storageKey ?? null,
         originalName: item.sharedImage.altText ?? '',
         mimeType: item.sharedImage.mimeType ?? '',
         width: item.sharedImage.width,
@@ -1234,6 +1258,7 @@ function mapSliderItem(
     ? {
         id: item.sharedMobileImage.id,
         publicUrl: item.sharedMobileImage.publicUrl,
+        storageKey: item.sharedMobileImage.storageKey ?? null,
         originalName: item.sharedMobileImage.altText ?? '',
         mimeType: item.sharedMobileImage.mimeType ?? '',
         width: item.sharedMobileImage.width,
@@ -1271,6 +1296,7 @@ function mapSliderItem(
       ? {
           id: desktop.id,
           publicUrl: desktop.publicUrl,
+          storageKey: desktop.storageKey ?? null,
           mimeType: desktop.mimeType,
           altText: desktop.originalName,
           width: desktop.width,
@@ -1287,6 +1313,7 @@ function mapSliderItem(
       ? {
           id: mobile.id,
           publicUrl: mobile.publicUrl,
+          storageKey: mobile.storageKey ?? null,
           mimeType: mobile.mimeType,
           altText: mobile.originalName,
           width: mobile.width,
@@ -1400,6 +1427,7 @@ function toCoverMediaRow(media: RichMediaRow): ContentTranslationRow['coverImage
   return {
     id: media.id,
     publicUrl: media.publicUrl,
+    storageKey: media.storageKey ?? null,
     originalName: media.altText ?? '',
     mimeType: media.mimeType ?? '',
     width: media.width,
@@ -1482,6 +1510,7 @@ function mapEvent(
       ? {
           id: coverRow.id,
           publicUrl: coverRow.publicUrl,
+          storageKey: coverRow.storageKey ?? null,
           mimeType: coverRow.mimeType,
           altText: coverRow.originalName,
           width: coverRow.width,
@@ -1610,6 +1639,7 @@ function mapCampaign(
       ? {
           id: coverRow.id,
           publicUrl: coverRow.publicUrl,
+          storageKey: coverRow.storageKey ?? null,
           mimeType: coverRow.mimeType,
           altText: coverRow.originalName,
           width: coverRow.width,
@@ -1627,6 +1657,7 @@ function mapCampaign(
       ? {
           id: mobileCoverRow.id,
           publicUrl: mobileCoverRow.publicUrl,
+          storageKey: mobileCoverRow.storageKey ?? null,
           mimeType: mobileCoverRow.mimeType,
           altText: mobileCoverRow.originalName,
           width: mobileCoverRow.width,

@@ -13,6 +13,7 @@ export const MEDIA_USAGE_KEYS = [
   'LOCATION_COVER',
   'SERVICE_ICON',
   'SERVICE_COVER',
+  'CINEMA_LOGO',
 ] as const;
 
 export type MediaUsageKey = (typeof MEDIA_USAGE_KEYS)[number];
@@ -153,6 +154,15 @@ export const DEFAULT_MEDIA_USAGE_PRESETS: Record<MediaUsageKey, MediaUsagePreset
     acceptedMimeTypes: ['image/*'],
     helperText: null,
     aspectRatioLocked: false,
+  },
+  CINEMA_LOGO: {
+    usageKey: 'CINEMA_LOGO',
+    label: 'Sinema Logosu',
+    recommendedWidth: 512,
+    recommendedHeight: 512,
+    acceptedMimeTypes: ['image/*'],
+    helperText: null,
+    aspectRatioLocked: true,
   },
 };
 

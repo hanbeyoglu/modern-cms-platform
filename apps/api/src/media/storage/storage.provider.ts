@@ -11,11 +11,14 @@ export interface UploadResult {
   publicUrl: string;
 }
 
+export type StorageProviderKind = 'local' | 'object';
+
 /**
  * Abstract storage provider.
  * Swap the implementation (Local → S3 → R2) without touching MediaService.
  */
 export abstract class StorageProvider {
+  abstract readonly kind: StorageProviderKind;
   abstract upload(input: UploadInput): Promise<UploadResult>;
   abstract delete(key: string): Promise<void>;
   abstract getPublicUrl(key: string): string;

@@ -10,6 +10,10 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { MulterExceptionFilter } from './common/filters/multer-exception.filter';
 import { setupSwagger } from './swagger/setup-swagger';
+import {
+  isObjectStorageConfigured,
+  isObjectStorageRequired,
+} from './media/object-storage.config';
 
 function assertProductionSafety(config: ConfigService, logger: Logger): void {
   if (config.get<string>('NODE_ENV') !== 'production') {
@@ -45,6 +49,12 @@ function assertProductionSafety(config: ConfigService, logger: Logger): void {
     );
     process.exit(1);
   }
+  if (isObjectStorageRequired(config) && !isObjectStorageConfigured(config)) {
+    logger.error(
+      'Object storage (R2_*) is required in production. Set all R2_* vars or MEDIA_ALLOW_LOCAL_STORAGE=true. Aborting startup.',
+    );
+    process.exit(1);
+  }
 }
 
 async function bootstrap() {
@@ -76,9 +86,8 @@ async function bootstrap() {
     }),
   );
 
-  // Local fallback only — R2 serves media via R2_PUBLIC_URL when configured
-  const r2Configured = Boolean(config.get<string>('R2_ACCOUNT_ID')?.trim());
-  if (!r2Configured) {
+  // Local fallback only — object storage serves media via R2_PUBLIC_URL when configured
+  if (!isObjectStorageConfigured(config)) {
     const storageRoot = config.get<string>('STORAGE_ROOT') ?? join(process.cwd(), 'storage');
     if (!existsSync(storageRoot)) {
       mkdirSync(storageRoot, { recursive: true });

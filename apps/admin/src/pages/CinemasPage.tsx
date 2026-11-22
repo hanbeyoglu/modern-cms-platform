@@ -8,18 +8,16 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
+import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
 import {
   apiCinemaCreate,
   apiCinemaDelete,
   apiCinemaUpdate,
   apiCinemasList,
-  apiMediaList,
   type CinemaProviderType,
   type CinemaStatus,
   type CmsCinema,
   type CreateCinemaPayload,
-  type MediaAsset,
-  API_MAX_PAGE_SIZE,
 } from '../lib/api';
 
 const STATUS_STYLE: Record<CinemaStatus, { bg: string; color: string; label: string }> = {
@@ -105,7 +103,6 @@ export function CinemasPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<CinemaStatus | ''>('');
   const [filterSearch, setFilterSearch] = useState('');
-  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CmsCinema | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -134,23 +131,9 @@ export function CinemasPage() {
     }
   }, [accessToken, tenantId, mallId, filterStatus, filterSearch]);
 
-  const loadMedia = useCallback(async () => {
-    if (!accessToken || !tenantId) return;
-    try {
-      const data = await apiMediaList(accessToken, tenantId, { limit: API_MAX_PAGE_SIZE, mallId });
-      setMediaAssets(data.assets);
-    } catch {
-      setMediaAssets([]);
-    }
-  }, [accessToken, tenantId, mallId]);
-
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    void loadMedia();
-  }, [loadMedia]);
 
   const inputStyle: CSSProperties = {
     width: '100%',
@@ -290,19 +273,14 @@ export function CinemasPage() {
             <input style={{ ...inputStyle, marginBottom: 12 }} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Slug (opsiyonel)</label>
             <input style={{ ...inputStyle, marginBottom: 12 }} value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Logo</label>
-            <select
-              style={{ ...inputStyle, marginBottom: 12 }}
-              value={form.logoMediaId}
-              onChange={(e) => setForm({ ...form, logoMediaId: e.target.value })}
-            >
-              <option value="">—</option>
-              {mediaAssets.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.originalName}
-                </option>
-              ))}
-            </select>
+            <div style={{ marginBottom: 12 }}>
+              <ContextualMediaPicker
+                context="CINEMA_LOGO"
+                value={form.logoMediaId}
+                mallId={mallId}
+                onChange={(id) => setForm({ ...form, logoMediaId: id })}
+              />
+            </div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Açıklama</label>
             <textarea style={{ ...inputStyle, minHeight: 60, marginBottom: 12 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Sağlayıcı tipi</label>

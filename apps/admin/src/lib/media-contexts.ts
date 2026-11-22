@@ -12,7 +12,8 @@ export type MediaUsageContextKey =
   | 'LOCATION_LOGO'
   | 'LOCATION_COVER'
   | 'SERVICE_ICON'
-  | 'SERVICE_COVER';
+  | 'SERVICE_COVER'
+  | 'CINEMA_LOGO';
 
 export interface MediaContextPreset {
   key: MediaUsageContextKey;
@@ -121,6 +122,13 @@ export const MEDIA_CONTEXTS: Record<MediaUsageContextKey, MediaContextPreset> = 
     label: 'Hizmet Kapak Görseli',
     recommendedWidth: 1200,
     recommendedHeight: 630,
+    acceptedMime: 'image/*',
+  },
+  CINEMA_LOGO: {
+    key: 'CINEMA_LOGO',
+    label: 'Sinema Logosu',
+    recommendedWidth: 512,
+    recommendedHeight: 512,
     acceptedMime: 'image/*',
   },
 };

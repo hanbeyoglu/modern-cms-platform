@@ -10,6 +10,7 @@ export interface LocalStorageConfig {
 }
 
 export class LocalStorageProvider extends StorageProvider {
+  readonly kind = 'local' as const;
   private readonly logger = new Logger(LocalStorageProvider.name);
   private readonly root: string;
   private readonly baseUrl: string;
