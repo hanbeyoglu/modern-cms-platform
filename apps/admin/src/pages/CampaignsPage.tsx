@@ -1,3 +1,4 @@
+import { RichTextEditor } from '../components/RichTextEditor';
 import { useCallback, useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { toast } from 'sonner';
@@ -167,7 +168,7 @@ function formToPayload(f: FormState, localeDrafts: Record<string, Record<string,
     title: f.title,
     slug: contentSlugForPayload({ useCustomSlug: f.useCustomSlug, slug: f.slug }),
     shortDescription: f.shortDescription || undefined,
-    description: f.description || undefined,
+    description: f.description,
     sameImageForAllLocales: f.sameImageForAllLocales,
     sharedCoverImageId: f.sharedCoverImageId || undefined,
     sharedMobileCoverImageId: f.sharedMobileCoverImageId || undefined,
@@ -177,7 +178,7 @@ function formToPayload(f: FormState, localeDrafts: Record<string, Record<string,
     publishEndAt: f.publishEndAt ? new Date(f.publishEndAt).toISOString() : undefined,
     campaignStartAt: f.campaignStartAt ? new Date(f.campaignStartAt).toISOString() : undefined,
     campaignEndAt: f.campaignEndAt ? new Date(f.campaignEndAt).toISOString() : undefined,
-    terms: f.terms || undefined,
+    terms: f.terms,
     couponCode: f.couponCode || undefined,
     buttonText: f.buttonText || undefined,
     linkUrl: f.linkUrl || undefined,
@@ -735,6 +736,7 @@ export function CampaignsPage() {
               <MultilingualContentFields
                 locales={tenantLocales}
                 fields={CAMPAIGN_I18N_FIELDS}
+                richTextFields={['description', 'terms']}
                 activeLocaleId={contentLocaleTab}
                 onTabChange={(id) => setContentLocaleTab(id)}
                 defaultLocaleId={tenantLocales.find((l) => l.isDefault)?.id}
@@ -890,25 +892,11 @@ export function CampaignsPage() {
                 </div>
                 <div>
                   <label style={labelStyle}>Açıklama</label>
-                  <textarea
-                    style={{ ...inputStyle, minHeight: 72 }}
-                    value={form.description}
-                    onChange={(e) => {
-                      setForm({ ...form, description: e.target.value });
-                      setCampaignFormDirty(true);
-                    }}
-                  />
+                  <RichTextEditor label="Açıklama" value={form.description} disabled={saving} onChange={(value) => { setForm({ ...form, description: value }); setCampaignFormDirty(true); }} />
                 </div>
                 <div>
                   <label style={labelStyle}>Şartlar</label>
-                  <textarea
-                    style={{ ...inputStyle, minHeight: 64 }}
-                    value={form.terms}
-                    onChange={(e) => {
-                      setForm({ ...form, terms: e.target.value });
-                      setCampaignFormDirty(true);
-                    }}
-                  />
+                  <RichTextEditor label="Şartlar" value={form.terms} disabled={saving} onChange={(value) => { setForm({ ...form, terms: value }); setCampaignFormDirty(true); }} />
                 </div>
                 <div>
                   <label style={labelStyle}>Buton metni</label>

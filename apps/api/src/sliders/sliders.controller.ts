@@ -57,9 +57,10 @@ export class SlidersController {
   }
 
   @Patch('reorder')
+  @HttpCode(204)
   @RequirePermission('slider:reorder')
   @ApiAdminOperation({ summary: 'slider.reorder.summary', permissions: ['slider:reorder'] })
-  @ApiResponse({ status: 200, description: 'slider.response.200' })
+  @ApiResponse({ status: 204, description: 'slider.response.204' })
   reorder(
     @Body() dto: ReorderSlidersDto,
     @CurrentUser() user: User,
@@ -182,10 +183,11 @@ export class SlidersController {
   }
 
   @Patch(':id/items/reorder')
+  @HttpCode(204)
   @RequirePermission('slider:reorder')
   @ApiUuidParam('id', 'common.param.uuid')
   @ApiAdminOperation({ summary: 'slider.reorder.summary', permissions: ['slider:reorder'] })
-  @ApiResponse({ status: 200, description: 'slider.response.200' })
+  @ApiResponse({ status: 204, description: 'slider.response.204' })
   reorderItems(
     @Param('id') id: string,
     @Body() dto: ReorderSliderItemsDto,

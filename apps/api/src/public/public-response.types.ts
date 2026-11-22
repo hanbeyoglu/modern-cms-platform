@@ -149,7 +149,12 @@ export interface PublicSlider {
   targetDevice: string;
 }
 
+export interface PublicEventDetail extends PublicEvent {
+  sliders: PublicSlider[];
+}
+
 export interface PublicEvent {
+  isFree: boolean;
   id: string;
   slug: string;
   title: string;
@@ -380,6 +385,7 @@ export interface PublicLocationService {
   cover: PublicMediaAsset | null;
   category: string | null;
   floor: string | null;
+  floors: { id: string; name: string; label: string }[];
   unitNo: string | null;
   phone: string | null;
   email: string | null;
@@ -387,6 +393,7 @@ export interface PublicLocationService {
   locationLabel: string | null;
   latitude: number | null;
   longitude: number | null;
+  workingHours: unknown;
   searchTags: string[];
   isSoon: boolean;
   sortOrder: number;

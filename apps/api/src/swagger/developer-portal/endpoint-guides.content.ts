@@ -99,7 +99,9 @@ Hero/banner areas outside the home aggregate, or entity-scoped sliders (store pa
 ### Channel behavior
 Kiosk/signage often uses \`channel=KIOSK\` or \`DIGITAL_SIGNAGE\` with large image assets from the same CMS record.`,
 
-  'devGuide.public.campaigns.list': `## Integration guide
+  'devGuide.public.campaigns.list': `Campaign description and terms may contain sanitized HTML (headings, lists, colors, links). Render them using a safe HTML renderer; do not show raw HTML tags.
+
+## Integration guide
 
 ### When to call
 Campaign listing page, store detail "offers" tab, or home section if not using \`/public/home\`.
@@ -112,7 +114,9 @@ Campaign listing page, store detail "offers" tab, or home section if not using \
 | search | Free-text filter |
 | locale | Content language |`,
 
-  'devGuide.public.campaigns.detail': `## Integration guide
+  'devGuide.public.campaigns.detail': `Campaign description and terms may contain sanitized HTML. Use a safe HTML renderer.
+
+## Integration guide
 
 ### When to call
 Campaign detail page \`/campaigns/{slug}\`.
@@ -175,6 +179,10 @@ Combine with \`GET /public/campaigns?storeId={id}\` for store offers.`,
 
   'devGuide.public.events.list': `## Integration guide
 
+\`isFree: true\` means free admission; \`false\` means paid admission.
+
+Description may contain sanitized HTML (colors, lists, headings, links). Use a safe HTML renderer. Title and shortDescription remain plain text.
+
 ### Query parameters
 | Param | Description |
 | --- | --- |
@@ -183,6 +191,12 @@ Combine with \`GET /public/campaigns?storeId={id}\` for store offers.`,
 | page, limit | Pagination |`,
 
   'devGuide.public.events.detail': `## Integration guide
+
+The response includes \`isFree\` and \`sliders\` (published groups and published items linked to this event). Sliders can also be fetched with \`GET /public/sliders?placement=EVENT&entityId={eventId}\`.
+
+\`isFree: true\` means free admission; \`false\` means paid admission.
+
+Description may contain sanitized HTML (colors, lists, headings, links). Use a safe HTML renderer. Title and shortDescription remain plain text.
 
 ### When to call
 Event detail page. Use \`slug\` from list, search or home aggregate.`,
@@ -252,12 +266,18 @@ Only active movies inside their publish window are returned. Each session embeds
 **Required** — amenities (parking, baby room, Wi-Fi map points).
 
 ### Query
-\`search\`, \`page\`, \`limit\`, \`locale\``,
+\`search\`, \`page\`, \`limit\`, \`locale\`
+
+### Payload notes
+The \`floors\` array contains selected mall floors as \`{ id, name, label }\`; \`floor\` remains a display string for compatibility. Only \`ACTIVE\`, non-deleted services for the resolved tenant/mall. Each item may include \`workingHours\` (weekly schedule JSON) or \`null\` when unset.`,
 
   'devGuide.public.services.detail': `## Integration guide
 
 ### Path
-\`id\` — service UUID from list or map marker.`,
+\`id\` — service UUID from list or map marker.
+
+### Payload notes
+Same shape as list item, including optional \`workingHours\`. Scoped to the resolved tenant and mall when \`x-mall-id\` is sent.`,
 
   'devGuide.public.mediaGuidelines': `## Integration guide
 
@@ -339,9 +359,15 @@ Mağaza detay — \`slug\`. Kampanyalar için \`GET /public/campaigns?storeId=\`
 
   'devGuide.public.events.list': `## Entegrasyon rehberi
 
+Açıklama (description) renk, liste ve bağlantı içeren temizlenmiş HTML olabilir; güvenli HTML gösterimi kullanın. Başlık ve kısa açıklama düz metindir.
+
 Etkinlik listesi — \`category\`, \`search\`, sayfalama.`,
 
   'devGuide.public.events.detail': `## Entegrasyon rehberi
+
+\`isFree: true\` ücretsiz, \`false\` ücretli katılımdır. \`sliders\` bu etkinliğe bağlı yayındaki grupları ve slaytları içerir. Ayrı istek: \`GET /public/sliders?placement=EVENT&entityId={eventId}\`.
+
+Açıklama (description) renk, liste ve bağlantı içeren temizlenmiş HTML olabilir; güvenli HTML gösterimi kullanın. Başlık ve kısa açıklama düz metindir.
 
 Etkinlik detay — \`slug\` ile.`,
 
@@ -369,11 +395,13 @@ Yalnızca aktif ve yayın aralığında olan filmler döner. Seans içindeki fil
 
   'devGuide.public.services.list': `## Entegrasyon rehberi
 
-AVM hizmetleri (otopark, bebek bakımı). **x-mall-id zorunlu.**`,
+AVM hizmetleri (otopark, bebek bakımı). **x-mall-id zorunlu.**
+
+\`floors\` alanı seçilen AVM katlarını \`{ id, name, label }[]\` olarak döndürür. \`floor\` alanı geriye uyumlu gösterim metnidir. Yalnızca ilgili tenant/AVM kapsamındaki aktif ve silinmemiş hizmetler döner. İsteğe bağlı \`workingHours\` alanı haftalık çalışma saatlerini içerir; yoksa \`null\`.`,
 
   'devGuide.public.services.detail': `## Entegrasyon rehberi
 
-Hizmet detay — UUID ile.`,
+Hizmet detay — UUID ile. Liste ile aynı şekil; \`workingHours\` dahil.`,
 
   'devGuide.public.mediaGuidelines': `## Entegrasyon rehberi
 

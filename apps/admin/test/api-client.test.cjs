@@ -56,3 +56,15 @@ test('failed refresh ends the session without retrying indefinitely', async () =
   assert.equal(refreshes, 1);
   assert.equal(api.events.length, 1);
 });
+
+test('successful empty reorder responses do not attempt JSON parsing', async () => {
+  for (const response of [new Response(null, { status: 204 }), new Response('', { status: 200 }), new Response('  ', { status: 200 })]) {
+    const api = client(async () => response);
+    assert.equal(await api.request('/sliders/group/items/reorder', { method: 'PATCH', token: 'access' }), undefined);
+  }
+});
+
+test('successful JSON responses still return their parsed payload', async () => {
+  const api = client(async () => ok());
+  assert.equal((await api.request('/sliders', { token: 'access' })).ok, true);
+});

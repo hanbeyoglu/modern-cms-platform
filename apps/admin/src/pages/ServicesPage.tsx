@@ -7,7 +7,11 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { Button } from '../components/ui/Button';
 import { ContextualMediaPicker } from '../components/ContextualMediaPicker';
+import { WorkingHoursEditor } from '../components/WorkingHoursEditor';
 import {
+  apiLocationGet,
+  apiMallFloorsList,
+  type MallFloor,
   apiServiceCreate,
   apiServiceDelete,
   apiServiceUpdate,
@@ -16,6 +20,12 @@ import {
   type CreateServicePayload,
   type ServiceStatus,
 } from '../lib/api';
+import {
+  parseWorkingHours,
+  validateWorkingHoursSchedule,
+  workingHoursToPayload,
+  type WorkingHoursSchedule,
+} from '../lib/working-hours';
 import { usePermission } from '../hooks/usePermission';
 import { useMallRequired } from '../hooks/useMallRequired';
 import { LocationScopedModuleShell } from '../components/location-scoped/LocationScopedModuleShell';
@@ -44,7 +54,7 @@ type FormState = {
   coverMediaWidthOverride: string;
   coverMediaHeightOverride: string;
   category: string;
-  floor: string;
+  floorIds: string[];
   unitNo: string;
   phone: string;
   email: string;
@@ -66,7 +76,7 @@ const EMPTY: FormState = {
   coverMediaWidthOverride: '',
   coverMediaHeightOverride: '',
   category: '',
-  floor: '',
+  floorIds: [],
   unitNo: '',
   phone: '',
   email: '',
@@ -89,7 +99,7 @@ function toForm(s: CmsService): FormState {
     coverMediaWidthOverride: s.coverMediaWidthOverride ? String(s.coverMediaWidthOverride) : '',
     coverMediaHeightOverride: s.coverMediaHeightOverride ? String(s.coverMediaHeightOverride) : '',
     category: s.category ?? '',
-    floor: s.floor ?? '',
+    floorIds: s.floors?.map((floor) => floor.id) ?? [],
     unitNo: s.unitNo ?? '',
     phone: s.phone ?? '',
     email: s.email ?? '',
@@ -99,6 +109,35 @@ function toForm(s: CmsService): FormState {
     isSoon: s.isSoon,
     sortOrder: String(s.sortOrder),
     status: s.status,
+  };
+}
+
+function toPayload(
+  f: FormState,
+  workingHours: WorkingHoursSchedule | null,
+): CreateServicePayload {
+  const wh = workingHoursToPayload(workingHours);
+  return {
+    name: f.name,
+    description: f.description || undefined,
+    iconMediaId: f.iconMediaId || undefined,
+    coverMediaId: f.coverMediaId || undefined,
+    iconMediaWidthOverride: parseOptionalDimension(f.iconMediaWidthOverride),
+    iconMediaHeightOverride: parseOptionalDimension(f.iconMediaHeightOverride),
+    coverMediaWidthOverride: parseOptionalDimension(f.coverMediaWidthOverride),
+    coverMediaHeightOverride: parseOptionalDimension(f.coverMediaHeightOverride),
+    category: f.category || undefined,
+    floorIds: f.floorIds,
+    unitNo: f.unitNo || undefined,
+    phone: f.phone || undefined,
+    email: f.email || undefined,
+    websiteUrl: f.websiteUrl || undefined,
+    locationLabel: f.locationLabel || undefined,
+    searchTags: parseSearchTags(f.searchTagsText),
+    isSoon: f.isSoon,
+    sortOrder: parseInt(f.sortOrder, 10) || 0,
+    status: f.status,
+    workingHoursJson: wh,
   };
 }
 
@@ -114,34 +153,13 @@ function parseOptionalDimension(value: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function toPayload(f: FormState): CreateServicePayload {
-  return {
-    name: f.name,
-    description: f.description || undefined,
-    iconMediaId: f.iconMediaId || undefined,
-    coverMediaId: f.coverMediaId || undefined,
-    iconMediaWidthOverride: parseOptionalDimension(f.iconMediaWidthOverride),
-    iconMediaHeightOverride: parseOptionalDimension(f.iconMediaHeightOverride),
-    coverMediaWidthOverride: parseOptionalDimension(f.coverMediaWidthOverride),
-    coverMediaHeightOverride: parseOptionalDimension(f.coverMediaHeightOverride),
-    category: f.category || undefined,
-    floor: f.floor || undefined,
-    unitNo: f.unitNo || undefined,
-    phone: f.phone || undefined,
-    email: f.email || undefined,
-    websiteUrl: f.websiteUrl || undefined,
-    locationLabel: f.locationLabel || undefined,
-    searchTags: parseSearchTags(f.searchTagsText),
-    isSoon: f.isSoon,
-    sortOrder: parseInt(f.sortOrder, 10) || 0,
-    status: f.status,
-  };
-}
-
 export function ServicesPage() {
   const { accessToken } = useAuth();
   const mallCtx = useMallRequired();
   const { can } = usePermission();
+  const [floors, setFloors] = useState<MallFloor[]>([]);
+  const [floorsLoading, setFloorsLoading] = useState(false);
+  const [floorsError, setFloorsError] = useState(false);
   const [rows, setRows] = useState<CmsService[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -151,6 +169,8 @@ export function ServicesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CmsService | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [workingHours, setWorkingHours] = useState<WorkingHoursSchedule | null>(null);
+  const [mallWorkingHours, setMallWorkingHours] = useState<WorkingHoursSchedule | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -162,14 +182,18 @@ export function ServicesPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiServicesList(accessToken, tenantId, {
-        mallId,
-        status: filterStatus || undefined,
-        search: filterSearch || undefined,
-        limit: 50,
-      });
+      const [data, location] = await Promise.all([
+        apiServicesList(accessToken, tenantId, {
+          mallId,
+          status: filterStatus || undefined,
+          search: filterSearch || undefined,
+          limit: 50,
+        }),
+        apiLocationGet(accessToken, mallId).catch(() => null),
+      ]);
       setRows(data.services);
       setTotal(data.total);
+      setMallWorkingHours(location?.workingHoursJson ? parseWorkingHours(location.workingHoursJson) : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Hizmetler yüklenemedi');
     } finally {
@@ -181,6 +205,19 @@ export function ServicesPage() {
     void load();
   }, [load]);
 
+
+  useEffect(() => {
+    setShowForm(false);
+    setFloors([]);
+    setFloorsError(false);
+    if (!accessToken || !tenantId || !mallId) return;
+    setFloorsLoading(true);
+    let cancelled = false;
+    void apiMallFloorsList(accessToken, tenantId, mallId).then((data) => {
+      if (!cancelled) setFloors(data);
+    }).catch(() => { if (!cancelled) setFloorsError(true); }).finally(() => { if (!cancelled) setFloorsLoading(false); });
+    return () => { cancelled = true; };
+  }, [accessToken, tenantId, mallId]);
 
   const inputStyle: CSSProperties = {
     width: '100%',
@@ -198,28 +235,58 @@ export function ServicesPage() {
     marginBottom: 3,
   };
 
+  function openCreate() {
+    setEditing(null);
+    setForm(EMPTY);
+    setWorkingHours(null);
+    setFormError(null);
+    setShowForm(true);
+  }
+
+  function openEdit(s: CmsService) {
+    setEditing(s);
+    setForm(toForm(s));
+    setWorkingHours(parseWorkingHours(s.workingHoursJson));
+    setFormError(null);
+    setShowForm(true);
+  }
+
   async function handleSubmit() {
     if (!accessToken || !tenantId || !mallId) return;
     if (!form.name.trim()) {
       setFormError('Ad zorunludur.');
       return;
     }
+    if (floorsLoading) { setFormError('Katlar yükleniyor. Lütfen bekleyin.'); return; }
+    if (floorsError) { setFormError('Katlar yüklenemedi. Sayfayı yenileyip tekrar deneyin.'); return; }
+    const whErr = validateWorkingHoursSchedule(workingHours);
+    if (whErr) {
+      setFormError(whErr);
+      return;
+    }
     setSaving(true);
     setFormError(null);
     try {
-      const payload = toPayload(form);
+      const payload = toPayload(form, workingHours);
       if (editing) {
         const u = await apiServiceUpdate(accessToken, tenantId, editing.id, payload);
         setRows((prev) => prev.map((r) => (r.id === u.id ? u : r)));
         toast.success('Hizmet güncellendi');
       } else {
-        const c = await apiServiceCreate(accessToken, tenantId, payload, mallId);
+        const { workingHoursJson, ...rest } = payload;
+        const c = await apiServiceCreate(
+          accessToken,
+          tenantId,
+          workingHoursJson ? { ...rest, workingHoursJson } : rest,
+          mallId,
+        );
         setRows((prev) => [c, ...prev]);
         setTotal((t) => t + 1);
         toast.success('Hizmet oluşturuldu');
       }
       setShowForm(false);
       setEditing(null);
+      setWorkingHours(null);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Kayıt hatası');
     } finally {
@@ -246,15 +313,7 @@ export function ServicesPage() {
       meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} kayıt</span>}
       headerAction={
         can('service:create') ? (
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditing(null);
-              setForm(EMPTY);
-              setFormError(null);
-              setShowForm(true);
-            }}
-          >
+          <Button variant="primary" onClick={openCreate}>
             + Yeni Hizmet
           </Button>
         ) : undefined
@@ -336,8 +395,18 @@ export function ServicesPage() {
                 <input style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
               </div>
               <div>
-                <label style={labelStyle}>Kat</label>
-                <input style={inputStyle} value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })} />
+                <fieldset style={{ border: '1px solid #d1d5db', borderRadius: 4 }}>
+                  <legend style={labelStyle}>Katlar (birden fazla seçebilirsiniz)</legend>
+                  {floorsLoading ? <span>Katlar yükleniyor…</span> : floorsError ? <span role="alert">Katlar yüklenemedi. Sayfayı yenileyin.</span> : floors.length === 0 ? <span>Bu AVM için kayıtlı kat bulunamadı.</span> : floors.map((floor) => (
+                    <label key={floor.id} style={{ display: 'block', fontSize: 13, padding: 4 }}>
+                      <input type="checkbox" checked={form.floorIds.includes(floor.id)} onChange={(e) => {
+                        const checked = e.target.checked;
+                        setForm((current) => ({ ...current, floorIds: checked ? [...current.floorIds, floor.id] : current.floorIds.filter((id) => id !== floor.id) }));
+                      }} /> {floor.label} {!floor.active && '(Pasif)'}
+                    </label>
+                  ))}
+                  {editing?.floor && !editing.floors?.length && <p>Önceki kat bilgisi: {editing.floor}. Lütfen kayıtlı katlardan seçim yapın.</p>}
+                </fieldset>
               </div>
               <div>
                 <label style={labelStyle}>Ünite no</label>
@@ -383,12 +452,30 @@ export function ServicesPage() {
                 <input type="checkbox" checked={form.isSoon} onChange={(e) => setForm({ ...form, isSoon: e.target.checked })} />
                 Yakında açılacak
               </label>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ ...labelStyle, marginBottom: 8 }}>Çalışma saatleri</label>
+                <WorkingHoursEditor
+                  value={workingHours}
+                  onChange={setWorkingHours}
+                  formKey={editing?.id ?? 'new'}
+                  mallHours={mallWorkingHours}
+                  showUseMallHoursOption
+                  showPreview
+                />
+              </div>
             </div>
             <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
               <Button variant="primary" disabled={saving} onClick={() => void handleSubmit()}>
                 {saving ? 'Kaydediliyor…' : 'Kaydet'}
               </Button>
-              <Button variant="secondary" onClick={() => { setShowForm(false); setEditing(null); }}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowForm(false);
+                  setEditing(null);
+                  setWorkingHours(null);
+                }}
+              >
                 İptal
               </Button>
             </div>
@@ -424,15 +511,7 @@ export function ServicesPage() {
                   </td>
                   <td style={{ padding: 8, whiteSpace: 'nowrap' }}>
                     {can('service:update') && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          setEditing(s);
-                          setForm(toForm(s));
-                          setFormError(null);
-                          setShowForm(true);
-                        }}
-                      >
+                      <Button variant="ghost" onClick={() => openEdit(s)}>
                         Düzenle
                       </Button>
                     )}

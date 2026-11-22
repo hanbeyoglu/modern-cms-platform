@@ -19,6 +19,7 @@ export type EventTranslation = {
 };
 
 export type CmsEvent = {
+  isFree: boolean;
   id: string;
   tenantId: string;
   mallId: string | null;
@@ -54,6 +55,7 @@ export type CmsEvent = {
 export type EventListResponse = { events: CmsEvent[]; total: number; page: number; limit: number };
 
 export type CreateEventPayload = {
+  isFree?: boolean;
   title: string;
   slug?: string;
   shortDescription?: string;

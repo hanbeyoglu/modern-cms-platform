@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma, Service, ServiceStatus, User } from '@prisma/client';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Prisma, type Service, type ServiceStatus, type User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import { SearchIndexerService } from '../search/search-indexer.service';
+import { PublicCacheService } from '../public/cache/public-cache.service';
+import { validateWorkingHours } from '../common/types/working-hours';
 import type { CreateServiceDto } from './dto/create-service.dto';
 import type { UpdateServiceDto } from './dto/update-service.dto';
 import type { ListServicesDto } from './dto/list-services.dto';
@@ -20,6 +22,7 @@ const MEDIA_SELECT = {
 } as const;
 
 const SERVICE_INCLUDE = {
+  floors: { orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] },
   iconMedia: { select: MEDIA_SELECT },
   coverMedia: { select: MEDIA_SELECT },
 } satisfies Prisma.ServiceInclude;
@@ -28,14 +31,49 @@ export type ServiceResponse = Prisma.ServiceGetPayload<{ include: typeof SERVICE
 
 @Injectable()
 export class ServicesService {
+  private readonly logger = new Logger(ServicesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
     private readonly searchIndexer: SearchIndexerService,
+    private readonly cache: PublicCacheService,
   ) {}
 
   private scheduleIndex(id: string): void {
     void this.searchIndexer.syncService(id).catch(() => undefined);
+  }
+
+  private async invalidatePublicCache(tenantId: string, mallId: string): Promise<void> {
+    try {
+      await this.cache.invalidateMall(tenantId, mallId);
+    } catch (err) {
+      this.logger.warn(
+        `[service=api] [op=services.cacheInvalidate] failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  private assertWorkingHours(raw: unknown): void {
+    const err = validateWorkingHours(raw);
+    if (err) throw new BadRequestException(err);
+  }
+
+  private async resolveFloors(floorIds: string[] | undefined, tenantId: string, mallId: string) {
+    if (floorIds === undefined) return undefined;
+    if (!Array.isArray(floorIds) || new Set(floorIds).size !== floorIds.length || floorIds.length > 100) {
+      throw new BadRequestException('Geçersiz kat seçimi');
+    }
+    if (floorIds.length === 0) return [];
+    const floors = await this.prisma.mallFloor.findMany({
+      where: { id: { in: floorIds }, tenantId, mallId },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      select: { id: true, label: true },
+    });
+    if (floors.length !== floorIds.length) {
+      throw new BadRequestException('Katlar seçili AVM’nin kayıtlı katlarından seçilmelidir');
+    }
+    return floors;
   }
 
   async list(
@@ -87,6 +125,11 @@ export class ServicesService {
     tenantId: string,
     mallId: string,
   ): Promise<ServiceResponse> {
+    if (dto.workingHoursJson !== undefined) {
+      this.assertWorkingHours(dto.workingHoursJson);
+    }
+
+    const floors = await this.resolveFloors(dto.floorIds, tenantId, mallId);
     const service = await this.prisma.service.create({
       data: {
         tenantId,
@@ -100,7 +143,8 @@ export class ServicesService {
         coverMediaWidthOverride: dto.coverMediaWidthOverride ?? null,
         coverMediaHeightOverride: dto.coverMediaHeightOverride ?? null,
         category: dto.category ?? null,
-        floor: dto.floor ?? null,
+        floor: floors?.map((f) => f.label).join(', ') || null,
+        ...(floors && { floors: { connect: floors.map((f) => ({ id: f.id })) } }),
         unitNo: dto.unitNo ?? null,
         phone: dto.phone ?? null,
         email: dto.email ?? null,
@@ -112,6 +156,10 @@ export class ServicesService {
         isSoon: dto.isSoon ?? false,
         status: (dto.status as ServiceStatus) ?? 'ACTIVE',
         sortOrder: dto.sortOrder ?? 0,
+        workingHoursJson:
+          dto.workingHoursJson !== undefined
+            ? (dto.workingHoursJson as Prisma.InputJsonValue)
+            : undefined,
         metadataJson: dto.metadataJson ? (dto.metadataJson as Prisma.InputJsonValue) : undefined,
         createdBy: user.id,
       },
@@ -129,6 +177,7 @@ export class ServicesService {
     });
 
     this.scheduleIndex(service.id);
+    await this.invalidatePublicCache(tenantId, mallId);
     return service;
   }
 
@@ -140,6 +189,11 @@ export class ServicesService {
   ): Promise<ServiceResponse> {
     const existing = await this.assertExists(id, tenantId);
 
+    if (dto.workingHoursJson !== undefined && dto.workingHoursJson !== null) {
+      this.assertWorkingHours(dto.workingHoursJson);
+    }
+
+    const floors = await this.resolveFloors(dto.floorIds, tenantId, existing.mallId);
     const service = await this.prisma.service.update({
       where: { id },
       data: {
@@ -160,7 +214,10 @@ export class ServicesService {
           coverMediaHeightOverride: dto.coverMediaHeightOverride,
         }),
         ...(dto.category !== undefined && { category: dto.category || null }),
-        ...(dto.floor !== undefined && { floor: dto.floor || null }),
+        ...(floors !== undefined && {
+          floor: floors.map((f) => f.label).join(', ') || null,
+          floors: { set: floors.map((f) => ({ id: f.id })) },
+        }),
         ...(dto.unitNo !== undefined && { unitNo: dto.unitNo || null }),
         ...(dto.phone !== undefined && { phone: dto.phone || null }),
         ...(dto.email !== undefined && { email: dto.email || null }),
@@ -172,6 +229,12 @@ export class ServicesService {
         ...(dto.isSoon !== undefined && { isSoon: dto.isSoon }),
         ...(dto.status !== undefined && { status: dto.status as ServiceStatus }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
+        ...(dto.workingHoursJson !== undefined && {
+          workingHoursJson:
+            dto.workingHoursJson === null
+              ? Prisma.JsonNull
+              : (dto.workingHoursJson as Prisma.InputJsonValue),
+        }),
         ...(dto.metadataJson !== undefined && { metadataJson: dto.metadataJson as Prisma.InputJsonValue }),
         updatedBy: user.id,
       },
@@ -190,6 +253,7 @@ export class ServicesService {
     });
 
     this.scheduleIndex(service.id);
+    await this.invalidatePublicCache(tenantId, service.mallId);
     return service;
   }
 
@@ -209,6 +273,7 @@ export class ServicesService {
     });
 
     this.scheduleIndex(id);
+    await this.invalidatePublicCache(tenantId, existing.mallId);
   }
 
   async getActiveForPublic(opts: { tenantId: string; mallId: string }): Promise<ServiceResponse[]> {

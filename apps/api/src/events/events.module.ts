@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PublicModule } from '../public/public.module';
 import { AccessModule } from '../access/access.module';
 import { AuditModule } from '../audit/audit.module';
 import { SearchModule } from '../search/search.module';
@@ -7,7 +8,7 @@ import { EventsController } from './events.controller';
 import { EventsService } from './events.service';
 
 @Module({
-  imports: [AccessModule, AuditModule, SearchModule, TranslationResolverModule],
+  imports: [PublicModule, AccessModule, AuditModule, SearchModule, TranslationResolverModule],
   controllers: [EventsController],
   providers: [EventsService],
   exports: [EventsService],

@@ -607,6 +607,7 @@ model MallFloor {
   tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   mall       Mall        @relation(fields: [mallId], references: [id], onDelete: Cascade)
   mallStores MallStore[]
+  services Service[] @relation("ServiceFloors")
 
   @@unique([mallId, name])
   @@index([tenantId, mallId, active])
@@ -658,6 +659,7 @@ model MallStore {
 }
 
 model Event {
+  isFree Boolean @default(true)
   id                       String        @id @default(cuid())
   tenantId                 String
   mallId                   String?
@@ -1277,6 +1279,7 @@ model Popup {
 }
 
 model Service {
+  floors MallFloor[] @relation("ServiceFloors")
   id                       String        @id @default(cuid())
   tenantId                 String
   mallId                   String
@@ -1297,6 +1300,7 @@ model Service {
   locationLabel            String?
   latitude                 Float?
   longitude                Float?
+  workingHoursJson         Json?
   searchTags               String[]
   isSoon                   Boolean       @default(false)
   status                   ServiceStatus @default(ACTIVE)

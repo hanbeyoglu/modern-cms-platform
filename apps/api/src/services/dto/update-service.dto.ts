@@ -1,4 +1,4 @@
-import { IsArray, IsBoolean, IsEmail, IsEnum, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsInt, IsNumber, IsObject, IsOptional, IsString, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import type { ServiceStatusType } from './create-service.dto';
 
@@ -48,8 +48,11 @@ export class UpdateServiceDto {
   category?: string;
 
   @IsOptional()
-  @IsString()
-  floor?: string;
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  floorIds?: string[];
 
   @IsOptional()
   @IsString()
@@ -99,6 +102,10 @@ export class UpdateServiceDto {
   @IsInt()
   @Min(0)
   sortOrder?: number;
+
+  @IsOptional()
+  @IsObject()
+  workingHoursJson?: Record<string, unknown> | null;
 
   @IsOptional()
   metadataJson?: unknown;

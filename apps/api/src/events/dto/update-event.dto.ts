@@ -17,6 +17,10 @@ import {
 import { EventTranslationDto } from './event-translation.dto.js';
 
 export class UpdateEventDto {
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsBoolean()
+  isFree?: boolean;
+
   @IsOptional()
   @IsString()
   title?: string;

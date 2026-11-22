@@ -1,4 +1,4 @@
-import { IsArray, IsBoolean, IsEmail, IsEnum, IsInt, IsOptional, IsString, IsNumber, Min } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsInt, IsObject, IsOptional, IsString, IsNumber, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export type ServiceStatusType = 'ACTIVE' | 'INACTIVE';
@@ -48,8 +48,11 @@ export class CreateServiceDto {
   category?: string;
 
   @IsOptional()
-  @IsString()
-  floor?: string;
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  floorIds?: string[];
 
   @IsOptional()
   @IsString()
@@ -99,6 +102,10 @@ export class CreateServiceDto {
   @IsInt()
   @Min(0)
   sortOrder?: number;
+
+  @IsOptional()
+  @IsObject()
+  workingHoursJson?: Record<string, unknown>;
 
   @IsOptional()
   metadataJson?: unknown;

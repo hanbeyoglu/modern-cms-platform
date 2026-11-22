@@ -1,3 +1,4 @@
+import { sanitizeLocalizedRichText } from '../common/utils/rich-text';
 import {
   BadRequestException,
   Injectable,
@@ -46,6 +47,7 @@ export class TranslationsService {
   // Upsert: if a translation already exists for the same (tenantId, localeId, entityType, entityId, field)
   // combination it is updated in-place rather than rejected. This makes idempotent bulk imports safe.
   async upsert(dto: CreateTranslationDto, user: User, tenantId: string): Promise<LocalizedContent> {
+    const value = sanitizeLocalizedRichText(dto.entityType, dto.field, dto.value);
     const localeId = await this.resolveLocaleId(tenantId, dto.localeId, dto.localeCode);
 
     const existing = await this.prisma.localizedContent.findUnique({
@@ -63,7 +65,7 @@ export class TranslationsService {
     if (existing) {
       const updated = await this.prisma.localizedContent.update({
         where: { id: existing.id },
-        data: { value: dto.value },
+        data: { value },
       });
 
       await this.audit.logAction({
@@ -90,7 +92,7 @@ export class TranslationsService {
         entityType: dto.entityType,
         entityId: dto.entityId,
         field: dto.field,
-        value: dto.value,
+        value,
       },
     });
 
@@ -125,7 +127,7 @@ export class TranslationsService {
 
     const translation = await this.prisma.localizedContent.update({
       where: { id },
-      data: { value: dto.value },
+      data: { value: sanitizeLocalizedRichText(existing.entityType, existing.field, dto.value) },
     });
 
     await this.audit.logAction({

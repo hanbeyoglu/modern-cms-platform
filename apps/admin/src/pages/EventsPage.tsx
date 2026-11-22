@@ -1,3 +1,4 @@
+import { RichTextEditor } from '../components/RichTextEditor';
 import { useCallback, useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { toast } from 'sonner';
@@ -67,6 +68,7 @@ function StatusBadge({ status }: { status: ContentStatus }) {
 }
 
 type FormState = {
+  isFree: boolean;
   title: string;
   slug: string;
   useCustomSlug: boolean;
@@ -92,6 +94,7 @@ type FormState = {
 };
 
 const EMPTY: FormState = {
+  isFree: true,
   title: '',
   slug: '',
   useCustomSlug: false,
@@ -118,6 +121,7 @@ const EMPTY: FormState = {
 
 function evToForm(e: CmsEvent): FormState {
   return {
+    isFree: e.isFree ?? true,
     title: e.title,
     slug: e.slug,
     useCustomSlug: resolveUseCustomSlug(e.slug, e.title),
@@ -154,10 +158,11 @@ function formToPayload(
   tenantLocales: CmsLocale[],
 ): CreateEventPayload {
   return {
+    isFree: f.isFree,
     title: f.title,
     slug: contentSlugForPayload({ useCustomSlug: f.useCustomSlug, slug: f.slug }),
     shortDescription: f.shortDescription || undefined,
-    description: f.description || undefined,
+    description: f.description,
     sameImageForAllLocales: f.sameImageForAllLocales,
     sharedCoverImageId: f.sharedCoverImageId || undefined,
     coverMediaWidthOverride: parseOptionalDimension(f.coverMediaWidthOverride),
@@ -657,6 +662,16 @@ export function EventsPage() {
               </div>
             </div>
             <div>
+              <label style={labelStyle} htmlFor="event-ticket-pricing">Bilet / katılım ücreti</label>
+              <select id="event-ticket-pricing" style={inputStyle} value={form.isFree ? 'FREE' : 'PAID'} disabled={saving} onChange={(e) => {
+                setForm({ ...form, isFree: e.target.value === 'FREE' });
+                setEventFormDirty(true);
+              }}>
+                <option value="FREE">Ücretsiz</option>
+                <option value="PAID">Ücretli</option>
+              </select>
+            </div>
+            <div>
               <label style={labelStyle}>Konum</label>
               <input
                 style={inputStyle}
@@ -685,6 +700,7 @@ export function EventsPage() {
                 onTabChange={(id) => setContentLocaleTab(id)}
                 defaultLocaleId={tenantLocales.find((l) => l.isDefault)?.id}
                 fields={EVENT_I18N_FIELDS}
+                richTextFields={['description']}
                 getValue={(localeId, field) => {
                   const defId = tenantLocales.find((l) => l.isDefault)?.id;
                   if (defId && localeId === defId) {
@@ -794,14 +810,7 @@ export function EventsPage() {
                 </div>
                 <div>
                   <label style={labelStyle}>Açıklama</label>
-                  <textarea
-                    style={{ ...inputStyle, minHeight: 72 }}
-                    value={form.description}
-                    onChange={(e) => {
-                      setForm({ ...form, description: e.target.value });
-                      setEventFormDirty(true);
-                    }}
-                  />
+                  <RichTextEditor label="Açıklama" value={form.description} disabled={saving} onChange={(value) => { setForm({ ...form, description: value }); setEventFormDirty(true); }} />
                 </div>
                 <div>
                   <label style={labelStyle}>Buton metni</label>

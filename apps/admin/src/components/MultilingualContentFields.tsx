@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { RichTextEditor } from './RichTextEditor';
 import type { CmsLocale } from '../lib/api';
 
 export const EVENT_I18N_FIELDS = ['title', 'shortDescription', 'description', 'buttonText'] as const;
@@ -112,6 +113,7 @@ type Props = {
   onTabChange: (id: string) => void;
   defaultLocaleId: string | undefined;
   fields?: readonly MultilingualContentField[];
+  richTextFields?: readonly MultilingualContentField[];
   requiredField?: MultilingualContentField | null;
   getValue: (localeId: string, field: MultilingualContentField) => string;
   setValue: (localeId: string, field: MultilingualContentField, v: string) => void;
@@ -127,6 +129,7 @@ export function MultilingualContentFields({
   onTabChange,
   defaultLocaleId,
   fields = EVENT_I18N_FIELDS,
+  richTextFields = [],
   requiredField,
   getValue,
   setValue,
@@ -223,7 +226,9 @@ export function MultilingualContentFields({
                 active.id === defaultLocaleId &&
                 ' *'}
             </label>
-            {field === 'description' ||
+            {richTextFields.includes(field) ? (
+              <RichTextEditor key={`${active.id}:${field}`} label={LABELS[field]} value={getValue(active.id, field)} onChange={value => setValue(active.id, field, value)} disabled={disabled} />
+            ) : field === 'description' ||
             field === 'shortDescription' ||
             field === 'terms' ||
             field === 'contentHtml' ||

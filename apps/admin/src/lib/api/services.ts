@@ -20,11 +20,13 @@ export type CmsService = {
   coverMediaHeightOverride: number | null;
   category: string | null;
   floor: string | null;
+  floors: { id: string; name: string; label: string }[];
   unitNo: string | null;
   phone: string | null;
   email: string | null;
   websiteUrl: string | null;
   locationLabel: string | null;
+  workingHoursJson: Record<string, unknown> | null;
   searchTags: string[];
   isSoon: boolean;
   status: ServiceStatus;
@@ -49,12 +51,13 @@ export type CreateServicePayload = {
   coverMediaWidthOverride?: number | null;
   coverMediaHeightOverride?: number | null;
   category?: string;
-  floor?: string;
+  floorIds?: string[];
   unitNo?: string;
   phone?: string;
   email?: string;
   websiteUrl?: string;
   locationLabel?: string;
+  workingHoursJson?: Record<string, unknown> | null;
   searchTags?: string[];
   isSoon?: boolean;
   status?: ServiceStatus;

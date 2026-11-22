@@ -12,11 +12,16 @@ import {
   IsString,
   Min,
   IsIn,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { EventTranslationDto } from './event-translation.dto.js';
 
 export class CreateEventDto {
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsBoolean()
+  isFree?: boolean;
+
   @IsString()
   @IsNotEmpty()
   title!: string;

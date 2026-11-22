@@ -123,7 +123,12 @@ export interface CmsSlider {
   targetDevice: string;
 }
 
+export interface CmsEventDetail extends CmsEvent {
+  sliders: CmsSlider[];
+}
+
 export interface CmsEvent {
+  isFree: boolean;
   id: string;
   slug: string;
   title: string;
@@ -331,6 +336,7 @@ export interface CmsService {
   cover: CmsMediaAsset | null;
   category: string | null;
   floor: string | null;
+  floors: { id: string; name: string; label: string }[];
   unitNo: string | null;
   phone: string | null;
   email: string | null;
@@ -338,6 +344,7 @@ export interface CmsService {
   locationLabel: string | null;
   latitude: number | null;
   longitude: number | null;
+  workingHours: unknown;
   searchTags: string[];
   isSoon: boolean;
   sortOrder: number;

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import type {
   SliderStatus,
   User,
 } from '@prisma/client';
+import { PublicCacheService } from '../public/cache/public-cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import { SearchIndexerService } from '../search/search-indexer.service';
@@ -51,7 +53,7 @@ const PUBLIC_SLIDER_INCLUDE = {
   items: {
     where: { deletedAt: null, status: 'PUBLISHED' as const },
     include: ITEM_INCLUDE,
-    orderBy: { sortOrder: 'asc' as const },
+    orderBy: [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }, { id: 'asc' as const }],
   },
 } satisfies Prisma.SliderInclude;
 
@@ -59,7 +61,7 @@ const SLIDER_INCLUDE = {
   items: {
     where: { deletedAt: null },
     include: ITEM_INCLUDE,
-    orderBy: { sortOrder: 'asc' as const },
+    orderBy: [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }, { id: 'asc' as const }],
   },
   _count: { select: { items: { where: { deletedAt: null } } } },
 } satisfies Prisma.SliderInclude;
@@ -69,14 +71,22 @@ export type SliderResponse = Prisma.SliderGetPayload<{ include: typeof SLIDER_IN
 
 @Injectable()
 export class SlidersService {
+  private readonly logger = new Logger(SlidersService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
     private readonly searchIndexer: SearchIndexerService,
+    private readonly cache: PublicCacheService,
   ) {}
 
-  private scheduleSliderIndex(id: string): void {
+  private async scheduleSliderIndex(id: string, tenantId: string): Promise<void> {
     void this.searchIndexer.syncSlider(id).catch(() => undefined);
+    try {
+      // Also invalidate home aggregates and tenant-wide slider queries.
+      await this.cache.invalidateTenant(tenantId);
+    } catch {
+      this.logger.warn('Slider public cache invalidation failed');
+    }
   }
 
   private scheduleSliderItemIndex(itemId: string): void {
@@ -110,7 +120,7 @@ export class SlidersService {
       this.prisma.slider.findMany({
         where,
         include: SLIDER_INCLUDE,
-        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }],
         skip,
         take: limit,
       }),
@@ -172,7 +182,7 @@ export class SlidersService {
       after: { title: slider.title, status: slider.status, placementType: slider.placementType },
     });
 
-    this.scheduleSliderIndex(slider.id);
+    await this.scheduleSliderIndex(slider.id, tenantId);
     return slider;
   }
 
@@ -233,7 +243,7 @@ export class SlidersService {
       after: { title: slider.title, status: slider.status },
     });
 
-    this.scheduleSliderIndex(slider.id);
+    await this.scheduleSliderIndex(slider.id, tenantId);
     return slider;
   }
 
@@ -262,7 +272,7 @@ export class SlidersService {
       before: { title: existing.title, status: existing.status },
     });
 
-    this.scheduleSliderIndex(id);
+    await this.scheduleSliderIndex(id, tenantId);
   }
 
   async publish(id: string, user: User, tenantId: string): Promise<SliderResponse> {
@@ -291,7 +301,7 @@ export class SlidersService {
       after: { status: 'PUBLISHED' },
     });
 
-    this.scheduleSliderIndex(slider.id);
+    await this.scheduleSliderIndex(slider.id, tenantId);
     return slider;
   }
 
@@ -320,7 +330,7 @@ export class SlidersService {
       after: { status: 'ARCHIVED' },
     });
 
-    this.scheduleSliderIndex(slider.id);
+    await this.scheduleSliderIndex(slider.id, tenantId);
     return slider;
   }
 
@@ -366,7 +376,7 @@ export class SlidersService {
     });
 
     for (const sid of ids) {
-      this.scheduleSliderIndex(sid);
+      await this.scheduleSliderIndex(sid, tenantId);
     }
   }
 
@@ -377,7 +387,7 @@ export class SlidersService {
     return this.prisma.sliderItem.findMany({
       where: { sliderId, deletedAt: null },
       include: ITEM_INCLUDE,
-      orderBy: { sortOrder: 'asc' },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
     });
   }
 
@@ -437,7 +447,7 @@ export class SlidersService {
       after: { sliderId, sortOrder: item.sortOrder },
     });
 
-    this.scheduleSliderIndex(sliderId);
+    await this.scheduleSliderIndex(sliderId, tenantId);
     this.scheduleSliderItemIndex(item.id);
     return this.findItemById(item.id, sliderId);
   }
@@ -530,7 +540,7 @@ export class SlidersService {
       after: { sliderId, sortOrder: item.sortOrder, status: item.status },
     });
 
-    this.scheduleSliderIndex(sliderId);
+    await this.scheduleSliderIndex(sliderId, tenantId);
     this.scheduleSliderItemIndex(item.id);
     return item;
   }
@@ -558,7 +568,7 @@ export class SlidersService {
       after: { sliderId },
     });
 
-    this.scheduleSliderIndex(sliderId);
+    await this.scheduleSliderIndex(sliderId, tenantId);
     this.scheduleSliderItemIndex(itemId);
   }
 
@@ -599,7 +609,7 @@ export class SlidersService {
       after: { itemCount: dto.items.length, ids },
     });
 
-    this.scheduleSliderIndex(sliderId);
+    await this.scheduleSliderIndex(sliderId, tenantId);
   }
 
   // ─── Public ──────────────────────────────────────────────────────────────────
@@ -631,7 +641,7 @@ export class SlidersService {
         ],
       },
       include: PUBLIC_SLIDER_INCLUDE,
-      orderBy: { sortOrder: 'asc' },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }],
       take: opts.limit ?? 10,
     });
   }
@@ -656,7 +666,7 @@ export class SlidersService {
 
   private async assertGroupPublishable(sliderId: string): Promise<void> {
     const items = await this.prisma.sliderItem.findMany({
-      where: { sliderId, deletedAt: null },
+      where: { sliderId, deletedAt: null, status: 'PUBLISHED' },
       include: {
         translations: { select: { imageId: true, mobileImageId: true } },
       },
@@ -671,7 +681,7 @@ export class SlidersService {
 
     if (!hasMedia) {
       throw new UnprocessableEntityException(
-        'At least one slider item with desktop or mobile media is required to publish',
+        'Yayınlamak için görseli olan en az bir slaytın yayın durumu PUBLISHED olmalıdır',
       );
     }
   }

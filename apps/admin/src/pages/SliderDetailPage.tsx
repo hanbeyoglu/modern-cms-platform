@@ -232,6 +232,7 @@ export function SliderDetailPage() {
   const [itemLocaleDrafts, setItemLocaleDrafts] = useState<Record<string, Record<string, string>>>({});
   const [itemContentLocaleTab, setItemContentLocaleTab] = useState<string | null>(null);
   const [itemSaving, setItemSaving] = useState(false);
+  const [itemReordering, setItemReordering] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken || !activeTenantId || !id) return;
@@ -397,7 +398,7 @@ export function SliderDetailPage() {
       } else if (editingItemId) {
         await apiSliderItemUpdate(accessToken, activeTenantId, id, editingItemId, payload);
       }
-      toast.success('Slayt kaydedildi');
+      toast.success(payload.status === 'PUBLISHED' ? 'Slayt yayınlandı. Web sitesinde görünmesi için slider grubu da yayında olmalıdır.' : 'Slayt taslak veya arşiv olarak kaydedildi; web sitesinde gösterilmez.');
       setEditingItemId(null);
       void load();
     } catch (e) {
@@ -420,7 +421,7 @@ export function SliderDetailPage() {
   };
 
   const moveItem = async (itemId: string, direction: -1 | 1) => {
-    if (!accessToken || !activeTenantId || !id || !slider?.items) return;
+    if (itemReordering || !accessToken || !activeTenantId || !id || !slider?.items) return;
     const items = [...slider.items].sort((a, b) => a.sortOrder - b.sortOrder);
     const idx = items.findIndex((i) => i.id === itemId);
     const swapIdx = idx + direction;
@@ -430,11 +431,14 @@ export function SliderDetailPage() {
       if (i === swapIdx) return { id: item.id, sortOrder: idx };
       return { id: item.id, sortOrder: i };
     });
+    setItemReordering(true);
     try {
       await apiSliderItemsReorder(accessToken, activeTenantId, id, reordered);
-      void load();
+      await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Sıralama güncellenemedi');
+    } finally {
+      setItemReordering(false);
     }
   };
 
@@ -668,6 +672,12 @@ export function SliderDetailPage() {
           <FormActionHint message="Önce tenant seçmelisiniz" />
         )}
 
+        {slider.status === 'PUBLISHED' && !(slider.items ?? []).some((item) => item.status === 'PUBLISHED') && (
+          <p role="status" style={{ fontSize: 13, color: '#92400e', background: '#fffbeb', padding: 12, borderRadius: 6 }}>
+            Slider grubu yayında, ancak yayınlanmış slayt yok. Görseli olan bir slaytı düzenleyip yayın durumunu “Yayında” olarak kaydedin. Taslak slaytlar web sitesine gönderilmez.
+          </p>
+        )}
+
         {(slider.items?.length ?? 0) === 0 && !editingItemId && (
           <p style={{ fontSize: 13, color: '#6b7280' }}>Henüz slayt yok. İlk slaytı ekleyin.</p>
         )}
@@ -714,7 +724,7 @@ export function SliderDetailPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      disabled={index === 0}
+                      disabled={itemReordering || index === 0}
                       onClick={() => void moveItem(item.id, -1)}
                     >
                       ↑
@@ -722,7 +732,7 @@ export function SliderDetailPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      disabled={index === arr.length - 1}
+                      disabled={itemReordering || index === arr.length - 1}
                       onClick={() => void moveItem(item.id, 1)}
                     >
                       ↓
@@ -947,6 +957,17 @@ export function SliderDetailPage() {
                   placeholder="https://"
                 />
               </div>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <label style={labelStyle} htmlFor="slide-publication-status">Slayt yayın durumu</label>
+              <select id="slide-publication-status" style={inputStyle} value={itemForm.status} disabled={itemSaving} onChange={(e) => setItemForm({ ...itemForm, status: e.target.value as SliderStatus })}>
+                <option value="DRAFT">Taslak</option>
+                <option value="PUBLISHED">Yayında</option>
+                <option value="ARCHIVED">Arşiv</option>
+                {itemForm.status === 'SCHEDULED' && <option value="SCHEDULED">Zamanlanmış</option>}
+              </select>
+              <p style={{ fontSize: 12, color: '#6b7280' }}>Web sitesi yalnızca yayındaki grubun yayındaki slaytlarını gösterir.</p>
             </div>
 
             <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>

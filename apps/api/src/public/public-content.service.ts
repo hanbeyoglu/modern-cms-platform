@@ -10,6 +10,7 @@ import type {
   PublicCampaign,
   PublicCinema,
   PublicEvent,
+  PublicEventDetail,
   PublicHomeResponse,
   PublicLocationService,
   PublicMediaAsset,
@@ -146,10 +147,10 @@ export class PublicContentService {
               },
             },
           },
-          orderBy: { sortOrder: 'asc' },
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
         },
       },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }],
       take: opts.limit ?? 10,
     });
 
@@ -248,7 +249,7 @@ export class PublicContentService {
     slug: string;
     localeId?: string;
     defaultLocaleId?: string | null;
-  }): Promise<PublicEvent | null> {
+  }): Promise<PublicEventDetail | null> {
     const now = new Date();
     const mallScope: Prisma.EventWhereInput =
       opts.mallId !== undefined
@@ -268,7 +269,17 @@ export class PublicContentService {
     });
     if (!row) return null;
 
-    const event = mapEvent(row, opts.localeId ?? null, opts.defaultLocaleId ?? null);
+    const event: PublicEventDetail = {
+      ...mapEvent(row, opts.localeId ?? null, opts.defaultLocaleId ?? null),
+      sliders: await this.getSliders({
+        tenantId: opts.tenantId,
+        mallId: opts.mallId,
+        placement: 'EVENT',
+        entityId: row.id,
+        localeId: opts.localeId,
+        defaultLocaleId: opts.defaultLocaleId,
+      }),
+    };
     if (!opts.localeId) return event;
 
     const tMap = await this.resolver.getTranslationsForEntities(
@@ -919,11 +930,19 @@ export class PublicContentService {
 
   async getLocationServiceById(opts: {
     tenantId: string;
+    mallId?: string;
     id: string;
   }): Promise<PublicLocationService | null> {
     const row = await this.prisma.service.findFirst({
-      where: { id: opts.id, tenantId: opts.tenantId, deletedAt: null, status: 'ACTIVE' },
+      where: {
+        id: opts.id,
+        tenantId: opts.tenantId,
+        ...(opts.mallId ? { mallId: opts.mallId } : {}),
+        deletedAt: null,
+        status: 'ACTIVE',
+      },
       include: {
+        floors: { select: { id: true, name: true, label: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] },
         iconMedia: { select: MEDIA_SELECT },
         coverMedia: { select: MEDIA_SELECT },
       },
@@ -964,7 +983,8 @@ export class PublicContentService {
       this.prisma.service.findMany({
         where,
         include: {
-          iconMedia: { select: MEDIA_SELECT },
+          floors: { select: { id: true, name: true, label: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] },
+        iconMedia: { select: MEDIA_SELECT },
           coverMedia: { select: MEDIA_SELECT },
         },
         orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
@@ -1390,6 +1410,7 @@ function toCoverMediaRow(media: RichMediaRow): ContentTranslationRow['coverImage
 function mapEvent(
   e: {
     id: string;
+    isFree: boolean;
     slug: string;
     title: string;
     shortDescription: string | null;
@@ -1490,6 +1511,7 @@ function mapEvent(
     eventEndAt,
     startAt: eventStartAt,
     endAt: eventEndAt,
+    isFree: e.isFree,
     location: e.location,
     category: e.category,
     buttonText: resolvedText.buttonText ?? e.buttonText,
@@ -1987,6 +2009,7 @@ function mapLocationService(r: {
   coverMediaHeightOverride?: number | null;
   category: string | null;
   floor: string | null;
+  floors?: { id: string; name: string; label: string }[];
   unitNo: string | null;
   phone: string | null;
   email: string | null;
@@ -1994,6 +2017,7 @@ function mapLocationService(r: {
   locationLabel: string | null;
   latitude: number | null;
   longitude: number | null;
+  workingHoursJson: Prisma.JsonValue | null;
   searchTags: string[];
   isSoon: boolean;
   sortOrder: number;
@@ -2012,7 +2036,8 @@ function mapLocationService(r: {
       height: r.coverMediaHeightOverride,
     }),
     category: r.category,
-    floor: r.floor,
+    floor: r.floors?.length ? r.floors.map((f) => f.label).join(', ') : r.floor,
+    floors: r.floors ?? [],
     unitNo: r.unitNo,
     phone: r.phone,
     email: r.email,
@@ -2020,6 +2045,7 @@ function mapLocationService(r: {
     locationLabel: r.locationLabel,
     latitude: r.latitude,
     longitude: r.longitude,
+    workingHours: r.workingHoursJson,
     searchTags: r.searchTags,
     isSoon: r.isSoon,
     sortOrder: r.sortOrder,

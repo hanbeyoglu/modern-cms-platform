@@ -4,6 +4,7 @@ import type {
   CmsCinema,
   CmsEnvelope,
   CmsEvent,
+  CmsEventDetail,
   CmsHomeResponse,
   CmsMediaGuideline,
   CmsMovieSession,
@@ -147,7 +148,7 @@ export class CmsPublicClient {
     });
   }
 
-  getEvent(slug: string, locale?: string): Promise<CmsEnvelope<CmsEvent>> {
+  getEvent(slug: string, locale?: string): Promise<CmsEnvelope<CmsEventDetail>> {
     return this.get(`/public/events/${encodeURIComponent(slug)}`, { locale });
   }
 

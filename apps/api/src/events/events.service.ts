@@ -1,10 +1,13 @@
+import { sanitizeRichText } from '../common/utils/rich-text';
 import {
   Injectable,
+  Logger,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { ContentStatus, Event, User } from '@prisma/client';
+import { PublicCacheService } from '../public/cache/public-cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import { SearchIndexerService } from '../search/search-indexer.service';
@@ -49,15 +52,22 @@ export type EventPublishResult = {
 
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
     private readonly searchIndexer: SearchIndexerService,
     private readonly i18n: TranslationResolverService,
+    private readonly cache: PublicCacheService,
   ) {}
 
-  private scheduleEventIndex(eventId: string): void {
+  private async scheduleEventIndex(eventId: string, tenantId: string): Promise<void> {
     void this.searchIndexer.syncEvent(eventId).catch(() => undefined);
+    try {
+      await this.cache.invalidateTenant(tenantId);
+    } catch {
+      this.logger.warn('Event public cache invalidation failed');
+    }
   }
 
   async list(
@@ -147,7 +157,7 @@ export class EventsService {
         title: dto.title,
         slug,
         shortDescription: dto.shortDescription ?? null,
-        description: dto.description ?? null,
+        description: dto.description != null ? sanitizeRichText(dto.description) : null,
         sameImageForAllLocales,
         sharedCoverImageId: dto.sharedCoverImageId ?? null,
         coverMediaWidthOverride: dto.coverMediaWidthOverride ?? null,
@@ -156,6 +166,7 @@ export class EventsService {
         publishEndAt: publishSchedule.publishEndAt,
         eventStartAt,
         eventEndAt,
+        isFree: dto.isFree ?? true,
         location: dto.location ?? null,
         category: dto.category ?? null,
         buttonText: dto.buttonText ?? null,
@@ -186,7 +197,7 @@ export class EventsService {
       after: { title: event.title, status: event.status, slug: event.slug },
     });
 
-    this.scheduleEventIndex(event.id);
+    await this.scheduleEventIndex(event.id, tenantId);
     return result;
   }
 
@@ -276,7 +287,7 @@ export class EventsService {
         ...(dto.title !== undefined && { title: dto.title }),
         slug,
         ...(dto.shortDescription !== undefined && { shortDescription: dto.shortDescription || null }),
-        ...(dto.description !== undefined && { description: dto.description || null }),
+        ...(dto.description !== undefined && { description: dto.description ? sanitizeRichText(dto.description) : null }),
         ...(dto.sameImageForAllLocales !== undefined && { sameImageForAllLocales }),
         ...(dto.sharedCoverImageId !== undefined && { sharedCoverImageId: dto.sharedCoverImageId || null }),
         ...(dto.coverMediaWidthOverride !== undefined && {
@@ -289,6 +300,7 @@ export class EventsService {
         publishEndAt: publishSchedule.publishEndAt,
         eventStartAt,
         eventEndAt,
+        ...(dto.isFree !== undefined && { isFree: dto.isFree }),
         ...(dto.location !== undefined && { location: dto.location || null }),
         ...(dto.category !== undefined && { category: dto.category || null }),
         ...(dto.buttonText !== undefined && { buttonText: dto.buttonText || null }),
@@ -327,7 +339,7 @@ export class EventsService {
       after: { title: event.title, status: event.status },
     });
 
-    this.scheduleEventIndex(event.id);
+    await this.scheduleEventIndex(event.id, tenantId);
     return event;
   }
 
@@ -350,7 +362,7 @@ export class EventsService {
       before: { title: existing.title, status: existing.status },
     });
 
-    this.scheduleEventIndex(id);
+    await this.scheduleEventIndex(id, tenantId);
   }
 
   async publish(id: string, user: User, tenantId: string, mallId: string | undefined): Promise<EventPublishResult> {
@@ -403,7 +415,7 @@ export class EventsService {
       after: { status: 'PUBLISHED', publishedAt: event.publishedAt },
     });
 
-    this.scheduleEventIndex(event.id);
+    await this.scheduleEventIndex(event.id, tenantId);
     return { event, localizationWarnings };
   }
 
@@ -433,7 +445,7 @@ export class EventsService {
       after: { status: 'ARCHIVED' },
     });
 
-    this.scheduleEventIndex(event.id);
+    await this.scheduleEventIndex(event.id, tenantId);
     return event;
   }
 
@@ -589,13 +601,13 @@ export class EventsService {
           eventId,
           localeId: tr.localeId,
           title: tr.title ?? null,
-          description: tr.description ?? null,
+          description: tr.description != null ? sanitizeRichText(tr.description) : null,
           shortDescription: tr.shortDescription ?? null,
           coverImageId: tr.coverImageId ?? null,
         },
         update: {
           title: tr.title ?? null,
-          description: tr.description ?? null,
+          description: tr.description != null ? sanitizeRichText(tr.description) : null,
           shortDescription: tr.shortDescription ?? null,
           coverImageId: tr.coverImageId ?? null,
         },

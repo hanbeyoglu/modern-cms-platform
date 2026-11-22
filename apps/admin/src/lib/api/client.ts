@@ -81,5 +81,6 @@ export async function request<T>(path: string, options: RequestOptions): Promise
   }
 
   if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  const text = await res.text();
+  return text.trim() ? JSON.parse(text) as T : undefined as T;
 }
