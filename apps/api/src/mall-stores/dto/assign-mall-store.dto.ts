@@ -5,6 +5,10 @@ import { Transform } from 'class-transformer';
 import type { StoreStatus } from '@prisma/client';
 
 export class AssignMallStoreDto {
+  @IsOptional()
+  @IsIn(['STORE', 'RESTAURANT'])
+  kind?: 'STORE' | 'RESTAURANT';
+
   @IsString()
   @IsNotEmpty()
   globalStoreId!: string;

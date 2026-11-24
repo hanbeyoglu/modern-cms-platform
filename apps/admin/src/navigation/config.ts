@@ -40,7 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'store-categories', label: 'Mağaza Kategorileri', icon: '▧', href: '/store-categories', permission: 'store-category:read', capability: 'stores', group: 'AVM ve Mağazalar' },
   { id: 'floors', label: 'Katlar', icon: '▥', href: '/floors', permission: null, anyPermission: ['location:read', 'mall-store:read'], capability: 'stores', group: 'AVM ve Mağazalar' },
   { id: 'services', label: 'Hizmetler', icon: '◇', href: '/services', permission: 'service:read', capability: 'location_services', group: 'AVM ve Mağazalar' },
-  { id: 'restaurants', label: 'Restoranlar', icon: '◔', href: '/restaurants', permission: 'location:read', capability: 'stores', group: 'AVM ve Mağazalar' },
+  { id: 'restaurants', label: 'Restoranlar', icon: '◔', href: '/restaurants', permission: 'mall-store:read', capability: 'stores', group: 'AVM ve Mağazalar' },
   { id: 'cinemas', label: 'Sinemalar', icon: '▶', href: '/cinemas', permission: 'cinema:read', capability: 'cinema', group: 'AVM ve Mağazalar' },
   { id: 'global-stores', label: 'Mağaza Havuzu', icon: '▣', href: '/global-stores', permission: 'global-store:read', capability: 'stores', group: 'AVM ve Mağazalar' },
   { id: 'locations', label: 'Lokasyonlar', icon: '◈', href: '/locations', permission: 'location:read', group: 'Yönetim' },

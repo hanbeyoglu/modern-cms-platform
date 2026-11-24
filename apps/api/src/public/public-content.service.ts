@@ -474,6 +474,7 @@ export class PublicContentService {
     tenantId: string;
     mallId: string;
     categoryId?: string;
+    kind?: 'STORE' | 'RESTAURANT';
     search?: string;
     featuredOnly?: boolean;
     page?: number;
@@ -489,6 +490,7 @@ export class PublicContentService {
       tenantId: opts.tenantId,
       mallId: opts.mallId,
       deletedAt: null,
+      ...(opts.kind ? { kind: opts.kind } : {}),
       status: 'ACTIVE',
       ...(opts.featuredOnly ? { isFeatured: true } : {}),
       ...(opts.categoryId
@@ -1851,6 +1853,7 @@ function mapPage(
 
 function mapStore(
   r: {
+    kind?: 'STORE' | 'RESTAURANT';
     id: string;
     mallId: string;
     detailTitle: string | null;
@@ -1915,6 +1918,7 @@ function mapStore(
 
   return {
     id: r.id,
+    kind: r.kind ?? 'STORE',
     mallId: r.mallId,
     name,
     detailTitle,

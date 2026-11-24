@@ -666,7 +666,13 @@ model MallFloor {
   @@index([mallId, sortOrder])
 }
 
+enum MallStoreKind {
+  STORE
+  RESTAURANT
+}
+
 model MallStore {
+  kind MallStoreKind @default(STORE)
   floors MallFloor[] @relation("MallStoreFloors")
   id               String                @id @default(cuid())
   tenantId         String
@@ -708,6 +714,7 @@ model MallStore {
   @@index([globalStoreId])
   @@index([tenantId, mallId, status])
   @@index([floorId])
+  @@index([tenantId, mallId, kind])
   @@index([categoryId])
 }
 

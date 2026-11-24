@@ -172,7 +172,7 @@
   },
   "restaurants": {
     "href": "/restaurants",
-    "permission": "location:read",
+    "permission": "mall-store:read",
     "anyPermission": null,
     "capability": "stores",
     "superAdminOnly": false,

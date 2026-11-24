@@ -274,6 +274,7 @@ export interface PublicStoreSocialLink {
 }
 
 export interface PublicStore {
+  kind?: 'STORE' | 'RESTAURANT';
   id: string;
   mallId: string;
   name: string;

@@ -119,7 +119,7 @@ export const router = createBrowserRouter([
           // Stores
           { path: '/store-categories', element: <PermissionGate permission="store-category:read" capability="stores"><StoreCategoriesPage /></PermissionGate> },
           { path: '/floors', element: <PermissionGate anyPermission={['location:read', 'mall-store:read']} capability="stores"><FloorsPage /></PermissionGate> },
-          { path: '/restaurants', element: <PermissionGate permission="location:read" capability="stores"><RestaurantsPage /></PermissionGate> },
+          { path: '/restaurants', element: <PermissionGate permission="mall-store:read" capability="stores"><RestaurantsPage /></PermissionGate> },
           { path: '/global-stores', element: <PermissionGate permission="global-store:read" capability="stores"><GlobalStoresPage /></PermissionGate> },
           { path: '/mall-stores', element: <PermissionGate permission="mall-store:read" capability="stores"><MallStoresPage /></PermissionGate> },
 

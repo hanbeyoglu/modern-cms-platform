@@ -2,6 +2,7 @@
 export const MALL_SCOPED_PATH_PREFIXES = [
   '/services',
   '/mall-stores',
+  '/restaurants',
   '/events',
   '/campaigns',
   '/sliders',

@@ -136,6 +136,7 @@ export class MallStoresService {
       tenantId,
       mallId,
       deletedAt: null,
+      ...(query.kind ? { kind: query.kind } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.isFeatured === true || query.isFeatured === false ? { isFeatured: query.isFeatured } : {}),
       ...(query.categoryId
@@ -215,6 +216,7 @@ export class MallStoresService {
         tenantId,
         mallId,
         globalStoreId: dto.globalStoreId,
+        kind: dto.kind ?? 'STORE',
         categoryId,
         detailTitle: dto.detailTitle?.trim() || null,
         localDescription: dto.localDescription?.trim() || null,
@@ -294,6 +296,7 @@ export class MallStoresService {
     }
 
     const data: Prisma.MallStoreUpdateInput = {
+      ...(dto.kind !== undefined && { kind: dto.kind }),
       ...(dto.detailTitle !== undefined && { detailTitle: dto.detailTitle }),
       ...(dto.localDescription !== undefined && { localDescription: dto.localDescription }),
       ...(dto.localLogoMediaId !== undefined && {

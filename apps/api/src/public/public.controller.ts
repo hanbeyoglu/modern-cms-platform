@@ -520,6 +520,7 @@ export class PublicController {
   @ApiQuery({ name: 'categoryId', required: false, description: 'Store category UUID filter.' })
   @ApiQuery({ name: 'search', required: false, description: 'Free-text search across name, tags, and description.' })
   @ApiQuery({ name: 'featuredOnly', required: false, description: 'Set to `true` to return only featured stores.', schema: { type: 'boolean' } })
+  @ApiQuery({ name: 'kind', required: false, enum: ['STORE', 'RESTAURANT'], description: 'Optional directory kind; omitted returns both.' })
   @ApiResponse({ status: 200, description: 'public.response.200', type: PublicStoresPaginatedDto })
   async getStores(
     @Headers('x-tenant-id') tenantId: string | undefined,
@@ -530,7 +531,9 @@ export class PublicController {
     @Query('page') pageStr: string | undefined,
     @Query('limit') limitStr: string | undefined,
     @Query('locale') locale: string | undefined,
+    @Query('kind') kind?: 'STORE' | 'RESTAURANT',
   ) {
+    if (kind && !['STORE', 'RESTAURANT'].includes(kind)) throw new BadRequestException('Geçersiz kayıt türü');
     const context = await this.ctx.resolve(tenantId, mallId, locale);
     if (!context.mallId) {
       throw new BadRequestException('x-mall-id header is required for the stores endpoint');
@@ -538,7 +541,7 @@ export class PublicController {
     const { page, limit } = parsePagination(pageStr, limitStr, 50, 100);
     const featuredOnly = featuredOnlyStr === 'true';
     const cacheKey =
-      `public:${context.tenantId}:${context.mallId}:stores:${categoryId ?? ''}:${search ?? ''}:${featuredOnly}:${page}:${limit}` +
+      `public:${context.tenantId}:${context.mallId}:stores:v2:${kind ?? 'ALL'}:${categoryId ?? ''}:${search ?? ''}:${featuredOnly}:${page}:${limit}` +
       lseg(context.locale?.code);
 
     const cached = await this.cache.get(cacheKey);
@@ -548,6 +551,7 @@ export class PublicController {
       tenantId: context.tenantId,
       mallId: context.mallId,
       categoryId,
+      kind,
       search,
       featuredOnly,
       page,

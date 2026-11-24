@@ -6,6 +6,10 @@ import type { StoreStatus } from '@prisma/client';
 
 export class UpdateMallStoreDto {
   @IsOptional()
+  @IsIn(['STORE', 'RESTAURANT'])
+  kind?: 'STORE' | 'RESTAURANT';
+
+  @IsOptional()
   @IsString()
   @MaxLength(300)
   detailTitle?: string | null;

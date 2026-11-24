@@ -51,6 +51,7 @@ export interface GetCampaignsOpts extends PaginatedListOpts {
 }
 
 export interface GetStoresOpts extends PaginatedListOpts {
+  kind?: 'STORE' | 'RESTAURANT';
   categoryId?: string;
   search?: string;
   featuredOnly?: boolean;
@@ -174,6 +175,7 @@ export class CmsPublicClient {
     return this.get('/public/stores', {
       locale: opts.locale,
       categoryId: opts.categoryId,
+      kind: opts.kind,
       search: opts.search,
       featuredOnly: opts.featuredOnly,
       page: opts.page,

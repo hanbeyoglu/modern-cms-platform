@@ -248,6 +248,7 @@ export interface CmsStoreSocialLink {
 }
 
 export interface CmsStore {
+  kind?: 'STORE' | 'RESTAURANT';
   id: string;
   mallId: string;
   name: string;

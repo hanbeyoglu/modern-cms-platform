@@ -89,6 +89,7 @@ export type MallFloor = {
 };
 
 export type MallStore = {
+  kind: 'STORE' | 'RESTAURANT';
   id: string;
   tenantId: string;
   mallId: string;
@@ -405,9 +406,10 @@ export async function apiMallStoresList(
   token: string,
   tenantId: string,
   mallId: string,
-  opts?: { search?: string; categoryId?: string; status?: StoreStatus; isFeatured?: boolean; page?: number; limit?: number },
+  opts?: { kind?: 'STORE' | 'RESTAURANT'; search?: string; categoryId?: string; status?: StoreStatus; isFeatured?: boolean; page?: number; limit?: number },
 ): Promise<MallStoreListResponse> {
   const params = new URLSearchParams();
+  if (opts?.kind) params.set('kind', opts.kind);
   if (opts?.search) params.set('search', opts.search);
   if (opts?.categoryId) params.set('categoryId', opts.categoryId);
   if (opts?.status) params.set('status', opts.status);
@@ -440,6 +442,7 @@ export async function apiMallStoreAssign(
   mallId: string,
   body: {
     globalStoreId: string;
+    kind?: 'STORE' | 'RESTAURANT';
     categoryId?: string | null;
     detailTitle?: string;
     localDescription?: string;
@@ -473,6 +476,7 @@ export async function apiMallStoreUpdate(
   mallId: string,
   id: string,
   body: Partial<{
+    kind: 'STORE' | 'RESTAURANT';
     detailTitle: string | null;
     localDescription: string | null;
     categoryId: string | null;

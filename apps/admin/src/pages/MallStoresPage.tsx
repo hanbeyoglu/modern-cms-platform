@@ -151,7 +151,9 @@ function parseJsonField(raw: string, label: string): Record<string, unknown> | u
   }
 }
 
-export function MallStoresPage() {
+export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURANT' }) {
+  const restaurant = kind === 'RESTAURANT';
+  const [formKind, setFormKind] = useState<'STORE' | 'RESTAURANT'>(kind);
   const { accessToken } = useAuth();
   const mallCtx = useMallRequired();
   const { can } = usePermission();
@@ -201,7 +203,7 @@ export function MallStoresPage() {
     setError(null);
     try {
       const [res, glob, cats, floorRows, location] = await Promise.all([
-        apiMallStoresList(accessToken, tenantId, mallId, { search: search || undefined, limit: 100 }),
+        apiMallStoresList(accessToken, tenantId, mallId, { kind, search: search || undefined, limit: 100 }),
         apiGlobalStoresList(accessToken, tenantId, { limit: 100, status: 'ACTIVE' }),
         apiStoreCategoriesList(accessToken, tenantId, mallId, { activeOnly: true }),
         apiMallFloorsList(accessToken, tenantId, mallId),
@@ -218,7 +220,7 @@ export function MallStoresPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, tenantId, mallId, search]);
+  }, [accessToken, tenantId, mallId, search, kind]);
 
   useEffect(() => {
     void load();
@@ -337,6 +339,7 @@ export function MallStoresPage() {
     setDetailTitle('');
     setLocalDescription('');
     setFloorIds([]);
+    setFormKind(kind);
     setCustomFloor('');
     setUseCustomFloor(false);
     setStoreNo('');
@@ -360,6 +363,7 @@ export function MallStoresPage() {
     setCategoryId(m.categoryId ?? m.category?.id ?? '');
     setDetailTitle(m.detailTitle ?? '');
     setLocalDescription(m.localDescription ?? '');
+    setFormKind(m.kind ?? 'STORE');
     setFloorIds(m.floors?.map(f => f.id) ?? (m.floorId ? [m.floorId] : []));
     setCustomFloor(m.floor && !m.floorId ? m.floor : '');
     setUseCustomFloor(Boolean(m.floor && !m.floorId));
@@ -411,6 +415,7 @@ export function MallStoresPage() {
 
       if (editing) {
         const u = await apiMallStoreUpdate(accessToken, tenantId, mallId, editing.id, {
+          kind: formKind,
           detailTitle: detailTitle.trim() || null,
           localDescription: localDescription.trim() || null,
           ...floorPayload,
@@ -426,7 +431,7 @@ export function MallStoresPage() {
           searchTags: parseSearchTags(searchTagsText),
           categoryId: categoryId || null,
         });
-        setItems((prev) => prev.map((x) => (x.id === u.id ? u : x)));
+        setItems((prev) => prev.map((x) => (x.id === u.id ? u : x)).filter(x => x.kind === kind));
         await flushMallStoreTranslations(u.id);
       } else {
         if (!globalStoreId) {
@@ -436,6 +441,7 @@ export function MallStoresPage() {
         }
         const c = await apiMallStoreAssign(accessToken, tenantId, mallId, {
           globalStoreId,
+          kind: formKind,
           detailTitle: detailTitle.trim() || undefined,
           localDescription: localDescription.trim() || undefined,
           ...(useCustomFloor
@@ -457,10 +463,11 @@ export function MallStoresPage() {
         setTotal((t) => t + 1);
         await flushMallStoreTranslations(c.id);
       }
+      await load();
       setShowAssign(false);
       setLocaleDrafts({});
       setI18nDirty(false);
-      toast.success(editing ? 'AVM mağazası güncellendi' : 'Mağaza AVM\'ye atandı');
+      toast.success(editing ? (restaurant ? 'Restoran güncellendi' : 'AVM mağazası güncellendi') : (restaurant ? 'Restoran AVM’ye eklendi' : 'Mağaza AVM\'ye atandı'));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Kayıt hatası');
     } finally {
@@ -499,9 +506,9 @@ export function MallStoresPage() {
 
   return (
     <LocationScopedModuleShell
-      title="AVM Mağazaları"
-      meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} mağaza</span>}
-      headerAction={<Button variant="primary" onClick={openAssign}>+ Mağaza Ata</Button>}
+      title={restaurant ? "Restoranlar" : "AVM Mağazaları"}
+      meta={<span style={{ fontSize: 12, color: '#6b7280' }}>{total} {restaurant ? 'restoran' : 'mağaza'}</span>}
+      headerAction={<Button variant="primary" onClick={openAssign}>{restaurant ? '+ Restoran Ekle' : '+ Mağaza Ata'}</Button>}
       search={{
         value: search,
         onChange: setSearch,
@@ -514,7 +521,7 @@ export function MallStoresPage() {
 
       {showAssign && (
         <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, marginBottom: 16, background: '#fafafa' }}>
-          <h3 style={{ marginTop: 0, fontSize: 14 }}>{editing ? 'AVM mağaza detayı' : 'Global mağazayı AVM\'ye ata'}</h3>
+          <h3 style={{ marginTop: 0, fontSize: 14 }}>{editing ? (restaurant ? 'Restoran detayı' : 'AVM mağaza detayı') : (restaurant ? 'Havuzdan restoranı AVM’ye ekle' : 'Global mağazayı AVM\'ye ata')}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, maxWidth: 800 }}>
             <div style={{ gridColumn: '1 / -1' }}>
               {!editing ? (
@@ -612,6 +619,11 @@ export function MallStoresPage() {
               )}
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Kayıt türü
+                <select value={formKind} onChange={e => setFormKind(e.target.value as 'STORE' | 'RESTAURANT')} disabled={saving} style={{ display: 'block', width: '100%', padding: 8, margin: '6px 0 16px' }}>
+                  <option value="STORE">Mağaza</option><option value="RESTAURANT">Restoran</option>
+                </select>
+              </label>
               <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Kat</label>
               {!useCustomFloor ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: 8 }}>
