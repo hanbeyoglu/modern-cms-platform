@@ -836,3 +836,14 @@ dil çevirileri bunu ezmez. Diğer dillerde çeviri ve varsayılan dil yedeği k
 Çeviri değişiklikleri ana sayfa gibi cache'lenen toplu public yanıtları da temizler.
 Web sitesi kendi HTML/veri cache'ini kullanıyorsa onun da yeniden doğrulanması
 veya bu istekler için `cache: 'no-store'` kullanması gerekir.
+
+### Web sitesi domainlerini panelden yönetme
+
+İlgili tenant altında **API Yönetimi → İzinli Domainler** alanına yalnızca
+hostname ekleyin: `metrogarden.hanbeyoglu.com` (şema, port, yol veya `*` olmadan).
+Bu alan public API CORS izinlerini de besler; yeni site için `.env.production`
+düzenlemek gerekmez. İzin yalnız `/public/*` yollarında geçerlidir. OPTIONS,
+API anahtarı olmadan doğru CORS başlıklarını döndürebilir; gerçek GET/POST isteğinde
+API anahtarı, tenant ve izinli domain kontrolleri devam eder. Domainin silinmesi
+sonraki istekte uygulanır. Ortam değişkenindeki sabit origin izinleri ayrı kalır;
+panelden kaldırılan domain ayrıca `CORS_ORIGINS` içinde tanımlıysa o sabit izin sürer.

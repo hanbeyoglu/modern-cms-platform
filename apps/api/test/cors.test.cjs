@@ -116,3 +116,41 @@ test('buildCorsOptions keeps credentials disabled and lists required headers/met
   assert.ok(options.allowedHeaders.includes('Authorization'));
   assert.ok(options.allowedHeaders.includes('x-api-key'));
 });
+
+test('Nest HTTP preflight and unauthorized route both retain the allowed origin before auth', async () => {
+  require('reflect-metadata');
+  const { Controller, Get, Module, UnauthorizedException } = require('@nestjs/common');
+  const { NestFactory } = require('@nestjs/core');
+  let routeCalls = 0;
+  class CorsProbeController {
+    siteConfig() { routeCalls += 1; throw new UnauthorizedException('API key required'); }
+  }
+  Controller('public')(CorsProbeController);
+  Get('site-config')(CorsProbeController.prototype, 'siteConfig', Object.getOwnPropertyDescriptor(CorsProbeController.prototype, 'siteConfig'));
+  class CorsProbeModule {}
+  Module({ controllers: [CorsProbeController] })(CorsProbeModule);
+  const app = await NestFactory.create(CorsProbeModule, { logger: false });
+  app.enableCors(buildCorsOptions('localhost,https://modern-cms.hanbeyoglu.com,https://metrogarden.hanbeyoglu.com'));
+  try {
+    await app.listen(0, '127.0.0.1');
+    const url = `${await app.getUrl()}/public/site-config?locale=tr`;
+    const origin = 'https://metrogarden.hanbeyoglu.com';
+    const options = await fetch(url, { method: 'OPTIONS', headers: {
+      Origin: origin,
+      'Access-Control-Request-Method': 'GET',
+      'Access-Control-Request-Headers': 'accept,x-api-key,x-tenant-id,x-mall-id',
+    } });
+    assert.equal(options.status, 204);
+    assert.equal(options.headers.get('access-control-allow-origin'), origin);
+    assert.equal(routeCalls, 0);
+    const unauthorized = await fetch(url, { headers: { Origin: origin } });
+    assert.equal(unauthorized.status, 401);
+    assert.equal(unauthorized.headers.get('access-control-allow-origin'), origin);
+    await unauthorized.arrayBuffer();
+    const rejected = await fetch(url, { headers: { Origin: 'https://metrogarden.hanbeyoglu.com.evil.example' } });
+    assert.equal(rejected.headers.get('access-control-allow-origin'), null);
+    await rejected.arrayBuffer();
+  } finally {
+    await app.close();
+  }
+});

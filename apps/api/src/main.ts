@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { buildCorsOptions } from './common/cors-options';
+import { PublicCorsService } from './common/public-cors.service';
 import { join } from 'node:path';
 import { mkdirSync, existsSync } from 'node:fs';
 import { Logger, ValidationPipe } from '@nestjs/common';
@@ -98,7 +98,7 @@ async function bootstrap() {
   // enableCors registers Express cors middleware early so OPTIONS preflight
   // is answered before JwtAuthGuard / PublicApiKeyGuard run.
   const corsOrigins = config.get<string>('CORS_ORIGINS', '');
-  app.enableCors(buildCorsOptions(corsOrigins));
+  app.enableCors(app.get(PublicCorsService).createOptions(corsOrigins));
 
   app.enableShutdownHooks();
 

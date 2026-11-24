@@ -28,7 +28,7 @@ export const CORS_ALLOWED_METHODS = [
 export function buildCorsOptions(corsOriginsEnv: string): CorsOptions {
   const trimmed = corsOriginsEnv.trim();
   return {
-    origin: trimmed.length > 0 ? parseCorsOrigins(trimmed) : true,
+    origin: trimmed.length > 0 ? parseCorsOrigins(trimmed) : false,
     methods: [...CORS_ALLOWED_METHODS],
     allowedHeaders: [...CORS_ALLOWED_HEADERS],
     credentials: false,

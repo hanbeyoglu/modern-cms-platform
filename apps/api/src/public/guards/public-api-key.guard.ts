@@ -12,9 +12,6 @@ import { PublicCacheService } from '../cache/public-cache.service';
 
 const RATE_LIMIT_WINDOW_SECONDS = 60;
 const RATE_LIMIT_CACHE_PREFIX = 'ratelimit:';
-// Cache allowed domains for 60s to avoid DB hits on every request
-const DOMAIN_CACHE_TTL = 60;
-const DOMAIN_CACHE_PREFIX = 'allowed_domains:';
 // Cache rate limit setting for 120s
 const RATE_LIMIT_SETTING_CACHE_TTL = 120;
 const RATE_LIMIT_SETTING_CACHE_PREFIX = 'ratelimit_cfg:';
@@ -162,13 +159,8 @@ export class PublicApiKeyGuard implements CanActivate {
   }
 
   private async getAllowedDomains(tenantId: string): Promise<string[]> {
-    const cacheKey = `${DOMAIN_CACHE_PREFIX}${tenantId}`;
-    const cached = await this.cache.get<string[]>(cacheKey);
-    if (cached !== null) return cached;
-
-    const domains = await this.developerApi.getAllowedDomains(tenantId);
-    await this.cache.set(cacheKey, domains, DOMAIN_CACHE_TTL);
-    return domains;
+    // Domain changes in API Management must apply immediately, including removals.
+    return this.developerApi.getAllowedDomains(tenantId);
   }
 
   private async getRateLimit(tenantId: string): Promise<number> {

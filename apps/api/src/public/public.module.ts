@@ -1,3 +1,4 @@
+import { PublicCorsService } from '../common/public-cors.service';
 import { ContactMessagesModule } from '../contact-messages/contact-messages.module';
 import { PublicContactMessagesController } from './public-contact-messages.controller';
 import { ContactRateLimitGuard } from './guards/contact-rate-limit.guard';
@@ -17,7 +18,7 @@ import { PublicApiKeyGuard } from './guards/public-api-key.guard';
 @Module({
   imports: [PublicCacheModule, ContactMessagesModule, PrismaModule, TranslationResolverModule, MallLocalesModule, SearchModule, MediaModule, DeveloperApiModule],
   controllers: [PublicController, PublicContactMessagesController],
-  providers: [ContactRateLimitGuard, PublicContextService, PublicContentService, PublicApiKeyGuard],
-  exports: [PublicCacheModule],
+  providers: [PublicCorsService, ContactRateLimitGuard, PublicContextService, PublicContentService, PublicApiKeyGuard],
+  exports: [PublicCacheModule, PublicCorsService],
 })
 export class PublicModule {}

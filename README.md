@@ -215,3 +215,32 @@ veritabanı migration’ları otomatik geri alınmaz.
 
 Yerel doğrulama: `pnpm test:infra`. GitHub secrets/variables eklenmeden ve GHCR
 sunucu erişimi kurulmadan canlı otomatik yayın başlamaz.
+
+### Canlı CORS origin listesi
+
+Yeni web sitelerini CMS panelindeki **API Yönetimi → İzinli Domainler** bölümünden,
+ilgili tenant seçiliyken ekleyin (ör. `metrogarden.hanbeyoglu.com`). Bu kayıtlar
+`/public/*` için hem CORS hem tenant API anahtarı domain kontrolünde kullanılır.
+Panel değişiklikleri sonraki istekte uygulanır; build/restart gerekmez. Kayıtlı
+hostname tam eşleşir; alt domainler otomatik açılmaz. HTTP/HTTPS originleri ve
+portlar hostname bazında çalışır. Pasif/silinmiş tenant domainleri CORS izni vermez.
+OPTIONS isteği API anahtarı taşımaz; kayıtlı domain kontrolü preflight öncesinde
+yapılır, gerçek istekte API anahtarı/tenant kontrolleri ayrıca devam eder.
+Yönetim/auth endpoint'leri panelde eklenen domainlerle açılmaz.
+
+`CORS_ORIGINS` admin paneli ve sunucu seviyesindeki sabit izinler için kalır.
+Mevcut sabit izinler korunur; panelden domain silmek bunları kaldırmaz. Bir web
+sitesini tamamen panelden yönetmek için panel kaydını ekledikten sonra aynı origin'i
+sunucu listesinden bir kez çıkarın. Boş env/listeler tüm interneti açmaz.
+
+Sunucu seviyesindeki bir origin değiştirilecekse:
+
+`CORS_ORIGINS` çalışan API container'ına `.env.production` üzerinden aktarılır.
+`.env.production.example` değişiklikleri sunucudaki gerçek ayar dosyasını güncellemez.
+Web sitesi origin'ini (örneğin `https://metrogarden.hanbeyoglu.com`, son `/` olmadan)
+mevcut virgülle ayrılmış listeye ekleyin; diğer izinleri koruyun. Ayar değiştikten
+sonra API container'ı yeniden oluşturulmalıdır; `docker restart` yeni ortam
+değişkenlerini yüklemez. GHCR dağıtımında yeniden oluştururken çalışan imaj
+referansını `CMS_API_IMAGE` ile koruyun veya sonraki başarılı Actions dağıtımını kullanın.
+CORS, API anahtarı kontrolünden bağımsızdır: izinli origin için preflight `204`
+ve anahtarsız `GET` yanıtı `401` olsa da `Access-Control-Allow-Origin` bulunmalıdır.

@@ -364,8 +364,12 @@ function AllowedDomainsTab({ token, tenantId, canEdit }: { token: string; tenant
   return (
     <div>
       <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280' }}>
-        Public API isteklerinin kabul edileceği domain'leri tanımlayın. Boş bırakılırsa tüm origin'lere izin verilir.
-        Wildcard (<code>*</code>) desteklenmez.
+        Web sitenizin domainini ekleyin; public API için CORS izni de otomatik tanımlanır.
+        Değişiklikler sunucuyu yeniden başlatmadan sonraki istekte uygulanır. HTTPS/HTTP öneki,
+        port veya yol yazmayın; örneğin <code>metrogarden.hanbeyoglu.com</code>.
+        Alt domainler ayrı eklenmelidir; wildcard (<code>*</code>) desteklenmez.
+        Bu izin yalnızca public API içindir; API anahtarı ve tenant kontrolleri devam eder.
+        Sunucu ortamında ayrıca izin verilmiş originler bu listeden bağımsızdır.
       </p>
 
       {canEdit && (
@@ -374,7 +378,7 @@ function AllowedDomainsTab({ token, tenantId, canEdit }: { token: string; tenant
             value={newDomain}
             onChange={(e) => setNewDomain(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') void handleAdd(); }}
-            placeholder="örn: www.emaar.com.tr, localhost"
+            placeholder="metrogarden.hanbeyoglu.com"
             style={{ flex: 1, padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13 }}
           />
           <button
@@ -392,7 +396,7 @@ function AllowedDomainsTab({ token, tenantId, canEdit }: { token: string; tenant
       ) : domains.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af', fontSize: 14 }}>
           <div style={{ fontSize: 28, marginBottom: 8 }}>🌐</div>
-          Domain eklenmemiş — tüm origin'lere izin veriliyor
+          Henüz web sitesi eklenmemiş. Tarayıcı erişimi için domain ekleyin.
         </div>
       ) : (
         <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
