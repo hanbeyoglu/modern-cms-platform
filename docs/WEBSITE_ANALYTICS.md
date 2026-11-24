@@ -146,3 +146,25 @@ filtrelerinde Mağazalar + Tıklamalar seçilince sıralamanın 2/1 olduğunu do
 Aynı clientEventId ile isteği tekrarlayıp sayının artmadığını kontrol edin.
 Etkinlik/kampanya/sinema/film ve genel menü bağlantısı için aynı kontrolü yapın.
 Başka AVM'nin entityId'si ve sahte tenant header'ı kabul edilmemelidir.
+
+## 403: Raporlama özelliği etkin değil
+
+Bu hata CORS veya admin JWT hatası değildir. Public anahtar ve domain guard'larından
+sonra, doğrulanmış tenant'ın `TenantCapability` kaydında `analytics` için
+`enabled: true` bulunmadığında üretilir. Eksik kayıt da kapalı kabul edilir.
+Aktif public API anahtarı tek başına raporlama özelliğini açmaz.
+
+Süper yönetici **Platform → Lisanslar** ekranında ilgili müşteriyi seçip
+**Raporlama (analytics)** özelliğini etkinleştirmelidir. Mevcut yönetim API'siyle
+aynı işlem `PATCH /tenants/:tenantId/capabilities` üzerinden yapılabilir:
+
+```json
+{ "capabilities": [{ "code": "analytics", "enabled": true }] }
+```
+
+Bu işlem süper yönetici JWT'si ve `capability:update` yetkisi gerektirir;
+bu JWT web sitesine konulmaz. Diğer özellikler değiştirilmez. Özellik kontrolü
+cache kullanmadığından etkinleştirme sonrası track isteği hemen tekrar denenebilir.
+Web isteğinde admin rolü/JWT gerekmez; anahtar, domain, tenant/AVM doğrulaması,
+oran sınırları ve içerik sahipliği kontrolleri aynen geçerlidir. Özelliği tüm
+tenant'lar için otomatik açmak veya veritabanını seed etmek çözüm olarak kullanılmaz.

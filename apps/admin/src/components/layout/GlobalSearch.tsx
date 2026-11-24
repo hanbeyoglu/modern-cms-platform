@@ -1,219 +1,225 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useId, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { usePermission } from '../../hooks/usePermission';
-import { apiGlobalSearch, type GlobalSearchHit, type GlobalSearchResponse } from '../../lib/api/search';
+import { useCapability } from '../../hooks/useCapability';
+import {
+  apiGlobalSearch,
+  type GlobalSearchHit,
+  type GlobalSearchResponse,
+} from '../../lib/api/search';
+import './global-search.css';
 
-const DEBOUNCE_MS = 320;
-
-const GROUP_ORDER: Array<{ key: keyof GlobalSearchResponse; label: string }> = [
+const GROUPS: Array<{ key: keyof GlobalSearchResponse; label: string }> = [
   { key: 'pages', label: 'Sayfalar' },
   { key: 'events', label: 'Etkinlikler' },
   { key: 'campaigns', label: 'Kampanyalar' },
   { key: 'stores', label: 'Mağazalar' },
   { key: 'movies', label: 'Filmler' },
   { key: 'cinemas', label: 'Sinemalar' },
-  { key: 'sliders', label: 'Sliderlar' },
+  { key: 'sliders', label: 'Slaytlar' },
 ];
+const LABELS: Record<GlobalSearchHit['entityType'], string> = {
+  PAGE: 'Sayfa',
+  EVENT: 'Etkinlik',
+  CAMPAIGN: 'Kampanya',
+  GLOBAL_STORE: 'Mağaza havuzu',
+  MALL_STORE: 'AVM mağazası',
+  MOVIE: 'Film',
+  CINEMA: 'Sinema',
+  SLIDER: 'Slayt',
+};
+const STATUS: Record<string, string> = {
+  PUBLISHED: 'Yayında',
+  DRAFT: 'Taslak',
+  ARCHIVED: 'Arşivde',
+  ACTIVE: 'Aktif',
+  PASSIVE: 'Pasif',
+  SCHEDULED: 'Zamanlanmış',
+  LIVE: 'Canlı',
+};
+type Result = { key: string; data?: GlobalSearchResponse; error?: boolean };
 
-function entityBadge(t: GlobalSearchHit['entityType']): string {
-  const m: Record<GlobalSearchHit['entityType'], string> = {
-    PAGE: 'Sayfa',
-    EVENT: 'Etkinlik',
-    CAMPAIGN: 'Kampanya',
-    GLOBAL_STORE: 'Global mağaza',
-    MALL_STORE: 'AVM mağazası',
-    MOVIE: 'Film',
-    CINEMA: 'Sinema',
-    SLIDER: 'Slider',
-  };
-  return m[t] ?? t;
-}
-
-type Props = { variant?: 'header' | 'page' };
-
-export function GlobalSearch({ variant = 'header' }: Props) {
+export function GlobalSearch({ variant = 'header' }: { variant?: 'header' | 'page' }) {
   const { accessToken, activeTenantId, activeMallId } = useAuth();
   const { can } = usePermission();
+  const { has } = useCapability();
+  const location = useLocation();
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-
+  const panelId = useId();
   const [q, setQ] = useState('');
-  const [debounced, setDebounced] = useState('');
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<GlobalSearchResponse | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  const allowed = can('search:global') && !!accessToken && !!activeTenantId;
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setDebounced(q.trim()), DEBOUNCE_MS);
-    return () => window.clearTimeout(t);
-  }, [q]);
-
-  const fetchSearch = useCallback(async () => {
-    if (!allowed || debounced.length < 1) {
-      setData(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setErr(null);
-    try {
-      const res = await apiGlobalSearch(accessToken!, activeTenantId!, activeMallId ?? undefined, {
-        q: debounced,
-        limit: 6,
-      });
-      setData(res);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Arama başarısız');
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [allowed, accessToken, activeTenantId, activeMallId, debounced]);
+  const [result, setResult] = useState<Result | null>(null);
+  const [retry, setRetry] = useState(0);
+  const allowed = can('search:global') && has('search') && !!accessToken && !!activeTenantId;
+  const query = q.trim();
+  // Results are tied to the complete context, including token changes on re-login.
+  const key = JSON.stringify([accessToken, activeTenantId, activeMallId, query, retry]);
+  const current = result?.key === key ? result : null;
+  const isPage = variant === 'page';
+  const loading = query.length > 0 && !current;
 
   useEffect(() => {
-    void fetchSearch();
-  }, [fetchSearch]);
-
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    if (!allowed || !query) return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void apiGlobalSearch(accessToken!, activeTenantId!, activeMallId ?? undefined, {
+        q: query,
+        limit: isPage ? 20 : 6,
+      })
+        .then((data) => {
+          if (!cancelled) setResult({ key, data });
+        })
+        .catch(() => {
+          if (!cancelled) setResult({ key, error: true });
+        });
+    }, 320);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
     };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, []);
+  }, [allowed, accessToken, activeTenantId, activeMallId, query, key, isPage]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
-        e.preventDefault();
-        inputRef.current?.focus();
+    setOpen(false);
+    setQ(isPage ? (new URLSearchParams(location.search).get('q') ?? '').slice(0, 200) : '');
+    setResult(null);
+  }, [location.pathname, location.search, activeTenantId, activeMallId, isPage]);
+  useEffect(() => {
+    const onClick = (event: MouseEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+      // Header search is hidden on phones and duplicated on the search page.
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === 'k' &&
+        inputRef.current?.getClientRects().length
+      ) {
+        if (variant === 'header' && location.pathname === '/search') return;
+        event.preventDefault();
+        inputRef.current.focus();
         setOpen(true);
       }
     };
+    document.addEventListener('mousedown', onClick);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [location.pathname, variant]);
 
   if (!allowed) return null;
-
-  const isPage = variant === 'page';
-  const showPanel = isPage ? debounced.length >= 1 : open && debounced.length >= 1;
-
+  const groups = GROUPS.map((group) => ({ ...group, hits: current?.data?.[group.key] ?? [] }));
+  const count = groups.reduce((sum, group) => sum + group.hits.length, 0);
+  const show = (isPage || open) && !!query;
   return (
     <div
       ref={wrapRef}
-      style={{
-        position: 'relative',
-        flex: isPage ? '1 1 auto' : '1 1 280px',
-        maxWidth: isPage ? 720 : 400,
-        minWidth: isPage ? 280 : 200,
+      className={`cms-global-search ${isPage ? 'cms-global-search--page' : ''}`}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
       }}
     >
-      <input
-        ref={inputRef}
-        type="search"
-        autoComplete="off"
-        placeholder="Ara… (⌘K / Ctrl+K)"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        onFocus={() => setOpen(true)}
-        aria-label="Genel arama"
-        style={{
-          width: '100%',
-          height: 36,
-          padding: '0 12px',
-          borderRadius: 8,
-          border: '1px solid #e5e7eb',
-          fontSize: 14,
-          outline: 'none',
-          boxSizing: 'border-box',
-        }}
-      />
-
-      {showPanel && (
-        <div
-          style={{
-            position: isPage ? 'relative' : 'absolute',
-            left: 0,
-            right: 0,
-            top: isPage ? 12 : 40,
-            marginTop: isPage ? 0 : 0,
-            background: '#fff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 8,
-            boxShadow: isPage ? 'none' : '0 8px 24px rgba(0,0,0,0.08)',
-            maxHeight: isPage ? 'none' : 380,
-            overflowY: isPage ? 'visible' : 'auto',
-            zIndex: 50,
-            padding: 12,
+      <div className="cms-global-search__input">
+        <span aria-hidden="true">⌕</span>
+        <input
+          ref={inputRef}
+          type="search"
+          autoComplete="off"
+          maxLength={200}
+          placeholder="İçerik veya mağaza ara…"
+          value={q}
+          onChange={(event) => {
+            setQ(event.target.value);
+            setOpen(true);
           }}
+          onFocus={() => setOpen(true)}
+          aria-label="Genel arama"
+          aria-controls={show ? panelId : undefined}
+          aria-expanded={show}
+        />
+        {!q && <kbd aria-hidden="true">⌘K / Ctrl+K</kbd>}
+      </div>
+      {isPage && !query && (
+        <p className="cms-global-search__hint">
+          Başlık veya mağaza adı yazarak başlayın. Yalnızca erişiminiz olan kayıtlar aranır.
+        </p>
+      )}
+      {show && (
+        <section
+          id={panelId}
+          aria-label="Arama sonuçları"
+          aria-busy={loading}
+          className="cms-global-search__panel"
         >
-          {loading && <div style={{ color: '#6b7280', fontSize: 13 }}>Aranıyor…</div>}
-          {err && <div style={{ color: '#b91c1c', fontSize: 13 }}>{err}</div>}
-          {!loading && !err && debounced.length >= 1 && GROUP_ORDER.every(({ key }) => (data?.[key] ?? []).length === 0) && (
-            <div style={{ color: '#6b7280', fontSize: 13 }}>Sonuç bulunamadı.</div>
-          )}
-          {!loading &&
-            !err &&
-            GROUP_ORDER.map(({ key, label }) => {
-              const hits = data?.[key] ?? [];
-              if (hits.length === 0) return null;
-              return (
-                <div key={key} style={{ marginBottom: 12 }}>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: '#9ca3af',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
-                      marginBottom: 6,
-                    }}
-                  >
-                    {label}
-                  </div>
-                  <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                    {hits.map((hit) => (
-                      <li key={`${hit.entityType}:${hit.id}`} style={{ marginBottom: 4 }}>
-                        <Link
-                          to={hit.url}
-                          onClick={() => {
-                            setOpen(false);
-                            setQ('');
-                          }}
-                          style={{
-                            display: 'block',
-                            padding: '8px 10px',
-                            borderRadius: 6,
-                            textDecoration: 'none',
-                            color: '#111827',
-                            fontSize: 13,
-                            lineHeight: 1.35,
-                          }}
-                        >
-                          <div style={{ fontWeight: 500 }}>{hit.title}</div>
-                          <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
-                            {entityBadge(hit.entityType)}
-                            {hit.mallName ? ` · ${hit.mallName}` : ''}
-                            <span style={{ marginLeft: 6, opacity: 0.7 }}>· skor {hit.score}</span>
-                          </div>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          {isPage && (
-            <div style={{ marginTop: 8, fontSize: 12, color: '#9ca3af' }}>
-              Daha fazla sonuç için sorguyu daraltın veya ilgili modül listelerini kullanın.
+          <div role="status" aria-live="polite" className="cms-global-search__summary">
+            {loading
+              ? 'Aranıyor…'
+              : current?.error
+                ? 'Arama tamamlanamadı.'
+                : `${count} sonuç · Seçili çalışma alanı`}
+          </div>
+          {current?.error && (
+            <div className="cms-global-search__message" role="alert">
+              Arama sonuçlarına ulaşılamadı. Bağlantınızı ve arama özelliğinin etkin olduğunu
+              kontrol edin.
+              <button type="button" onClick={() => setRetry((value) => value + 1)}>
+                Tekrar dene
+              </button>
             </div>
           )}
-        </div>
+          {!loading && !current?.error && !count && (
+            <div className="cms-global-search__message">
+              “{query}” için sonuç bulunamadı. Farklı bir ad veya kelime deneyin.
+            </div>
+          )}
+          {!loading &&
+            !current?.error &&
+            groups.map(
+              ({ key: groupKey, label, hits }) =>
+                hits.length > 0 && (
+                  <div key={groupKey} className="cms-global-search__group">
+                    <h3>
+                      {label}
+                      <span>{hits.length}</span>
+                    </h3>
+                    <ul>
+                      {hits.map((hit) => (
+                        <li key={`${hit.entityType}:${hit.id}`}>
+                          <Link
+                            to={hit.url}
+                            onClick={() => {
+                              setOpen(false);
+                              setQ('');
+                            }}
+                          >
+                            <span className="cms-global-search__title">{hit.title}</span>
+                            <span className="cms-global-search__meta">
+                              {LABELS[hit.entityType]}
+                              {hit.mallName ? ` · ${hit.mallName}` : ''}
+                              {STATUS[hit.status] ? ` · ${STATUS[hit.status]}` : ''}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ),
+            )}
+          {!loading && !current?.error && count > 0 && (
+            <div className="cms-global-search__footer">
+              {isPage ? (
+                'Her tür için en fazla 20 sonuç gösterilir. Daha kesin sonuç için aramanızı daraltın.'
+              ) : (
+                <Link to={`/search?q=${encodeURIComponent(query)}`}>Tüm sonuçları göster →</Link>
+              )}
+            </div>
+          )}
+        </section>
       )}
     </div>
   );

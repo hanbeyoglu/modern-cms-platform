@@ -410,10 +410,10 @@ function EmptyMalls({ isSuperAdmin, onCreateMall }: { isSuperAdmin: boolean; onC
       </div>
       <div>
         <div style={{ fontWeight: 800, fontSize: 17, color: '#111827', marginBottom: 6 }}>
-          Henüz AVM Bulunmuyor
+          {isSuperAdmin ? 'Henüz AVM Bulunmuyor' : 'Erişebileceğiniz AVM bulunmuyor'}
         </div>
         <div style={{ fontSize: 13, color: '#6b7280', maxWidth: 280, lineHeight: 1.6 }}>
-          Bu tenant altında ilk AVM'nizi oluşturun.
+          {isSuperAdmin ? 'Bu tenant altında ilk AVM’nizi oluşturun.' : 'Yöneticinizden kullanıcı üyeliğinize AVM erişimi tanımlamasını isteyin. Rol atanması tek başına AVM erişimi sağlamaz.'}
         </div>
       </div>
       {isSuperAdmin && (

@@ -58,7 +58,10 @@ export class AnalyticsService {
       where: { tenantId, enabled: true, capability: { code: 'analytics' } },
       select: { id: true },
     });
-    if (!enabled) throw new ForbiddenException('Raporlama özelliği etkin değil');
+    if (!enabled)
+      throw new ForbiddenException(
+        'Bu müşteri için Raporlama (analytics) özelliği etkin değil. Süper yönetici müşteri özelliklerinden etkinleştirmelidir.',
+      );
     const supportedEntities = EVENT_ENTITIES[dto.eventType];
     if (!supportedEntities?.includes(dto.entityType))
       throw new BadRequestException('Olay ve içerik türü uyumsuz');

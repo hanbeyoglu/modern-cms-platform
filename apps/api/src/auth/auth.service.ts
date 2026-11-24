@@ -186,7 +186,7 @@ export class AuthService {
             coverMedia: mall.coverMedia,
           }));
         } else {
-          malls = m.mallAccess.map((a) => ({
+          malls = m.mallAccess.filter((a) => a.mall.tenantId === m.tenantId && a.mall.deletedAt === null).map((a) => ({
             id: a.mall.id,
             name: a.mall.name,
             slug: a.mall.slug,

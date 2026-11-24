@@ -91,7 +91,7 @@ export class SearchService {
     const perCap = Math.min(Math.max(limitPerGroup, 1), 20);
 
     for (const r of filtered) {
-      const mall = r.mallId ? mallMap.get(r.mallId) ?? null : null;
+      const mall = r.mallId ? (mallMap.get(r.mallId) ?? null) : null;
       const hit = this.mapper.toAdminHit(r, mall);
       switch (r.entityType as SearchIndexEntityType) {
         case 'PAGE':
@@ -129,11 +129,13 @@ export class SearchService {
     tenantId: string,
     headerMallId?: string | null,
   ): Promise<Prisma.Sql> {
-    if (user.isSuperAdmin) {
-      return headerMallId
-        ? Prisma.sql`(s."mallId" IS NULL OR s."mallId" = ${headerMallId} OR s."entityType" IN ('GLOBAL_STORE'::"SearchIndexEntityType", 'MOVIE'::"SearchIndexEntityType"))`
-        : Prisma.sql`TRUE`;
+    // An explicit workspace must never widen into the user's other malls.
+    if (headerMallId) {
+      await this.access.assertMallAccess(user, tenantId, headerMallId);
+      return Prisma.sql`(s."mallId" IS NULL OR s."mallId" = ${headerMallId} OR s."entityType" IN ('GLOBAL_STORE'::"SearchIndexEntityType", 'MOVIE'::"SearchIndexEntityType"))`;
     }
+
+    if (user.isSuperAdmin) return Prisma.sql`TRUE`;
 
     const tenantUser = await this.prisma.tenantUser.findFirst({
       where: { userId: user.id, tenantId, deletedAt: null },
@@ -143,11 +145,7 @@ export class SearchService {
       return Prisma.sql`FALSE`;
     }
 
-    if (ALL_MALLS_ROLE_CODES.has(tenantUser.role.code)) {
-      return headerMallId
-        ? Prisma.sql`(s."mallId" IS NULL OR s."mallId" = ${headerMallId} OR s."entityType" IN ('GLOBAL_STORE'::"SearchIndexEntityType", 'MOVIE'::"SearchIndexEntityType"))`
-        : Prisma.sql`TRUE`;
-    }
+    if (ALL_MALLS_ROLE_CODES.has(tenantUser.role.code)) return Prisma.sql`TRUE`;
 
     const accesses = await this.prisma.userMallAccess.findMany({
       where: { tenantUserId: tenantUser.id },
@@ -156,13 +154,6 @@ export class SearchService {
     const mallIds = accesses.map((a) => a.mallId);
     if (mallIds.length === 0) {
       return Prisma.sql`(s."mallId" IS NULL OR s."entityType" IN ('GLOBAL_STORE'::"SearchIndexEntityType", 'MOVIE'::"SearchIndexEntityType"))`;
-    }
-
-    const headerOk =
-      headerMallId && mallIds.includes(headerMallId) ? headerMallId : null;
-
-    if (headerOk) {
-      return Prisma.sql`(s."mallId" IS NULL OR s."mallId" = ${headerOk} OR s."entityType" IN ('GLOBAL_STORE'::"SearchIndexEntityType", 'MOVIE'::"SearchIndexEntityType") OR s."mallId" IN (${Prisma.join(mallIds)}))`;
     }
 
     return Prisma.sql`(s."mallId" IS NULL OR s."entityType" IN ('GLOBAL_STORE'::"SearchIndexEntityType", 'MOVIE'::"SearchIndexEntityType") OR s."mallId" IN (${Prisma.join(mallIds)}))`;

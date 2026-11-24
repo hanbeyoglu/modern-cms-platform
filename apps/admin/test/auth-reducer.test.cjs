@@ -91,3 +91,16 @@ test('user choice and failures clear pending scope', () => {
   s = authReducer(s, { type: 'SET_MALLS_FAILED', tenantId: 'tA', error: 'x' });
   assert.deepEqual(plain([s.activeMallId, s.pendingMallId]), [null, null]);
 });
+
+test('fresh normal-user login resolves one AVM, requests a choice for many, and never invents missing access', () => {
+  for (const ids of [[], ['m1'], ['m1', 'm2']]) {
+    const signedIn = authReducer(restored('old-tenant', 'old-mall'), {
+      type: 'SET_SESSION', accessToken: 'new-token', refreshToken: 'refresh', email: 'member@example.test',
+    });
+    const result = authReducer(signedIn, { type: 'SET_PROFILE', user: member(ids), tenants: [tenantA] });
+    assert.equal(result.activeTenantId, 'tA');
+    assert.equal(result.activeMallId, ids.length === 1 ? 'm1' : null);
+    assert.deepEqual(plain(result.malls.map(m => m.id)), ids);
+    assert.equal(result.pendingMallId, null);
+  }
+});

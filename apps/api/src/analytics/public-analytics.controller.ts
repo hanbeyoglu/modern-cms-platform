@@ -29,6 +29,10 @@ export class PublicAnalyticsController {
     description: 'Event accepted: { success: true, data: { accepted: true } }',
   })
   @ApiResponse({ status: 429, description: 'IP or tenant rate limit reached' })
+  @ApiResponse({
+    status: 403,
+    description: 'Origin or tenant mismatch, or analytics capability disabled for the tenant. An admin JWT is not required; a super administrator must enable analytics using tenant capabilities.',
+  })
   async track(@Req() req: Request, @Body() dto: TrackAnalyticsDto) {
     await this.analytics.track(req, dto);
     return { success: true, data: { accepted: true } };

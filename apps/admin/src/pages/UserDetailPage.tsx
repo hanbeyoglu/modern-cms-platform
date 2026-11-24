@@ -10,6 +10,8 @@ import {
   apiUserUpdateMembership,
   apiUserRemoveMembership,
   apiRolesList,
+  apiMalls,
+  type Mall,
   apiUserResetPassword,
   type CmsUser,
   type CmsRole,
@@ -32,6 +34,10 @@ export function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showAddMembership, setShowAddMembership] = useState(false);
   const [membershipForm, setMembershipForm] = useState({ tenantId: '', roleId: '', mallIds: [] as string[] });
+  const [editingMembershipId, setEditingMembershipId] = useState<string | null>(null);
+  const [membershipMalls, setMembershipMalls] = useState<Mall[]>([]);
+  const [membershipMallsLoading, setMembershipMallsLoading] = useState(false);
+  const [membershipMallsError, setMembershipMallsError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -51,6 +57,22 @@ export function UserDetailPage() {
 
   useEffect(() => { reload(); }, [reload]);
 
+  useEffect(() => {
+    if (!showAddMembership || !accessToken || !membershipForm.tenantId) {
+      setMembershipMalls([]);
+      return;
+    }
+    let cancelled = false;
+    setMembershipMallsLoading(true);
+    setMembershipMallsError(false);
+    setMembershipMalls([]);
+    void apiMalls(accessToken, membershipForm.tenantId)
+      .then(data => { if (!cancelled) setMembershipMalls(data.malls); })
+      .catch(() => { if (!cancelled) setMembershipMallsError(true); })
+      .finally(() => { if (!cancelled) setMembershipMallsLoading(false); });
+    return () => { cancelled = true; };
+  }, [showAddMembership, accessToken, membershipForm.tenantId]);
+
   const handleStatusToggle = async () => {
     if (!accessToken || !user) return;
     const next = user.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
@@ -65,8 +87,15 @@ export function UserDetailPage() {
     if (!accessToken || !user) return;
     setSaving(true);
     try {
-      await apiUserAddMembership(accessToken, user.id, membershipForm);
-      toast.success('Üyelik eklendi');
+      if (editingMembershipId) {
+        await apiUserUpdateMembership(accessToken, user.id, editingMembershipId, {
+          roleId: membershipForm.roleId, mallIds: membershipForm.mallIds,
+        });
+      } else {
+        await apiUserAddMembership(accessToken, user.id, membershipForm);
+      }
+      toast.success(editingMembershipId ? 'Üyelik güncellendi' : 'Üyelik eklendi');
+      setEditingMembershipId(null);
       setShowAddMembership(false);
       setMembershipForm({ tenantId: '', roleId: '', mallIds: [] });
       reload();
@@ -180,7 +209,7 @@ export function UserDetailPage() {
           <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' }}>Üyelikler</div>
           {can('user:create') && (
             <button
-              onClick={() => setShowAddMembership(true)}
+              onClick={() => { setEditingMembershipId(null); setMembershipForm({ tenantId: '', roleId: '', mallIds: [] }); setShowAddMembership(true); }}
               style={{ padding: '5px 12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 5, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
             >
               + Üyelik Ekle
@@ -210,6 +239,13 @@ export function UserDetailPage() {
                 </div>
                 {can('user:update') && (
                   <div style={{ display: 'flex', gap: 6 }}>
+                    <button type="button" onClick={() => {
+                      const role = roles.find(role => role.id === m.role.id);
+                      if (!role) { toast.error('Üyeliğin rol bilgisi yüklenemedi'); return; }
+                      setEditingMembershipId(m.id);
+                      setMembershipForm({ tenantId: m.tenantId, roleId: role.id, mallIds: m.malls.map(mall => mall.id) });
+                      setShowAddMembership(true);
+                    }} style={{ padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: 5, background: '#fff', cursor: 'pointer' }}>AVM erişimini düzenle</button>
                     <button
                       onClick={() => handleToggleMembershipActive(m.id, m.isActive)}
                       style={{ padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: 5, fontSize: 12, cursor: 'pointer', background: '#fff' }}
@@ -235,13 +271,14 @@ export function UserDetailPage() {
       {/* Add membership modal */}
       {showAddMembership && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 10, padding: 28, width: 400, maxWidth: '90vw' }}>
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>Üyelik Ekle</div>
+          <div style={{ background: '#fff', borderRadius: 10, padding: 28, width: 480, maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>{editingMembershipId ? 'Üyeliği ve AVM erişimini düzenle' : 'Üyelik Ekle'}</div>
             <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Tenant *</label>
               <select
                 value={membershipForm.tenantId}
-                onChange={(e) => setMembershipForm((p) => ({ ...p, tenantId: e.target.value }))}
+                disabled={saving || !!editingMembershipId}
+                onChange={(e) => setMembershipForm((p) => ({ ...p, tenantId: e.target.value, roleId: '', mallIds: [] }))}
                 style={{ width: '100%', padding: '7px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}
               >
                 <option value="">— Seçiniz —</option>
@@ -256,13 +293,28 @@ export function UserDetailPage() {
                 style={{ width: '100%', padding: '7px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}
               >
                 <option value="">— Seçiniz —</option>
-                {roles.filter((r) => r.isActive).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                {roles.filter((r) => r.isActive && (r.tenantId === null || r.tenantId === membershipForm.tenantId)).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
             </div>
+            <fieldset disabled={saving || membershipMallsLoading} style={{ border: '1px solid #e2e8f0', borderRadius: 8, margin: '16px 0', padding: 12 }}>
+              <legend>AVM erişimi</legend>
+              {roles.find(role => role.id === membershipForm.roleId)?.code === 'TENANT_ADMIN' ? (
+                <p>Müşteri yöneticisi bu müşterinin tüm AVM’lerine erişir.</p>
+              ) : <>
+                <p style={{ fontSize: 13 }}>Kullanıcının çalışabileceği AVM’leri seçin. Tek AVM girişte otomatik seçilir; birden fazlaysa kullanıcı seçim yapar.</p>
+                {membershipMallsLoading ? <p role="status">AVM’ler yükleniyor…</p> : membershipMallsError ? <p role="alert">AVM listesi yüklenemedi. Formu kapatıp tekrar deneyin.</p> : membershipMalls.length === 0 ? <p>Bu müşteri için seçilebilir AVM yok.</p> : membershipMalls.map(mall => (
+                  <label key={mall.id} style={{ display: 'flex', gap: 8, margin: '8px 0' }}>
+                    <input type="checkbox" checked={membershipForm.mallIds.includes(mall.id)} onChange={event => setMembershipForm(previous => ({ ...previous, mallIds: event.target.checked ? [...previous.mallIds, mall.id] : previous.mallIds.filter(id => id !== mall.id) }))} />
+                    {mall.name}
+                  </label>
+                ))}
+                {!membershipForm.mallIds.length && <p style={{ color: '#b45309', fontSize: 13 }}>AVM seçilmezse kullanıcı AVM içeriklerini yönetemez.</p>}
+              </>}
+            </fieldset>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
               <button onClick={() => setShowAddMembership(false)} style={{ padding: '7px 16px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13, cursor: 'pointer', background: '#fff' }}>İptal</button>
-              <button onClick={handleAddMembership} disabled={saving || !membershipForm.tenantId || !membershipForm.roleId} style={{ padding: '7px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                {saving ? 'Ekleniyor…' : 'Ekle'}
+              <button onClick={handleAddMembership} disabled={saving || membershipMallsLoading || membershipMallsError || !membershipForm.tenantId || !membershipForm.roleId} style={{ padding: '7px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                {saving ? 'Kaydediliyor…' : editingMembershipId ? 'Kaydet' : 'Ekle'}
               </button>
             </div>
           </div>

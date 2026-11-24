@@ -62,7 +62,7 @@ export function ProtectedRoute() {
     activeTenantId &&
     !activeMallId &&
     !mallsLoading &&
-    malls.length > 1 &&
+    malls.length !== 1 &&
     !isTenantRoute &&
     !isLocationRoute
   ) {
