@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { PublicApiKeyGuard } from '../public/guards/public-api-key.guard';
+import { AnalyticsRateLimitGuard } from './analytics-rate-limit.guard';
+import { Body, Controller, Get, Post, Header, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import type { User } from '@prisma/client';
@@ -29,11 +31,14 @@ export class AnalyticsController {
   constructor(private readonly analytics: AnalyticsService) {}
 
   @Post('track')
+  @UseGuards(PublicApiKeyGuard, AnalyticsRateLimitGuard)
+  @Header('Cache-Control', 'no-store')
   @Public()
   @ApiPublicContext()
-  @ApiPublicOperation({ summary: 'public.track.analytics.event.summary',
+  @ApiPublicOperation({
+    summary: 'public.track.analytics.event.summary',
     description:
-      'Public ingestion endpoint for page views, clicks, and impressions. No JWT required — send `x-tenant-id` header.',
+      'Public ingestion endpoint for page views, clicks, and impressions. Deprecated alias of POST /public/analytics/track. Requires x-api-key, x-tenant-id and x-mall-id.',
     related: [SWAGGER_TAGS.PUBLIC],
   })
   @ApiResponse({ status: 201, description: 'analytics.response.201' })
@@ -42,14 +47,17 @@ export class AnalyticsController {
   }
 
   @Get('summary')
+  @Header('Cache-Control', 'no-store')
   @RequireTenantContext()
   @RequireMallContext()
   @UseGuards(TenantAccessGuard, MallAccessGuard, PermissionsGuard, CapabilityGuard)
   @RequirePermission('analytics:view')
   @RequireCapability('analytics')
   @ApiAdminContext()
-  @ApiAdminOperation({ summary: 'analytics.get.summary',
-    description: 'Aggregated KPIs (views, clicks, unique visitors) for the selected date range.',
+  @ApiAdminOperation({
+    summary: 'analytics.get.summary',
+    description:
+      'Aggregated click and view counts for the selected date range. Counts are events, not unique people.',
     permissions: ['analytics:view'],
     related: [SWAGGER_TAGS.DASHBOARD],
   })
@@ -59,13 +67,15 @@ export class AnalyticsController {
   }
 
   @Get('top-content')
+  @Header('Cache-Control', 'no-store')
   @RequireTenantContext()
   @RequireMallContext()
   @UseGuards(TenantAccessGuard, MallAccessGuard, PermissionsGuard, CapabilityGuard)
   @RequirePermission('analytics:view')
   @RequireCapability('analytics')
   @ApiAdminContext()
-  @ApiAdminOperation({ summary: 'analytics.get.summary',
+  @ApiAdminOperation({
+    summary: 'analytics.get.summary',
     description: 'Ranked list of most viewed or clicked content entities in the date range.',
     permissions: ['analytics:view'],
   })
@@ -75,18 +85,36 @@ export class AnalyticsController {
   }
 
   @Get('timeseries')
+  @Header('Cache-Control', 'no-store')
   @RequireTenantContext()
   @RequireMallContext()
   @UseGuards(TenantAccessGuard, MallAccessGuard, PermissionsGuard, CapabilityGuard)
   @RequirePermission('analytics:view')
   @RequireCapability('analytics')
   @ApiAdminContext()
-  @ApiAdminOperation({ summary: 'analytics.get.summary',
-    description: 'Daily or hourly time-series data for charting views and engagement over time.',
+  @ApiAdminOperation({
+    summary: 'analytics.get.summary',
+    description: 'UTC daily time-series data for charting views and engagement over time.',
     permissions: ['analytics:view'],
   })
   @ApiResponse({ status: 200, description: 'analytics.response.200' })
   timeseries(@CurrentUser() user: User, @Req() req: Request, @Query() q: AnalyticsQueryDto) {
     return this.analytics.timeseries(user, req.tenantId!, req.mallId, q);
+  }
+
+  @Get('top-paths')
+  @Header('Cache-Control', 'no-store')
+  @RequireTenantContext()
+  @RequireMallContext()
+  @UseGuards(TenantAccessGuard, MallAccessGuard, PermissionsGuard, CapabilityGuard)
+  @RequirePermission('analytics:view')
+  @RequireCapability('analytics')
+  @ApiAdminContext()
+  @ApiAdminOperation({
+    summary: 'Most visited or clicked website paths',
+    permissions: ['analytics:view'],
+  })
+  topPaths(@CurrentUser() user: User, @Req() req: Request, @Query() q: AnalyticsQueryDto) {
+    return this.analytics.topPaths(user, req.tenantId!, req.mallId, q);
   }
 }

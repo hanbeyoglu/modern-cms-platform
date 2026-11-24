@@ -1,8 +1,14 @@
 import type { AnalyticsEntityType, AnalyticsEventType } from '@prisma/client';
-import { ANALYTICS_ENTITY_TYPES, ANALYTICS_EVENT_TYPES } from '../../common/prisma-validation-enums.js';
-import { IsObject, IsOptional, IsString, IsUrl, MaxLength, IsIn } from 'class-validator';
+import {
+  ANALYTICS_ENTITY_TYPES,
+  ANALYTICS_EVENT_TYPES,
+} from '../../common/prisma-validation-enums.js';
+import { IsObject, IsOptional, IsString, IsUrl, MaxLength, IsIn, IsUUID } from 'class-validator';
 
 export class TrackAnalyticsDto {
+  @IsOptional()
+  @IsUUID()
+  clientEventId?: string;
   @IsIn(ANALYTICS_ENTITY_TYPES)
   entityType!: AnalyticsEntityType;
 

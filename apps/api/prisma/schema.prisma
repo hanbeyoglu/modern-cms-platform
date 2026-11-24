@@ -1199,6 +1199,7 @@ model SearchIndexEntry {
 }
 
 model AnalyticsEvent {
+  clientEventId String?
   id           String              @id @default(cuid())
   tenantId     String
   mallId       String?
@@ -1217,6 +1218,8 @@ model AnalyticsEvent {
   mall         Mall?               @relation(fields: [mallId], references: [id])
   tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, mallId, clientEventId])
+  @@index([tenantId, mallId, eventType, createdAt])
   @@index([tenantId, mallId, createdAt])
   @@index([entityType, entityId])
   @@index([eventType])
@@ -1599,6 +1602,9 @@ enum AnalyticsEntityType {
 }
 
 enum AnalyticsEventType {
+  CINEMA_CLICK
+  MOVIE_CLICK
+  LINK_CLICK
   PAGE_VIEW
   SLIDER_VIEW
   SLIDER_CLICK

@@ -28,6 +28,7 @@ export type {
   CmsSearchHit,
   CmsSearchResponse,
   CmsSearchPaginatedEnvelope,
+  CmsTrackingInput,
   CmsAnalyticsEvent,
   CmsAnalyticsEventType,
 } from './types';

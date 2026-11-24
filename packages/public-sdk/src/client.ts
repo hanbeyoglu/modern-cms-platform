@@ -1,4 +1,4 @@
-import type { CmsContactMessageInput } from './types';
+import type { CmsContactMessageInput, CmsTrackingInput } from './types';
 import type {
   CmsCampaign,
   CmsCinema,
@@ -225,8 +225,15 @@ export class CmsPublicClient {
 
   // ── Movie Sessions ────────────────────────────────────────────────────────
 
-  getMovies(opts: PaginatedListOpts & { listingStatus?: CmsMovie['listingStatus'] } = {}): Promise<CmsPaginatedEnvelope<CmsMovie>> {
-    return this.get('/public/movies', { locale: opts.locale, page: opts.page, limit: opts.limit, listingStatus: opts.listingStatus });
+  getMovies(
+    opts: PaginatedListOpts & { listingStatus?: CmsMovie['listingStatus'] } = {},
+  ): Promise<CmsPaginatedEnvelope<CmsMovie>> {
+    return this.get('/public/movies', {
+      locale: opts.locale,
+      page: opts.page,
+      limit: opts.limit,
+      listingStatus: opts.listingStatus,
+    });
   }
 
   getMovieSessions(opts: GetMovieSessionsOpts = {}): Promise<CmsEnvelope<CmsMovieSession[]>> {
@@ -251,11 +258,23 @@ export class CmsPublicClient {
     });
   }
 
-  submitContactMessage(input: CmsContactMessageInput, locale?: string): Promise<CmsEnvelope<{ accepted: true }>> {
+  submitContactMessage(
+    input: CmsContactMessageInput,
+    locale?: string,
+  ): Promise<CmsEnvelope<{ accepted: true }>> {
     return this.request('/public/contact-messages', { locale }, input);
   }
 
-  private get<T>(path: string, params: Record<string, string | number | boolean | undefined | null> = {}): Promise<T> {
+  /** Call from actual clicks/client-side route transitions, respecting the site's consent settings. */
+  trackAnalytics(input: CmsTrackingInput): Promise<CmsEnvelope<{ accepted: true }>> {
+    if (!this.config.mallId) throw new Error('mallId is required for website analytics');
+    return this.request('/public/analytics/track', { locale: input.locale }, input, true);
+  }
+
+  private get<T>(
+    path: string,
+    params: Record<string, string | number | boolean | undefined | null> = {},
+  ): Promise<T> {
     return this.request(path, params);
   }
 
@@ -264,7 +283,8 @@ export class CmsPublicClient {
   private async request<T>(
     path: string,
     params: Record<string, string | number | boolean | undefined | null> = {},
-    body?: CmsContactMessageInput,
+    body?: CmsContactMessageInput | CmsTrackingInput,
+    keepalive = false,
   ): Promise<T> {
     const fetchFn = this.config.fetchImpl ?? globalThis.fetch;
     if (!fetchFn) {
@@ -293,7 +313,12 @@ export class CmsPublicClient {
     }
 
     if (body !== undefined) headers['Content-Type'] = 'application/json';
-    const response = await fetchFn(url.toString(), { headers, method: body === undefined ? 'GET' : 'POST', ...(body !== undefined && { body: JSON.stringify(body) }) });
+    const response = await fetchFn(url.toString(), {
+      headers,
+      ...(keepalive ? { keepalive: true } : {}),
+      method: body === undefined ? 'GET' : 'POST',
+      ...(body !== undefined && { body: JSON.stringify(body) }),
+    });
 
     if (!response.ok) {
       let errorBody: unknown;
@@ -302,7 +327,10 @@ export class CmsPublicClient {
       } catch {
         errorBody = null;
       }
-      const envelope = errorBody as { success: false; error: { code: string; message: string } } | null;
+      const envelope = errorBody as {
+        success: false;
+        error: { code: string; message: string };
+      } | null;
       const code = envelope?.error?.code ?? 'HTTP_ERROR';
       const message = envelope?.error?.message ?? `HTTP ${response.status}`;
       throw new CmsApiError(code, message, response.status);

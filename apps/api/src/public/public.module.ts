@@ -19,6 +19,6 @@ import { PublicApiKeyGuard } from './guards/public-api-key.guard';
   imports: [PublicCacheModule, ContactMessagesModule, PrismaModule, TranslationResolverModule, MallLocalesModule, SearchModule, MediaModule, DeveloperApiModule],
   controllers: [PublicController, PublicContactMessagesController],
   providers: [PublicCorsService, ContactRateLimitGuard, PublicContextService, PublicContentService, PublicApiKeyGuard],
-  exports: [PublicCacheModule, PublicCorsService],
+  exports: [PublicCacheModule, PublicCorsService, PublicContextService],
 })
 export class PublicModule {}

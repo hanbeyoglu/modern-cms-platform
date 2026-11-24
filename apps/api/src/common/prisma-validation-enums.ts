@@ -90,6 +90,7 @@ export const ANALYTICS_ENTITY_TYPES = [
   'CUSTOM',
 ] as const;
 export const ANALYTICS_EVENT_TYPES = [
+  'CINEMA_CLICK', 'MOVIE_CLICK', 'LINK_CLICK',
   'PAGE_VIEW',
   'SLIDER_VIEW',
   'SLIDER_CLICK',

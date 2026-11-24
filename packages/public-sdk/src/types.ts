@@ -515,3 +515,15 @@ export interface CmsContactMessageInput {
   kvkkConsent: true;
   website?: string;
 }
+
+/** Anonymous website event; scope is always taken from the configured API key/headers. */
+export interface CmsTrackingInput {
+  clientEventId?: string;
+  entityType: 'PAGE' | 'SLIDER' | 'EVENT' | 'CAMPAIGN' | 'STORE' | 'CINEMA' | 'MOVIE' | 'MOVIE_SESSION' | 'CUSTOM';
+  entityId?: string;
+  eventType: 'PAGE_VIEW' | 'SLIDER_VIEW' | 'SLIDER_CLICK' | 'EVENT_VIEW' | 'EVENT_CLICK' | 'CAMPAIGN_VIEW' | 'CAMPAIGN_CLICK' | 'STORE_VIEW' | 'STORE_CLICK' | 'CINEMA_VIEW' | 'CINEMA_CLICK' | 'MOVIE_VIEW' | 'MOVIE_CLICK' | 'MOVIE_SESSION_CLICK' | 'LINK_CLICK';
+  path?: string;
+  locale?: string;
+  deviceType?: 'mobile' | 'tablet' | 'desktop';
+  metadataJson?: { label?: string; source?: string; targetPath?: string };
+}

@@ -3,6 +3,11 @@ import { request } from './client';
 
 export type AnalyticsSummary = {
   totalEvents: number;
+  totalClicks: number;
+  storeClicks: number;
+  eventClicks: number;
+  cinemaClicks: number;
+  movieClicks: number;
   pageViews: number;
   sliderClicks: number;
   eventViews: number;
@@ -12,6 +17,7 @@ export type AnalyticsSummary = {
 };
 
 export type AnalyticsTopRow = {
+  name: string;
   entityType: string;
   entityId: string | null;
   eventType: string;
@@ -29,6 +35,7 @@ export type AnalyticsQueryParams = {
   entityType?: string;
   eventType?: string;
   limit?: number;
+  metric?: 'clicks' | 'views' | 'all';
 };
 
 function toQuery(params: AnalyticsQueryParams): string {
@@ -38,6 +45,7 @@ function toQuery(params: AnalyticsQueryParams): string {
   if (params.entityType) sp.set('entityType', params.entityType);
   if (params.eventType) sp.set('eventType', params.eventType);
   appendLimitParam(sp, params.limit);
+  if (params.metric) sp.set('metric', params.metric);
   return sp.toString();
 }
 
@@ -76,6 +84,20 @@ export async function apiAnalyticsTimeseries(
   params: AnalyticsQueryParams,
 ): Promise<AnalyticsTimeseriesRow[]> {
   return request<AnalyticsTimeseriesRow[]>(`/analytics/timeseries?${toQuery(params)}`, {
+    method: 'GET',
+    token,
+    tenantId,
+    mallId,
+  });
+}
+
+export async function apiAnalyticsTopPaths(
+  token: string,
+  tenantId: string,
+  mallId: string,
+  params: AnalyticsQueryParams,
+): Promise<Array<{ path: string; eventType: string; count: number }>> {
+  return request(`/analytics/top-paths?${toQuery(params)}`, {
     method: 'GET',
     token,
     tenantId,
