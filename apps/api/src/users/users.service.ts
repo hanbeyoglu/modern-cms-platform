@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { assertPasswordPolicy, getSecurityPolicy } from '../common/security-policy';
 import * as bcrypt from 'bcrypt';
-import { AuditSeverity, type User } from '@prisma/client';
+import { AuditSeverity, Prisma, type User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../audit/audit.service';
 import type { ListUsersDto } from './dto/list-users.dto';
@@ -195,19 +195,41 @@ export class UsersService {
 
   async addMembership(actor: User, userId: string, dto: CreateMembershipDto, contextTenantId?: string) {
     const assignment = await this.validateMembershipAssignment(actor, dto, contextTenantId);
-    const existing = await this.prisma.tenantUser.findFirst({
-      where: { tenantId: dto.tenantId, userId, deletedAt: null },
+    // Soft deletion does not release the database's (tenantId, userId) unique key.
+    const existing = await this.prisma.tenantUser.findUnique({
+      where: { tenantId_userId: { tenantId: dto.tenantId, userId } },
     });
-    if (existing) throw new ConflictException('Bu kullanıcı zaten bu tenant\'ta üye');
+    const conflict = () => new ConflictException(
+      'Bu kullanıcı bu müşteride zaten üye. Rol veya AVM erişimini mevcut üyelikten düzenleyin.',
+    );
+    if (existing && !existing.deletedAt) throw conflict();
 
-    const membership = await this.prisma.tenantUser.create({
-      data: { userId, ...assignment },
-    });
+    let membership;
+    try {
+      membership = existing
+        ? await this.prisma.tenantUser.update({
+            // Conditional restore: another request must not overwrite a restored membership.
+            where: { id: existing.id, deletedAt: existing.deletedAt },
+            data: {
+              roleId: assignment.roleId,
+              isActive: true,
+              deletedAt: null,
+              mallAccess: { deleteMany: {}, create: assignment.mallAccess.create },
+            },
+          })
+        : await this.prisma.tenantUser.create({ data: { userId, ...assignment } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError &&
+          (error.code === 'P2002' || (existing && error.code === 'P2025'))) {
+        throw conflict();
+      }
+      throw error;
+    }
 
     await this.audit.logAction({
       userId: actor.id,
       tenantId: dto.tenantId,
-      action: 'membership_created',
+      action: existing ? 'membership_restored' : 'membership_created',
       entityType: 'tenant_user',
       entityId: membership.id,
       after: { tenantId: dto.tenantId, roleId: dto.roleId, mallIds: dto.mallIds },
