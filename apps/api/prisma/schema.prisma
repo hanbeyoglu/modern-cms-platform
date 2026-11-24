@@ -108,6 +108,8 @@ model Tenant {
   allowedDomains     AllowedDomain[]
   apiRequestLogs     ApiRequestLog[]
   apiUsageDaily      ApiUsageDaily[]
+  contentImportMappings ContentImportMapping[]
+  demoContentBatches    DemoContentBatch[]
 }
 
 model Mall {
@@ -168,10 +170,59 @@ model Mall {
   sliders            Slider[]
   userMallAccesses   UserMallAccess[]
   mallLocales        MallLocale[]
+  contentImportMappings ContentImportMapping[]
+  demoContentBatches    DemoContentBatch[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
   @@unique([id, tenantId])
+}
+
+/// Tracks admin-triggered demo import / cleanup jobs per mall.
+model DemoContentBatch {
+  id           String                @id @default(cuid())
+  tenantId     String
+  mallId       String
+  sourceSystem String                @default("metrogarden")
+  action       DemoContentBatchAction
+  status       DemoContentBatchStatus @default(PENDING)
+  createdBy    String
+  reportJson   Json?
+  errorMessage String?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall         Mall                  @relation(fields: [mallId], references: [id], onDelete: Cascade)
+  mappings     ContentImportMapping[]
+
+  @@index([tenantId, mallId, status])
+  @@index([tenantId, mallId, createdAt])
+}
+
+/// Idempotent content import mapping (sourceKey → CMS entity).
+model ContentImportMapping {
+  id           String   @id @default(cuid())
+  tenantId     String
+  mallId       String?
+  batchId      String?
+  sourceSystem String
+  entityType   String
+  sourceKey    String
+  entityId     String
+  metaJson     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mall         Mall?    @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  batch        DemoContentBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, sourceSystem, entityType, sourceKey])
+  @@index([tenantId, entityType])
+  @@index([tenantId, mallId])
+  @@index([batchId])
+  @@index([entityId])
 }
 
 /// Per-location language activation (system Locale definitions are tenant-global).
@@ -1414,6 +1465,19 @@ enum ContentStatus {
   SCHEDULED
   PUBLISHED
   ARCHIVED
+}
+
+enum DemoContentBatchAction {
+  IMPORT
+  REMOVE
+  RESET
+}
+
+enum DemoContentBatchStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
 }
 
 enum CinemaStatus {

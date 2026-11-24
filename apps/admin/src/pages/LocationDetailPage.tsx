@@ -32,6 +32,7 @@ import { PageContainer } from '../components/layout/PageContainer';
 import { PageHeader } from '../components/layout/PageHeader';
 import { AuditTimeline } from '../components/AuditTimeline';
 import { LinkedSliderGroupsSection } from '../components/LinkedSliderGroupsSection';
+import { DemoContentPanel } from '../components/DemoContentPanel';
 
 const STATUS_LABELS: Record<string, string> = {
   LIVE: 'Yayında', DRAFT: 'Taslak', MAINTENANCE: 'Bakımda', CLOSED: 'Kapalı',
@@ -524,6 +525,14 @@ export function LocationDetailPage() {
         >
           <LinkedSliderGroupsSection entityType="LOCATION" entityId={id} />
         </div>
+      )}
+
+      {id && location && (
+        <DemoContentPanel
+          mallId={id}
+          mallName={location.displayName ?? location.name}
+          tenantName={location.tenant?.name}
+        />
       )}
 
       {/* Danger zone */}

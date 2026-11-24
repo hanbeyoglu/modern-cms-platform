@@ -26,6 +26,7 @@ const DANGEROUS_PERMISSIONS = new Set([
   'audit:security',
   'audit:export',
   'location:delete',
+  'mall:content-reset',
   'settings:update',
 ]);
 
@@ -42,6 +43,9 @@ const PERMISSION_LABELS: Record<string, string> = {
   'location:create': 'Lokasyon oluştur',
   'location:update': 'Lokasyon düzenle',
   'location:delete': 'Lokasyon sil',
+  'demo:import': 'Demo içerik yükle',
+  'demo:remove': 'Demo verilerini kaldır',
+  'mall:content-reset': 'AVM içeriklerini sıfırla',
   'user:read': 'Kullanıcı görüntüle',
   'user:create': 'Kullanıcı oluştur',
   'user:update': 'Kullanıcı düzenle',
@@ -143,7 +147,7 @@ const PERMISSION_GROUPS: Array<{ key: string; label: string; prefixes: string[] 
   { key: 'users', label: 'Kullanıcı Yönetimi', prefixes: ['user:'] },
   { key: 'roles', label: 'Rol ve Yetki Yönetimi', prefixes: ['role:'] },
   { key: 'tenants', label: 'Müşteri Yönetimi', prefixes: ['tenant:'] },
-  { key: 'locations', label: 'Lokasyon Yönetimi', prefixes: ['location:', 'mall:'] },
+  { key: 'locations', label: 'Lokasyon Yönetimi', prefixes: ['location:', 'mall:', 'demo:'] },
   { key: 'media', label: 'Medya Yönetimi', prefixes: ['media:'] },
   { key: 'sliders', label: 'Slider Yönetimi', prefixes: ['slider:'] },
   { key: 'pages', label: 'Sayfa Yönetimi', prefixes: ['page:', 'page-block:'] },

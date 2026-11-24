@@ -42,6 +42,7 @@ import { PopupsModule } from './popups/popups.module';
 import { LocationServicesModule } from './services/services.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DeveloperApiModule } from './developer-api/developer-api.module';
+import { DemoContentModule } from './demo-content/demo-content.module';
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { DeveloperApiModule } from './developer-api/developer-api.module';
     DashboardModule,
     DeveloperApiModule,
     ContactMessagesModule,
+    DemoContentModule,
   ],
 })
 export class AppModule implements NestModule {

@@ -21,7 +21,10 @@
     "db:seed": "prisma db seed",
     "demo:seed": "tsx prisma/demo-seed.ts",
     "media:migrate-to-r2": "tsx scripts/migrate-local-media-to-r2.ts",
-    "test": "node --test test/*.test.cjs"
+    "metrogarden:import": "pnpm run build && node dist/metrogarden-import/cli.js",
+    "metrogarden:export": "tsx ../../integrations/metrogarden-import/export-source.ts",
+    "test": "node --test test/*.test.cjs",
+    "test:metrogarden-import": "tsx --test test/metrogarden-import-helpers.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

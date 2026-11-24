@@ -205,12 +205,22 @@ export function LocationsPage() {
                     </span>
                   </td>
                   <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                    <button
-                      onClick={() => navigate(`/locations/${loc.id}`)}
-                      style={{ padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: 5, fontSize: 12, cursor: 'pointer', background: '#fff' }}
-                    >
-                      Detay
-                    </button>
+                    <div style={{ display: 'inline-flex', gap: 6 }}>
+                      {(can('demo:import') || can('demo:remove') || (user?.isSuperAdmin && can('mall:content-reset'))) && (
+                        <button
+                          onClick={() => navigate(`/locations/${loc.id}#demo-content`)}
+                          style={{ padding: '4px 10px', border: '1px solid #bfdbfe', borderRadius: 5, fontSize: 12, cursor: 'pointer', background: '#eff6ff', color: '#1d4ed8' }}
+                        >
+                          Demo
+                        </button>
+                      )}
+                      <button
+                        onClick={() => navigate(`/locations/${loc.id}`)}
+                        style={{ padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: 5, fontSize: 12, cursor: 'pointer', background: '#fff' }}
+                      >
+                        Detay
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

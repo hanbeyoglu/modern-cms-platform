@@ -413,6 +413,23 @@ export type {
 } from './locations';
 
 export {
+  apiDemoContentPreview,
+  apiDemoContentApply,
+  apiDemoContentBatch,
+  apiDemoContentRemove,
+  apiMallContentResetPreview,
+  apiMallContentReset,
+} from './demo-content';
+export type {
+  DemoPreviewResponse,
+  DemoBatchStartResponse,
+  DemoBatchStatus,
+  DemoRemoveResponse,
+  MallResetPreview,
+  MallResetResult,
+} from './demo-content';
+
+export {
   apiLocationLocalesList,
   apiLocationActiveLocales,
   apiLocationLocalesUpdate,

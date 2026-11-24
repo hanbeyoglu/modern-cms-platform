@@ -1,0 +1,1995 @@
+{
+  "mode": "dry-run",
+  "tenantId": "cmwp3a2r7003dnrjzpluej3qh",
+  "mallId": "cmwp3a2vj003hnrjzhq4q11zn",
+  "targetMallName": "Mall of İstanbul",
+  "shiftDates": false,
+  "dateShiftDays": 0,
+  "startedAt": "2026-11-24T18:24:03.621Z",
+  "counts": {
+    "stores": 20,
+    "campaigns": 18,
+    "events": 18,
+    "movies": 10,
+    "sliders": 4,
+    "uniqueMediaUrls": 131
+  },
+  "media": {
+    "uniqueUrls": 131,
+    "wouldUpload": 104,
+    "reused": 53,
+    "uploaded": 0,
+    "failed": 0
+  },
+  "expiredAsDraft": [
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-zara-yaz",
+      "endDate": "2026-08-31"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-apple-macbook",
+      "endDate": "2026-08-31"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-sephora-guzellik",
+      "endDate": "2026-07-20"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-nike-yaz",
+      "endDate": "2026-08-31"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-boyner-fashion",
+      "endDate": "2026-07-31"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-mango-yeni-sezon",
+      "endDate": "2026-08-15"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-vakko-luxury",
+      "endDate": "2026-09-30"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-lego-yaz",
+      "endDate": "2026-08-31"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-mavi-denim",
+      "endDate": "2026-07-31"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-dr-kitap",
+      "endDate": "2026-07-31"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-skechers-adim",
+      "endDate": "2026-08-15"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-network-profesyonel",
+      "endDate": "2026-07-31"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-mediamarkt-hafta-sonu",
+      "endDate": "2026-07-06"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-starbucks-1al1",
+      "endDate": "2026-07-05"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-koton-yaz",
+      "endDate": "2026-07-07"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-hd-iskender-mutlu",
+      "endDate": "2026-07-03"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-watsons-guzellik",
+      "endDate": "2026-06-15"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-lcw-aile",
+      "endDate": "2026-06-20"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-1",
+      "endDate": "2026-06-15"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-2",
+      "endDate": "2026-06-21"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-3",
+      "endDate": "2026-06-10"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-4",
+      "endDate": "2026-06-23"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-5",
+      "endDate": "2026-06-05"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-1",
+      "endDate": "2026-07-04"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-2",
+      "endDate": "2026-07-05"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-3",
+      "endDate": "2026-07-04"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-1",
+      "endDate": "2026-07-12"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-2",
+      "endDate": "2026-07-31"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-3",
+      "endDate": "2026-07-28"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-4",
+      "endDate": "2026-07-15"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-5",
+      "endDate": "2026-07-21"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-6",
+      "endDate": "2026-07-14"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-7",
+      "endDate": "2026-07-25"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-upcoming-1",
+      "endDate": "2026-08-06"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-upcoming-2",
+      "endDate": "2026-08-17"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-upcoming-3",
+      "endDate": "2026-09-11"
+    }
+  ],
+  "unmatchedStoreRefs": [],
+  "unsupportedFields": [
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-zara",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)",
+        "meta"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-apple",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)",
+        "meta"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-mango",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-vakko",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-sephora",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-nike",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-lego",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-starbucks",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-mavi",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-lc-waikiki",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-koton",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-network",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-boyner",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-watsons",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-mediamarkt",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-teknosa",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-hd-iskender",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-cookshop",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-skechers",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-dr",
+      "fields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-zara-yaz",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "meta",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-apple-macbook",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "meta",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-sephora-guzellik",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "meta",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-nike-yaz",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "meta",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-boyner-fashion",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-mango-yeni-sezon",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-vakko-luxury",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-lego-yaz",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-mavi-denim",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-dr-kitap",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-skechers-adim",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-network-profesyonel",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-mediamarkt-hafta-sonu",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-starbucks-1al1",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-koton-yaz",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-hd-iskender-mutlu",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-watsons-guzellik",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-lcw-aile",
+      "fields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-1",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-2",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-3",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-4",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-5",
+      "fields": [
+        "organizer → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-1",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-2",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-3",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-1",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-2",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-3",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-4",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-5",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-6",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-7",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-upcoming-1",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-upcoming-2",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-upcoming-3",
+      "fields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ]
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-f1",
+      "fields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ]
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-superman",
+      "fields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ]
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-jurassic-world-rebirth",
+      "fields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ]
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-mission-impossible",
+      "fields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ]
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-elio",
+      "fields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ]
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-lilo-stitch",
+      "fields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ]
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-httyd",
+      "fields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ]
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-karate-kid",
+      "fields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)"
+      ]
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-fantastic-four",
+      "fields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)"
+      ]
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-28-years-later",
+      "fields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)"
+      ]
+    },
+    {
+      "entityType": "slider_item",
+      "sourceKey": "slide-1",
+      "fields": [
+        "eyebrow"
+      ]
+    },
+    {
+      "entityType": "slider_item",
+      "sourceKey": "slide-2",
+      "fields": [
+        "eyebrow"
+      ]
+    },
+    {
+      "entityType": "slider_item",
+      "sourceKey": "slide-3",
+      "fields": [
+        "eyebrow"
+      ]
+    },
+    {
+      "entityType": "slider_item",
+      "sourceKey": "slide-4",
+      "fields": [
+        "eyebrow"
+      ]
+    }
+  ],
+  "textReplacements": [
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-zara",
+      "field": "description",
+      "before": "Zara, Inditex grubunun amiral gemisi markasıdır. Pist trendlerini hızla sokak modası hâline getiren Zara, her sezon yenilikçi koleksiyonları ve uygun fiyatla…",
+      "after": "Zara, Inditex grubunun amiral gemisi markasıdır. Pist trendlerini hızla sokak modası hâline getiren Zara, her sezon yenilikçi koleksiyonları ve uygun fiyatla…"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-zara",
+      "field": "metaTitle",
+      "before": "Zara — Metrogarden AVM",
+      "after": "Zara — Mall of İstanbul"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-zara",
+      "field": "metaDescription",
+      "before": "Zara mağazası Metrogarden AVM 1. Katta hizmetinizde.",
+      "after": "Zara mağazası Mall of İstanbul 1. Katta hizmetinizde."
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-apple",
+      "field": "metaTitle",
+      "before": "Apple — Metrogarden AVM",
+      "after": "Apple — Mall of İstanbul"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-apple",
+      "field": "metaDescription",
+      "before": "Apple Store Metrogarden AVM Zemin Katta.",
+      "after": "Apple Store Mall of İstanbul Zemin Katta."
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-nike",
+      "field": "description",
+      "before": "Nike, sporun ruhunu ve sınırları zorlamanın tutkusunu her ürününe yansıtır. Koşu, basketbol, futbol ve yaşam tarzı kategorilerinde en yeni koleksiyonları den…",
+      "after": "Nike, sporun ruhunu ve sınırları zorlamanın tutkusunu her ürününe yansıtır. Koşu, basketbol, futbol ve yaşam tarzı kategorilerinde en yeni koleksiyonları den…"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-boyner",
+      "field": "description",
+      "before": "Boyner, Türkiye'nin en köklü mağazacılık gruplarından biri olup giyimden aksesuvara, kozmetikten ev ürünlerine kadar geniş bir yelpazede hizmet sunar. Çatısı…",
+      "after": "Boyner, Türkiye'nin en köklü mağazacılık gruplarından biri olup giyimden aksesuvara, kozmetikten ev ürünlerine kadar geniş bir yelpazede hizmet sunar. Çatısı…"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-zara-yaz",
+      "field": "metaTitle",
+      "before": "Zara Yaz Sonu İndirim — Metrogarden AVM",
+      "after": "Zara Yaz Sonu İndirim — Mall of İstanbul"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-apple-macbook",
+      "field": "description",
+      "before": "Apple Store Metrogarden'da MacBook Air M3 alımlarında sıfır faizli taksit kampanyası başladı. 8 GB veya 16 GB Birleşik Bellek seçenekleriyle sunulan MacBook …",
+      "after": "Apple Store Mall of İstanbul'da MacBook Air M3 alımlarında sıfır faizli taksit kampanyası başladı. 8 GB veya 16 GB Birleşik Bellek seçenekleriyle sunulan Mac…"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-apple-macbook",
+      "field": "metaTitle",
+      "before": "Apple MacBook Air M3 Kampanya — Metrogarden AVM",
+      "after": "Apple MacBook Air M3 Kampanya — Mall of İstanbul"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-sephora-guzellik",
+      "field": "description",
+      "before": "Sephora'nın yılın en büyük güzellik kampanyası Metrogarden'da başladı. 500 TL ve üzeri alışverişlerde sizi özel bir güzellik seti bekliyor. Parfüm, cilt bakı…",
+      "after": "Sephora'nın yılın en büyük güzellik kampanyası Mall of İstanbul'da başladı. 500 TL ve üzeri alışverişlerde sizi özel bir güzellik seti bekliyor. Parfüm, cilt…"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-sephora-guzellik",
+      "field": "metaTitle",
+      "before": "Sephora Güzellik Günleri — Metrogarden AVM",
+      "after": "Sephora Güzellik Günleri — Mall of İstanbul"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-nike-yaz",
+      "field": "metaTitle",
+      "before": "Nike Yaz Koleksiyonu — Metrogarden AVM",
+      "after": "Nike Yaz Koleksiyonu — Mall of İstanbul"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-vakko-luxury",
+      "field": "description",
+      "before": "Vakko'nun bu sezon koleksiyonu, Türk tekstil geleneğini günümüz haute couture anlayışıyla sentezliyor. El işlemeli ipek bluzlar, özel baskı atkılar ve deri a…",
+      "after": "Vakko'nun bu sezon koleksiyonu, Türk tekstil geleneğini günümüz haute couture anlayışıyla sentezliyor. El işlemeli ipek bluzlar, özel baskı atkılar ve deri a…"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-starbucks-1al1",
+      "field": "description",
+      "before": "Starbucks Metrogarden'da bu haftasonu özel \"1 Al 1 Bedava\" kampanyası düzenlenecek. Grande ve Venti boyutlarında seçili sıcak ve soğuk içecekler kampanyaya d…",
+      "after": "Starbucks Mall of İstanbul'da bu haftasonu özel \"1 Al 1 Bedava\" kampanyası düzenlenecek. Grande ve Venti boyutlarında seçili sıcak ve soğuk içecekler kampany…"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-starbucks-1al1",
+      "field": "terms",
+      "before": "Kampanya 1-5 Temmuz 2026 tarihleri arasında 09:00–22:00 saatleri arasında geçerlidir. Sadece Metrogarden şubesinde uygulanır. İkinci içeceğin boyutu birincid…",
+      "after": "Kampanya 1-5 Temmuz 2026 tarihleri arasında 09:00–22:00 saatleri arasında geçerlidir. Sadece Mall of İstanbul şubesinde uygulanır. İkinci içeceğin boyutu bir…"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-hd-iskender-mutlu",
+      "field": "terms",
+      "before": "Kampanya 28 Haziran – 3 Temmuz 2026 tarihleri arasında 12:00–15:00 saatlerinde geçerlidir. Sadece HD İskender Metrogarden şubesine uygulanır. Diğer indirimle…",
+      "after": "Kampanya 28 Haziran – 3 Temmuz 2026 tarihleri arasında 12:00–15:00 saatlerinde geçerlidir. Sadece HD İskender Mall of İstanbul şubesine uygulanır. Diğer indi…"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-1",
+      "field": "description",
+      "before": "Metrogarden AVM'nin özel sahnesinde düzenlenen İstanbul Caz Gecesi, şehrin en prestijli caz etkinliklerinden biri olarak kayıtlara geçti. Türkiye'nin önde ge…",
+      "after": "Mall of İstanbul'nin özel sahnesinde düzenlenen İstanbul Caz Gecesi, şehrin en prestijli caz etkinliklerinden biri olarak kayıtlara geçti. Türkiye'nin önde g…"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-1",
+      "field": "organizer",
+      "before": "Metrogarden Kültür & Sanat",
+      "after": "Mall of İstanbul Kültür & Sanat"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-4",
+      "field": "shortDescription",
+      "before": "Türkiye ve dünyadan şefler Metrogarden'da buluştu. 2 gün, 50+ lezzet.",
+      "after": "Türkiye ve dünyadan şefler Mall of İstanbul'da buluştu. 2 gün, 50+ lezzet."
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-4",
+      "field": "description",
+      "before": "İki gün boyunca süren İstanbul Gastronomi Festivali, ülkemizin ve dünyanın dört bir yanından gelen şeflerin ellerinden çıkan eşsiz lezzetleri sever kitlesiyl…",
+      "after": "İki gün boyunca süren İstanbul Gastronomi Festivali, ülkemizin ve dünyanın dört bir yanından gelen şeflerin ellerinden çıkan eşsiz lezzetleri sever kitlesiyl…"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-1",
+      "field": "description",
+      "before": "LEGO Store Metrogarden'ın düzenlediği bu özel workshop'ta çocuklar deneyimli LEGO eğitmenleri eşliğinde yaratıcı inşaat projelerini hayata geçirecek. City, T…",
+      "after": "LEGO Store Mall of İstanbul'ın düzenlediği bu özel workshop'ta çocuklar deneyimli LEGO eğitmenleri eşliğinde yaratıcı inşaat projelerini hayata geçirecek. Ci…"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-1",
+      "field": "organizer",
+      "before": "LEGO Store Metrogarden",
+      "after": "LEGO Store Mall of İstanbul"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-2",
+      "field": "shortDescription",
+      "before": "Metrogarden Sahnesi'nde Türkiye'nin en iyi caz müzisyenleriyle bir gece.",
+      "after": "Mall of İstanbul Sahnesi'nde Türkiye'nin en iyi caz müzisyenleriyle bir gece."
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-2",
+      "field": "description",
+      "before": "Bu Cumartesi akşamı Metrogarden'ın özel açık hava sahnesi, Türkiye'nin önde gelen caz müzisyenlerine ev sahipliği yapıyor. Nükhet Ruacan Quartet'in yönetimin…",
+      "after": "Bu Cumartesi akşamı Mall of İstanbul'ın özel açık hava sahnesi, Türkiye'nin önde gelen caz müzisyenlerine ev sahipliği yapıyor. Nükhet Ruacan Quartet'in yöne…"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-2",
+      "field": "organizer",
+      "before": "Metrogarden Kültür & Sanat",
+      "after": "Mall of İstanbul Kültür & Sanat"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-3",
+      "field": "description",
+      "before": "Cookshop Metrogarden'ın baş şefi Murat Demir'in rehberliğinde gerçekleşen bu pratik mutfak atölyesinde katılımcılar Akdeniz ve Türk mutfağından seçme tarifle…",
+      "after": "Cookshop Mall of İstanbul'ın baş şefi Murat Demir'in rehberliğinde gerçekleşen bu pratik mutfak atölyesinde katılımcılar Akdeniz ve Türk mutfağından seçme ta…"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-3",
+      "field": "organizer",
+      "before": "Cookshop Metrogarden",
+      "after": "Cookshop Mall of İstanbul"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-1",
+      "field": "description",
+      "before": "Metrogarden'ın yılın en büyük müzik etkinliği olan Yaz Müzik Festivali, bu yıl üç gün boyunca pop, rock ve elektronik müzik severlerini ağırlıyor. 20'den faz…",
+      "after": "Mall of İstanbul'ın yılın en büyük müzik etkinliği olan Yaz Müzik Festivali, bu yıl üç gün boyunca pop, rock ve elektronik müzik severlerini ağırlıyor. 20'de…"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-1",
+      "field": "organizer",
+      "before": "Metrogarden Etkinlik Yönetimi",
+      "after": "Mall of İstanbul Etkinlik Yönetimi"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-2",
+      "field": "description",
+      "before": "Bu Temmuz, Metrogarden'ın sergi alanı genç Türk fotoğraf sanatçılarına ev sahipliği yapıyor. \"İstanbul'un Gizli Yüzü\" temasıyla hazırlanan sergide 40 özgün f…",
+      "after": "Bu Temmuz, Mall of İstanbul'ın sergi alanı genç Türk fotoğraf sanatçılarına ev sahipliği yapıyor. \"İstanbul'un Gizli Yüzü\" temasıyla hazırlanan sergide 40 öz…"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-2",
+      "field": "organizer",
+      "before": "Metrogarden Kültür & Sanat",
+      "after": "Mall of İstanbul Kültür & Sanat"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-3",
+      "field": "organizer",
+      "before": "Metrogarden Kültür & Sanat",
+      "after": "Mall of İstanbul Kültür & Sanat"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-4",
+      "field": "description",
+      "before": "Türkiye'nin en çok okunan yazarlarından Elif Şimşek, yeni romanı \"Sessiz Kalan Sokaklar\" için D&R Metrogarden'da imza etkinliği düzenliyecek. Etkinlikte yaza…",
+      "after": "Türkiye'nin en çok okunan yazarlarından Elif Şimşek, yeni romanı \"Sessiz Kalan Sokaklar\" için D&R Mall of İstanbul'da imza etkinliği düzenliyecek. Etkinlikte…"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-5",
+      "field": "shortDescription",
+      "before": "Türkiye ve dünyadan kahve ustaları Metrogarden'da. Tadım, demo ve yarışma.",
+      "after": "Türkiye ve dünyadan kahve ustaları Mall of İstanbul'da. Tadım, demo ve yarışma."
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-7",
+      "field": "description",
+      "before": "Her yaz Metrogarden'ın çatı katı terası, film severler için açık hava sinema sahnesine dönüşüyor. Bu özel gecede iki klasik Türk filmi gösterilecek. Dev ekra…",
+      "after": "Her yaz Mall of İstanbul'ın çatı katı terası, film severler için açık hava sinema sahnesine dönüşüyor. Bu özel gecede iki klasik Türk filmi gösterilecek. Dev…"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-7",
+      "field": "organizer",
+      "before": "Metrogarden Etkinlik Yönetimi",
+      "after": "Mall of İstanbul Etkinlik Yönetimi"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-upcoming-1",
+      "field": "description",
+      "before": "Metrogarden AVM'nin prestijli catwalk sahnesi, Türkiye'nin en yetenekli moda tasarımcılarını bir araya getiriyor. İki günlük defilede 15 tasarımcı 2026 ilkba…",
+      "after": "Mall of İstanbul'nin prestijli catwalk sahnesi, Türkiye'nin en yetenekli moda tasarımcılarını bir araya getiriyor. İki günlük defilede 15 tasarımcı 2026 ilkb…"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-upcoming-2",
+      "field": "description",
+      "before": "Türkiye'nin en büyük teknoloji startup fuarı bu yıl Metrogarden'da! Üç gün boyunca 50'den fazla startup ve teknoloji şirketi ürünlerini ve projelerini tanıta…",
+      "after": "Türkiye'nin en büyük teknoloji startup fuarı bu yıl Mall of İstanbul'da! Üç gün boyunca 50'den fazla startup ve teknoloji şirketi ürünlerini ve projelerini t…"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-upcoming-3",
+      "field": "title",
+      "before": "Metrogarden Gaming Tournament",
+      "after": "Mall of İstanbul Gaming Tournament"
+    }
+  ],
+  "publicVisibility": {
+    "campaigns": 0,
+    "events": 0,
+    "movies": 7,
+    "sliders": 4
+  },
+  "rows": [
+    {
+      "entityType": "store_category",
+      "sourceKey": "category:fashion",
+      "status": "would-create",
+      "message": "Moda"
+    },
+    {
+      "entityType": "store_category",
+      "sourceKey": "category:electronics",
+      "status": "would-create",
+      "message": "Elektronik"
+    },
+    {
+      "entityType": "store_category",
+      "sourceKey": "category:beauty",
+      "status": "would-create",
+      "message": "Güzellik"
+    },
+    {
+      "entityType": "store_category",
+      "sourceKey": "category:sports",
+      "status": "would-create",
+      "message": "Spor"
+    },
+    {
+      "entityType": "store_category",
+      "sourceKey": "category:kids",
+      "status": "would-create",
+      "message": "Çocuk"
+    },
+    {
+      "entityType": "store_category",
+      "sourceKey": "category:food-and-beverage",
+      "status": "would-create",
+      "message": "Yeme & İçme"
+    },
+    {
+      "entityType": "store_category",
+      "sourceKey": "category:entertainment",
+      "status": "would-create",
+      "message": "Eğlence"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-zara",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)",
+        "meta"
+      ],
+      "message": "Zara"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-apple",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)",
+        "meta"
+      ],
+      "message": "Apple"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-mango",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Mango"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-vakko",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Vakko"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-sephora",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Sephora"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-nike",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Nike"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-lego",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "LEGO"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-starbucks",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Starbucks"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-mavi",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Mavi"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-lc-waikiki",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "LC Waikiki"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-koton",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Koton"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-network",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Network"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-boyner",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Boyner"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-watsons",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Watsons"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-mediamarkt",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "MediaMarkt"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-teknosa",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Teknosa"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-hd-iskender",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "HD İskender"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-cookshop",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Cookshop"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-skechers",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "Skechers"
+    },
+    {
+      "entityType": "mall_store",
+      "sourceKey": "store-dr",
+      "status": "would-create",
+      "unsupportedFields": [
+        "images[] (CMS mağaza galerisi yok)"
+      ],
+      "message": "D&R"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-zara-yaz",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "meta",
+        "is_featured"
+      ],
+      "message": "Yaz Sonu Büyük İndirim → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-apple-macbook",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "meta",
+        "is_featured"
+      ],
+      "message": "MacBook Air M3 Kampanyası → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-sephora-guzellik",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "meta",
+        "is_featured"
+      ],
+      "message": "Güzellik Günleri → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-nike-yaz",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "meta",
+        "is_featured"
+      ],
+      "message": "Yaz Koleksiyonu Geldi → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-boyner-fashion",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Fashion Week Fırsatları → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-mango-yeni-sezon",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Yeni Sezon Koleksiyonu → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-vakko-luxury",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Lüks Koleksiyonu → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-lego-yaz",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Yaz Macerası Seti → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-mavi-denim",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Denim Günleri → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-dr-kitap",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Yaz Kitap Festivali → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-skechers-adim",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Adım At Kampanyası → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-network-profesyonel",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Profesyonel Stil → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-mediamarkt-hafta-sonu",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Hafta Sonu Elektroniği → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-starbucks-1al1",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "1 Al 1 Bedava → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-koton-yaz",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Yaz İndirimi Başladı → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-hd-iskender-mutlu",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Mutlu Saatler Kampanyası → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-watsons-guzellik",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Güzellik Haftası → DRAFT"
+    },
+    {
+      "entityType": "campaign",
+      "sourceKey": "campaign-lcw-aile",
+      "status": "would-create",
+      "unsupportedFields": [
+        "category (kampanya kategori alanı yok; dynamicFieldsJson)",
+        "is_featured"
+      ],
+      "message": "Aile Paketi İndirimi → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-1",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "İstanbul Caz Gecesi → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-2",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Çocuk Tiyatrosu: Ormandaki Sır → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-3",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Başlangıç Fotoğraf Atölyesi → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-4",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "İstanbul Gastronomi Festivali → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-past-5",
+      "status": "would-create",
+      "unsupportedFields": [
+        "organizer → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Söz & Şiir Gecesi → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-1",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "LEGO Kids Workshop → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-2",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Canlı Jazz Gecesi → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-week-3",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Cookshop Mutfak Dersleri → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-1",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Yaz Müzik Festivali → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-2",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Çağdaş Fotoğrafçılık Sergisi → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-3",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Çocuklar İçin Sanat Atölyesi → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-4",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "D&R Kitap İmza Günü → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-5",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Yaz Kahve Festivali → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-6",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Yoga & Mindfulness Workshop → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-month-7",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Açık Hava Sinema Gecesi → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-upcoming-1",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Fashion Week Defilesi → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-upcoming-2",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Teknoloji & İnovasyon Expo → DRAFT"
+    },
+    {
+      "entityType": "event",
+      "sourceKey": "event-upcoming-3",
+      "status": "would-create",
+      "unsupportedFields": [
+        "gallery[] (CMS event galeri alanı yok)",
+        "organizer → dynamicFieldsJson",
+        "ticket_price → dynamicFieldsJson",
+        "tags → dynamicFieldsJson",
+        "is_featured"
+      ],
+      "message": "Mall of İstanbul Gaming Tournament → DRAFT"
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-f1",
+      "status": "would-create",
+      "unsupportedFields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ],
+      "message": "F1 → NOW_PLAYING"
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-superman",
+      "status": "would-create",
+      "unsupportedFields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ],
+      "message": "Superman → NOW_PLAYING"
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-jurassic-world-rebirth",
+      "status": "would-create",
+      "unsupportedFields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ],
+      "message": "Jurassic World Rebirth → NOW_PLAYING"
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-mission-impossible",
+      "status": "would-create",
+      "unsupportedFields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ],
+      "message": "Mission: Impossible — The Final Reckoning → NOW_PLAYING"
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-elio",
+      "status": "would-create",
+      "unsupportedFields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ],
+      "message": "Elio → NOW_PLAYING"
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-lilo-stitch",
+      "status": "would-create",
+      "unsupportedFields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ],
+      "message": "Lilo & Stitch → NOW_PLAYING"
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-httyd",
+      "status": "would-create",
+      "unsupportedFields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "gallery[]",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)",
+        "daily_times (tarih kaydırma kapalı; seans oluşturulmadı)"
+      ],
+      "message": "How to Train Your Dragon → NOW_PLAYING"
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-karate-kid",
+      "status": "would-create",
+      "unsupportedFields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)"
+      ],
+      "message": "Karate Kid: Legends → UPCOMING"
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-fantastic-four",
+      "status": "would-create",
+      "unsupportedFields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)"
+      ],
+      "message": "Fantastic Four: First Steps → UPCOMING"
+    },
+    {
+      "entityType": "movie",
+      "sourceKey": "movie-28-years-later",
+      "status": "would-create",
+      "unsupportedFields": [
+        "cover_image (CMS yalnızca posterMediaId)",
+        "director (CreateMovieDto cast/directors yok)",
+        "cast",
+        "language",
+        "subtitle",
+        "is_featured",
+        "ticket_url (geçersiz/#)"
+      ],
+      "message": "28 Years Later → UPCOMING"
+    },
+    {
+      "entityType": "slider",
+      "sourceKey": "slider-group:home",
+      "status": "would-create",
+      "message": "Mall of İstanbul Home"
+    },
+    {
+      "entityType": "slider_item",
+      "sourceKey": "slide-1",
+      "status": "would-create",
+      "unsupportedFields": [
+        "eyebrow"
+      ],
+      "message": "Yaz Koleksiyonu Geldi"
+    },
+    {
+      "entityType": "slider_item",
+      "sourceKey": "slide-2",
+      "status": "would-create",
+      "unsupportedFields": [
+        "eyebrow"
+      ],
+      "message": "Lezzetin Yeni Adresi"
+    },
+    {
+      "entityType": "slider_item",
+      "sourceKey": "slide-3",
+      "status": "would-create",
+      "unsupportedFields": [
+        "eyebrow"
+      ],
+      "message": "Büyük Yaz Festivali"
+    },
+    {
+      "entityType": "slider_item",
+      "sourceKey": "slide-4",
+      "status": "would-create",
+      "unsupportedFields": [
+        "eyebrow"
+      ],
+      "message": "Sinema Deneyimi"
+    }
+  ],
+  "errors": [],
+  "finishedAt": "2026-11-24T18:24:20.172Z"
+}

@@ -1,0 +1,2395 @@
+{
+  "sourceSystem": "metrogarden",
+  "exportedAt": "2026-11-24T09:58:42.099Z",
+  "webRoot": "/Users/hanbeyoglu/Desktop/Apps/metrogarden-mall-react",
+  "stores": [
+    {
+      "id": "store-zara",
+      "slug": "zara",
+      "name": "Zara",
+      "cover_image": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "fashion",
+      "floor": "1f",
+      "description": "Zara, Inditex grubunun amiral gemisi markasıdır. Pist trendlerini hızla sokak modası hâline getiren Zara, her sezon yenilikçi koleksiyonları ve uygun fiyatlarıyla milyonların tercihi olmaktadır. Metrogarden'daki geniş mağazamızda kadın, erkek ve çocuk koleksiyonlarının tamamını bulabilirsiniz.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 01 10",
+      "website": "https://www.zara.com/tr",
+      "social_links": {
+        "instagram": "https://instagram.com/zara",
+        "facebook": "https://facebook.com/zara"
+      },
+      "is_featured": true,
+      "is_active": true,
+      "meta": {
+        "title": "Zara — Metrogarden AVM",
+        "description": "Zara mağazası Metrogarden AVM 1. Katta hizmetinizde."
+      }
+    },
+    {
+      "id": "store-apple",
+      "slug": "apple",
+      "name": "Apple",
+      "cover_image": "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "electronics",
+      "floor": "ground",
+      "description": "Apple Store, tüm Apple ürünlerini birebir deneyimlemenizi sağlar. iPhone, Mac, iPad, Apple Watch ve AirPods'u uzman personelimizin rehberliğinde keşfedin. Teknik destek, ürün eğitimleri ve özel workshop etkinlikleri için mağazamızı ziyaret edin.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 01 20",
+      "website": "https://www.apple.com/tr",
+      "social_links": {
+        "instagram": "https://instagram.com/apple",
+        "twitter": "https://twitter.com/apple",
+        "youtube": "https://youtube.com/apple"
+      },
+      "is_featured": true,
+      "is_active": true,
+      "meta": {
+        "title": "Apple — Metrogarden AVM",
+        "description": "Apple Store Metrogarden AVM Zemin Katta."
+      }
+    },
+    {
+      "id": "store-mango",
+      "slug": "mango",
+      "name": "Mango",
+      "cover_image": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1445205170230-053b83016050?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "fashion",
+      "floor": "1f",
+      "description": "Mango, Barselona kökenli uluslararası moda markasıdır. Zarif ve sofistike koleksiyonları ile çalışan kadınların vazgeçilmezi olan Mango, her sezon güncel trendleri kaliteli kumaşlarla buluşturmaktadır. Ofis şıklığından akşam elegansına kadar eksiksiz bir moda deneyimi sunar.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 01 30",
+      "website": "https://www.mango.com/tr",
+      "social_links": {
+        "instagram": "https://instagram.com/mango",
+        "facebook": "https://facebook.com/mango"
+      },
+      "is_featured": true,
+      "is_active": true
+    },
+    {
+      "id": "store-vakko",
+      "slug": "vakko",
+      "name": "Vakko",
+      "cover_image": "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1445205170230-053b83016050?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "fashion",
+      "floor": "2f",
+      "description": "Türkiye'nin önde gelen lüks moda markası Vakko, 1934'ten bu yana eşsiz tasarımlar ve kaliteli kumaşlar sunmaktadır. İpek ürünleri, haute couture koleksiyonları ve özel siparişleriyle Vakko, zarafet ve Türk tekstil geleneğini en üst düzeyde temsil etmektedir.",
+      "working_hours": "Pazartesi – Cumartesi: 10:00 – 21:30, Pazar: 11:00 – 21:00",
+      "phone": "+90 216 555 01 40",
+      "website": "https://www.vakko.com",
+      "social_links": {
+        "instagram": "https://instagram.com/vakko",
+        "facebook": "https://facebook.com/vakko"
+      },
+      "is_featured": true,
+      "is_active": true
+    },
+    {
+      "id": "store-sephora",
+      "slug": "sephora",
+      "name": "Sephora",
+      "cover_image": "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1487412912498-0447578fcca8?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "beauty",
+      "floor": "1f",
+      "description": "Sephora, dünyanın en büyük güzellik perakendecilerinden biridir. 300'den fazla markanın binlerce ürününü tek bir çatı altında sunan Sephora, parfüm, makyaj, cilt bakımı ve saç bakımı kategorilerinde geniş seçenekler sunmaktadır. Uzman güzellik danışmanları kişiselleştirilmiş öneriler için daima yanınızda.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 01 50",
+      "website": "https://www.sephora.com.tr",
+      "social_links": {
+        "instagram": "https://instagram.com/sephoratukey",
+        "facebook": "https://facebook.com/sephoraturkey",
+        "youtube": "https://youtube.com/sephora"
+      },
+      "is_featured": true,
+      "is_active": true
+    },
+    {
+      "id": "store-nike",
+      "slug": "nike",
+      "name": "Nike",
+      "cover_image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1556906781-9a412961a28f?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "sports",
+      "floor": "2f",
+      "description": "Nike, sporun ruhunu ve sınırları zorlamanın tutkusunu her ürününe yansıtır. Koşu, basketbol, futbol ve yaşam tarzı kategorilerinde en yeni koleksiyonları deneyimleyin. Nike Metrogarden mağazamızda ayakkabı, giyim ve aksesuar ürünlerinin yanı sıra kişiselleştirme hizmetinden de yararlanabilirsiniz.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 01 60",
+      "website": "https://www.nike.com/tr",
+      "social_links": {
+        "instagram": "https://instagram.com/nike",
+        "twitter": "https://twitter.com/nike",
+        "youtube": "https://youtube.com/nike"
+      },
+      "is_featured": true,
+      "is_active": true
+    },
+    {
+      "id": "store-lego",
+      "slug": "lego",
+      "name": "LEGO",
+      "cover_image": "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1611010344444-38f4d28a6c6c?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "kids",
+      "floor": "3f",
+      "description": "LEGO Store, hayal gücünün sınırlarını zorlayan yaratıcı oyun deneyimleri sunar. Klasik setlerden tematik koleksiyonlara, LEGO Technic'ten LEGO Architecture'a kadar binlerce ürün sizi bekliyor. Mağazamızdaki interaktif oluşturma istasyonlarında çocuklarınızla birlikte yaratıcılığınızı keşfedin.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 01 70",
+      "website": "https://www.lego.com/tr-tr",
+      "social_links": {
+        "instagram": "https://instagram.com/lego",
+        "youtube": "https://youtube.com/lego"
+      },
+      "is_featured": true,
+      "is_active": true
+    },
+    {
+      "id": "store-starbucks",
+      "slug": "starbucks",
+      "name": "Starbucks",
+      "cover_image": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "food-and-beverage",
+      "floor": "ground",
+      "description": "Starbucks, dünyanın her köşesinde aynı kalite ve lezzeti sunan global kahve markasıdır. Özenle seçilmiş kahve çekirdeklerinden hazırlanan içeceklerimiz, taze fırın ürünlerimiz ve rahat atmosferimizle alışveriş aranızda nefes alın. Mobil uygulamamız ile sipariş vererek sıra beklemeden ürünlerinizi teslim alabilirsiniz.",
+      "working_hours": "Pazartesi – Pazar: 09:00 – 22:30",
+      "phone": "+90 216 555 01 80",
+      "website": "https://www.starbucks.com.tr",
+      "social_links": {
+        "instagram": "https://instagram.com/starbucksturkiye",
+        "facebook": "https://facebook.com/starbucksturkiye"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": "store-mavi",
+      "slug": "mavi",
+      "name": "Mavi",
+      "cover_image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "fashion",
+      "floor": "2f",
+      "description": "Mavi, 1991'de İstanbul'da kurulan Türkiye'nin global denim markasıdır. Premium denim kalitesi ve Akdeniz esintili tasarımıyla dünyada 35 ülkede faaliyet gösteren Mavi, genç ve dinamik bir yaşam tarzını yansıtmaktadır. Mağazamızda kadın, erkek ve çocuk koleksiyonlarını bulabilirsiniz.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 01 90",
+      "website": "https://www.mavi.com",
+      "social_links": {
+        "instagram": "https://instagram.com/mavi",
+        "facebook": "https://facebook.com/mavi"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": "store-lc-waikiki",
+      "slug": "lc-waikiki",
+      "name": "LC Waikiki",
+      "cover_image": "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "fashion",
+      "floor": "3f",
+      "description": "LC Waikiki, Türkiye'nin en büyük hazır giyim perakende zinciridir. Uygun fiyatlı, kaliteli ve moda koleksiyonları ile tüm aile bireylerinin ihtiyacına cevap verir. Bebek, çocuk, genç ve yetişkin kategorilerinde geniş ürün yelpazesiyle hizmet veren mağazamız, ailenizin her ferdini düşünüyor.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 02 00",
+      "website": "https://www.lcw.com",
+      "social_links": {
+        "instagram": "https://instagram.com/lcwaikiki",
+        "facebook": "https://facebook.com/lcwaikiki",
+        "youtube": "https://youtube.com/lcwaikiki"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": "store-koton",
+      "slug": "koton",
+      "name": "Koton",
+      "cover_image": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1445205170230-053b83016050?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "fashion",
+      "floor": "3f",
+      "description": "Koton, 1988'de İstanbul'da kurulan Türk moda markasıdır. Trendy tasarımları, uygun fiyatları ve geniş koleksiyonlarıyla her mevsime uygun giyim seçenekleri sunan Koton, günlük yaşamdan özel günlere kadar tüm ihtiyaçları karşılar. Kadın, erkek ve çocuk bölümleriyle tam anlamıyla bir aile mağazasıdır.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 02 10",
+      "website": "https://www.koton.com",
+      "social_links": {
+        "instagram": "https://instagram.com/koton",
+        "facebook": "https://facebook.com/koton"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": "store-network",
+      "slug": "network",
+      "name": "Network",
+      "cover_image": "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "fashion",
+      "floor": "2f",
+      "description": "Network, uluslararası kalite standartlarında Türk tasarımı giyim ürünleri sunan köklü bir moda markasıdır. Özellikle iş yaşamı ve özel davet koleksiyonlarıyla öne çıkan Network, zarafet ve kaliteyi bir araya getirerek profesyonel imajı güçlendirir. Hem klasik hem de modern çizgilerde zengin seçenekler sunar.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 02 20",
+      "website": "https://www.network.com.tr",
+      "social_links": {
+        "instagram": "https://instagram.com/networkturkiye",
+        "facebook": "https://facebook.com/networkturkiye"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": "store-boyner",
+      "slug": "boyner",
+      "name": "Boyner",
+      "cover_image": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1445205170230-053b83016050?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "fashion",
+      "floor": "ground",
+      "description": "Boyner, Türkiye'nin en köklü mağazacılık gruplarından biri olup giyimden aksesuvara, kozmetikten ev ürünlerine kadar geniş bir yelpazede hizmet sunar. Çatısı altında barındırdığı ulusal ve uluslararası markalarla tek adımda alışverişin ayrıcalığını yaşatır. Metrogarden şubemiz, şehrin en büyük Boyner mağazalarından biridir.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 02 30",
+      "website": "https://www.boyner.com.tr",
+      "social_links": {
+        "instagram": "https://instagram.com/boyner",
+        "facebook": "https://facebook.com/boyner"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": "store-watsons",
+      "slug": "watsons",
+      "name": "Watsons",
+      "cover_image": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1487412912498-0447578fcca8?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "beauty",
+      "floor": "ground",
+      "description": "Watsons, Asya'nın önde gelen sağlık ve güzellik perakendecisidir. Kişisel bakım, sağlık, makyaj ve güzellik ürünlerinde binlerce seçenek sunan Watsons, kendi markası ürünleri ve dünyaca ünlü markaları bir arada bulundurur. Eczacı danışmanlığı ve ücretsiz güzellik testleri mağazamızda sizi bekliyor.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 02 40",
+      "website": "https://www.watsons.com.tr",
+      "social_links": {
+        "instagram": "https://instagram.com/watsonsturkiye",
+        "facebook": "https://facebook.com/watsonsturkiye"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": "store-mediamarkt",
+      "slug": "mediamarkt",
+      "name": "MediaMarkt",
+      "cover_image": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "electronics",
+      "floor": "b1",
+      "description": "MediaMarkt, Avrupa'nın en büyük tüketici elektroniği perakendecisidir. Televizyon, beyaz eşya, bilgisayar, cep telefonu ve aksesuarlar dahil binlerce ürünü rekabetçi fiyatlarla sunar. Uzman satış danışmanları, teknik servis ve kurulum hizmetleri ile alışverişinizi kolaylaştıran MediaMarkt'ta en yeni teknoloji sizi bekliyor.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 02 50",
+      "website": "https://www.mediamarkt.com.tr",
+      "social_links": {
+        "instagram": "https://instagram.com/mediamarktturkiye",
+        "youtube": "https://youtube.com/mediamarkt"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": "store-teknosa",
+      "slug": "teknosa",
+      "name": "Teknosa",
+      "cover_image": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "electronics",
+      "floor": "b1",
+      "description": "Teknosa, Türkiye'nin köklü tüketici elektroniği zinciridir. Sabancı Grubu'na bağlı olan Teknosa, cep telefonundan dizüstü bilgisayara, televizyondan küçük ev aletlerine kadar geniş bir ürün yelpazesi sunar. Uygun taksit seçenekleri, garantili ürünler ve teknik destek hizmetleriyle alışverişlerinizde güvende kalın.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 02 60",
+      "website": "https://www.teknosa.com",
+      "social_links": {
+        "instagram": "https://instagram.com/teknosa",
+        "facebook": "https://facebook.com/teknosa"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": "store-hd-iskender",
+      "slug": "hd-iskender",
+      "name": "HD İskender",
+      "cover_image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "food-and-beverage",
+      "floor": "3f",
+      "description": "HD İskender, Bursa'nın efsanevi İskender kebabını modern bir sunum anlayışıyla buluşturuyor. 1867'den bu yana süregelen geleneksel tarifleri ve el yapımı lahmacun hamurunu kullanan HD İskender, Türk mutfağının en sevilen lezzetlerini gurme bir deneyime dönüştürüyor. Yemek katımızdaki en popüler mekanlardan biri.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 02 70",
+      "website": "https://www.hdiskender.com.tr",
+      "social_links": {
+        "instagram": "https://instagram.com/hdiskender"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": "store-cookshop",
+      "slug": "cookshop",
+      "name": "Cookshop",
+      "cover_image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "food-and-beverage",
+      "floor": "3f",
+      "description": "Cookshop, taze ve sağlıklı malzemelerle hazırlanan uluslararası mutfak lezzetlerini sevenlerle buluşturuyor. Kahvaltıdan akşam yemeğine kadar sürekli değişen menüsü ve şef spesiyalleriyle Cookshop, her ziyarette yeni bir lezzet keşfi sunuyor. Geniş açık büfesi ve bireysel porsiyonlarıyla her damak tadına uygun seçenekler mevcut.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 02 80",
+      "website": "https://www.cookshop.com.tr",
+      "social_links": {
+        "instagram": "https://instagram.com/cookshoprestaurant"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": "store-skechers",
+      "slug": "skechers",
+      "name": "Skechers",
+      "cover_image": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1556906781-9a412961a28f?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "sports",
+      "floor": "2f",
+      "description": "Skechers, konfor ve stilin mükemmel dengesini sunan küresel ayakkabı markasıdır. Spor, günlük kullanım ve çocuk kategorilerinde binlerce model barındıran Skechers, özellikle Memory Foam teknolojisiyle donatılmış modelleriyle uzun yürüyüşlerde dahi konfor sağlar. Erkek, kadın ve çocuk bölümlerimizde ilgilendiğiniz modeli deneyimleyebilirsiniz.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 02 90",
+      "website": "https://www.skechers.com.tr",
+      "social_links": {
+        "instagram": "https://instagram.com/skechersturkiye",
+        "facebook": "https://facebook.com/skechers"
+      },
+      "is_featured": false,
+      "is_active": true
+    },
+    {
+      "id": "store-dr",
+      "slug": "d-r",
+      "name": "D&R",
+      "cover_image": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=800&h=533&fit=crop&q=85",
+      "images": [
+        "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=1200&h=800&fit=crop&q=85"
+      ],
+      "category": "entertainment",
+      "floor": "1f",
+      "description": "D&R, Türkiye'nin en köklü kültür ve eğlence perakende zinciridir. Kitap, müzik, film, oyun ve teknoloji aksesuar kategorilerinde on binlerce ürünü bünyesinde barındıran D&R, kültür tutkunlarının buluşma noktasıdır. Düzenli imza günleri, kitap kulübü etkinlikleri ve müzik dinletileriyle yaşayan bir kültür mekanına dönüşmüştür.",
+      "working_hours": "Pazartesi – Pazar: 10:00 – 22:00",
+      "phone": "+90 216 555 03 00",
+      "website": "https://www.dr.com.tr",
+      "social_links": {
+        "instagram": "https://instagram.com/drcom",
+        "facebook": "https://facebook.com/drcom"
+      },
+      "is_featured": false,
+      "is_active": true
+    }
+  ],
+  "campaigns": [
+    {
+      "id": "campaign-zara-yaz",
+      "slug": "zara-yaz-sonu-indirim",
+      "title": "Yaz Sonu Büyük İndirim",
+      "image": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Yaz koleksiyonunun tamamında seçilen ürünlerde kaçırılmaz fırsatlar.",
+      "description": "Zara'nın yaz sonu kampanyasıyla tüm yaz koleksiyonu ürünlerinde büyük indirimler başladı. Elbiseler, mayo ve bikini takımları, plaj kıyafetleri ve aksesuarlar dahil yüzlerce üründe %40'a varan indirimden yararlanın. Kampanya süresince mağazamızı ziyaret eden ilk 100 müşterimize özel bir şans kartı hediye edilecektir.",
+      "terms": "Kampanya geçerlilik tarihleri 1 Haziran – 31 Ağustos 2026 arasındadır. İndirimler seçili ürünlerle sınırlıdır ve yeni sezon ürünlerini kapsamaz. Aynı ürün birden fazla indirimle birleştirilemez. Kampanya yurt içi mağazalarda geçerlidir.",
+      "discount_label": "%40'a varan",
+      "store": {
+        "id": "store-zara",
+        "slug": "zara",
+        "name": "Zara",
+        "category": "fashion"
+      },
+      "category": "fashion",
+      "start_date": "2026-06-01",
+      "end_date": "2026-08-31",
+      "status": "active",
+      "is_active": true,
+      "is_featured": true,
+      "meta": {
+        "title": "Zara Yaz Sonu İndirim — Metrogarden AVM"
+      }
+    },
+    {
+      "id": "campaign-apple-macbook",
+      "slug": "apple-macbook-air-kampanya",
+      "title": "MacBook Air M3 Kampanyası",
+      "image": "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Yeni MacBook Air M3'ü şimdi al, üç ay taksit fırsatını kaçırma.",
+      "description": "Apple Store Metrogarden'da MacBook Air M3 alımlarında sıfır faizli taksit kampanyası başladı. 8 GB veya 16 GB Birleşik Bellek seçenekleriyle sunulan MacBook Air M3, günlük kullanım ve profesyonel iş akışları için gereken tüm gücü kullanıcı dostu bir formatta sunuyor. Ayrıca seçili Türk bankaları ile 3 ay taksit imkânından yararlanabilirsiniz.",
+      "terms": "Taksit kampanyası yalnızca Yapı Kredi, Akbank ve İş Bankası kartları ile geçerlidir. Kampanya 1 Temmuz – 31 Ağustos 2026 tarihleri arasında uygulanır. Stok ile sınırlıdır.",
+      "discount_label": "3 Ay Taksit",
+      "store": {
+        "id": "store-apple",
+        "slug": "apple",
+        "name": "Apple",
+        "category": "electronics"
+      },
+      "category": "electronics",
+      "start_date": "2026-07-01",
+      "end_date": "2026-08-31",
+      "status": "active",
+      "is_active": true,
+      "is_featured": false,
+      "meta": {
+        "title": "Apple MacBook Air M3 Kampanya — Metrogarden AVM"
+      }
+    },
+    {
+      "id": "campaign-sephora-guzellik",
+      "slug": "sephora-guzellik-gunleri",
+      "title": "Güzellik Günleri",
+      "image": "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=1920&h=900&fit=crop&q=85",
+      "short_description": "500 TL ve üzeri alışverişlerde kişiye özel güzellik seti hediye.",
+      "description": "Sephora'nın yılın en büyük güzellik kampanyası Metrogarden'da başladı. 500 TL ve üzeri alışverişlerde sizi özel bir güzellik seti bekliyor. Parfüm, cilt bakımı ve makyaj kategorilerinde seçili ürünlerde ek indirim avantajları da sunulacak. Sephora Güzellik Uzmanlarımız, ücretsiz makyaj denemesi ve cilt analizi için randevu almak isteyenlere özel danışmanlık hizmeti verecek.",
+      "terms": "Hediye set yalnızca 500 TL ve üzeri tek seferlik alışverişlerde geçerlidir. Hediye seti stokları tükendiğinde kampanya sona erer. Parfüm indirimleri belirli markaları kapsar; detaylar için mağazamızı ziyaret ediniz.",
+      "discount_label": "Hediye Set",
+      "store": {
+        "id": "store-sephora",
+        "slug": "sephora",
+        "name": "Sephora",
+        "category": "beauty"
+      },
+      "category": "beauty",
+      "start_date": "2026-06-15",
+      "end_date": "2026-07-20",
+      "status": "active",
+      "is_active": true,
+      "is_featured": true,
+      "meta": {
+        "title": "Sephora Güzellik Günleri — Metrogarden AVM"
+      }
+    },
+    {
+      "id": "campaign-nike-yaz",
+      "slug": "nike-yaz-koleksiyonu",
+      "title": "Yaz Koleksiyonu Geldi",
+      "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1920&h=900&fit=crop&q=85",
+      "short_description": "2026 yaz koleksiyonu şimdi raflarda. Limitsiz performans için doğru seçim.",
+      "description": "Nike 2026 Yaz Koleksiyonu, spor ve yaşam tarzı kategorisinde yeni ufuklar açıyor. Dri-FIT teknolojisiyle üretilen giysi serisi, yoğun yaz sıcaklarında bile maksimum konforu garanti ediyor. Air Max ve React tabanlı yeni ayakkabı modelleri de bu koleksiyonda ziyaretçilerle buluşuyor. Mağazamızda seçili ürünlerde özel indirim etiketlerini takip etmeyi unutmayın.",
+      "terms": "Kampanya 20 Haziran – 31 Ağustos 2026 tarihleri arasında geçerlidir. İndirimler seçili ürünlerde uygulanır.",
+      "discount_label": "Yeni Sezon",
+      "store": {
+        "id": "store-nike",
+        "slug": "nike",
+        "name": "Nike",
+        "category": "sports"
+      },
+      "category": "sports",
+      "start_date": "2026-06-20",
+      "end_date": "2026-08-31",
+      "status": "active",
+      "is_active": true,
+      "is_featured": true,
+      "meta": {
+        "title": "Nike Yaz Koleksiyonu — Metrogarden AVM"
+      }
+    },
+    {
+      "id": "campaign-boyner-fashion",
+      "slug": "boyner-fashion-week",
+      "title": "Fashion Week Fırsatları",
+      "image": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Boyner'da Fashion Week ruhu. Seçili markalarda yüksek indirimler.",
+      "description": "Boyner'ın Fashion Week kampanyasıyla yüzlerce seçkin marka ürününde büyük indirimler sizi bekliyor. Kadın, erkek ve çocuk kategorilerinde birbirinden şık parçaları uygun fiyatlarla bulabilirsiniz. Boyner Kart sahiplerine ek %10 indirim uygulanmaktadır.",
+      "terms": "Kampanya 1-31 Temmuz 2026 tarihleri arasında geçerlidir. Boyner Kart indirimi diğer indirimlerle birleştirilemez. Seçili markalar ve ürünlerle sınırlıdır.",
+      "discount_label": "%30'a varan",
+      "store": {
+        "id": "store-boyner",
+        "slug": "boyner",
+        "name": "Boyner",
+        "category": "fashion"
+      },
+      "category": "fashion",
+      "start_date": "2026-07-01",
+      "end_date": "2026-07-31",
+      "status": "active",
+      "is_active": true,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-mango-yeni-sezon",
+      "slug": "mango-yeni-sezon-2026",
+      "title": "Yeni Sezon Koleksiyonu",
+      "image": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Mango 2026 yaz sonu koleksiyonu şimdi mağazalarda.",
+      "description": "Mango'nun 2026 yaz sonu koleksiyonu, Akdeniz estetiğini modern Avrupa modası ile buluşturuyor. Zengin doku ve renk alternatifleriyle sunulan bu koleksiyon; elbiseler, bluzlar, pantolonlar ve aksesuar ürünlerini kapsıyor. Mango Members üyeleri alışverişlerinde ek puan kazanmaktadır.",
+      "terms": "Kampanya 15 Haziran – 15 Ağustos 2026 arasında geçerlidir. Mango Members avantajları yalnızca kayıtlı üyelere uygulanır.",
+      "discount_label": "Yeni Sezon",
+      "store": {
+        "id": "store-mango",
+        "slug": "mango",
+        "name": "Mango",
+        "category": "fashion"
+      },
+      "category": "fashion",
+      "start_date": "2026-06-15",
+      "end_date": "2026-08-15",
+      "status": "active",
+      "is_active": true,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-vakko-luxury",
+      "slug": "vakko-luks-koleksiyonu",
+      "title": "Lüks Koleksiyonu",
+      "image": "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Vakko'nun efsanevi ipek ürünleri ve özel tasarımlar bu sezon mağazada.",
+      "description": "Vakko'nun bu sezon koleksiyonu, Türk tekstil geleneğini günümüz haute couture anlayışıyla sentezliyor. El işlemeli ipek bluzlar, özel baskı atkılar ve deri aksesuar serileri bu koleksiyonun öne çıkan parçaları arasında yer alıyor. Vakko Metrogarden'da özel sipariş danışmanlığı da sunulmaktadır.",
+      "terms": "Koleksiyon 1 Temmuz – 30 Eylül 2026 tarihleri arasında sergilenmektedir. Özel sipariş teslimat süreleri mağaza personeli tarafından belirtilecektir.",
+      "discount_label": "Özel Sezon",
+      "store": {
+        "id": "store-vakko",
+        "slug": "vakko",
+        "name": "Vakko",
+        "category": "fashion"
+      },
+      "category": "fashion",
+      "start_date": "2026-07-01",
+      "end_date": "2026-09-30",
+      "status": "active",
+      "is_active": true,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-lego-yaz",
+      "slug": "lego-yaz-macerasi",
+      "title": "Yaz Macerası Seti",
+      "image": "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Çocuklarınızla yaratıcı bir yaz geçirin. Sınırlı özel LEGO setleri.",
+      "description": "LEGO Yaz Macerası koleksiyonuyla çocuklarınızın tatil boyunca hayal güçleri gelişsin. Bu sezon mağazamıza özel iki yeni set piyasaya çıkıyor: LEGO City Beach Resort ve LEGO Technic Safari. Mağazamızdaki build station'larda bu setleri deneyimleyebilir, satın alım sonrası ücretsiz assembly workshopuna katılabilirsiniz.",
+      "terms": "Sınırlı sayıda stok mevcuttur. Workshop etkinlikleri hafta sonları 11:00–13:00 saatleri arasında düzenlenmektedir. Reservasyon mağaza personeline yaptırılabilir.",
+      "discount_label": "Özel Set",
+      "store": {
+        "id": "store-lego",
+        "slug": "lego",
+        "name": "LEGO",
+        "category": "kids"
+      },
+      "category": "kids",
+      "start_date": "2026-06-20",
+      "end_date": "2026-08-31",
+      "status": "active",
+      "is_active": true,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-mavi-denim",
+      "slug": "mavi-denim-gunleri",
+      "title": "Denim Günleri",
+      "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Mavi'nin en sevilen jean modelleri özel fiyatlarla.",
+      "description": "Mavi Denim Günleri kapsamında klasikleşmiş jean modelleri ve bu sezonun denim trendleri özel indirimle sunuluyor. Slim fit, straight leg ve wide leg modelleriniz arasında dilediğinizi seçin. Mavi Club üyeleri tüm alışverişlerinde 2 kat puan kazanıyor.",
+      "terms": "Kampanya 1-31 Temmuz 2026 tarihleri arasında geçerlidir. Mavi Club ikinci puan avantajı için üyelik gereklidir. Seçili jean modelleri ile sınırlıdır.",
+      "discount_label": "%25'e varan",
+      "store": {
+        "id": "store-mavi",
+        "slug": "mavi",
+        "name": "Mavi",
+        "category": "fashion"
+      },
+      "category": "fashion",
+      "start_date": "2026-07-01",
+      "end_date": "2026-07-31",
+      "status": "active",
+      "is_active": true,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-dr-kitap",
+      "slug": "d-r-kitap-festivali",
+      "title": "Yaz Kitap Festivali",
+      "image": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1920&h=900&fit=crop&q=85",
+      "short_description": "D&R'da seçili kitaplarda büyük indirim ve imzalı kitap etkinlikleri.",
+      "description": "D&R Yaz Kitap Festivali kapsamında roman, edebiyat ve kişisel gelişim kategorilerindeki en çok satan kitaplarda %30'a varan indirimler sunulmaktadır. Festival süresince her hafta sonu tanınmış yazarlarla imza etkinlikleri düzenlenmektedir. Etkinlik takvimini mağazamızdan veya D&R web sitesinden takip edebilirsiniz.",
+      "terms": "İndirimler 1-31 Temmuz 2026 tarihleri arasında seçili kategorilerde geçerlidir. Ders kitapları ve okul malzemeleri kampanya kapsamı dışındadır.",
+      "discount_label": "%30'a varan",
+      "store": {
+        "id": "store-dr",
+        "slug": "d-r",
+        "name": "D&R",
+        "category": "entertainment"
+      },
+      "category": "entertainment",
+      "start_date": "2026-07-01",
+      "end_date": "2026-07-31",
+      "status": "active",
+      "is_active": true,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-skechers-adim",
+      "slug": "skechers-adim-at",
+      "title": "Adım At Kampanyası",
+      "image": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Skechers Memory Foam serisinde yaz fiyatları.",
+      "description": "Skechers'ın efsane Memory Foam serisi ve yeni Arch Fit teknolojisiyle donatılmış modeller bu yaz özel kampanya fiyatlarıyla sunuluyor. Erkek, kadın ve çocuk kategorilerinde 50'den fazla model kampanyaya dahildir. Çift alımlarda kargo ücretsizdir.",
+      "terms": "Kampanya 1 Temmuz – 15 Ağustos 2026 tarihleri arasında geçerlidir. Çift alım indirimi aynı sepette en az 2 ayakkabı ürünü için uygulanır.",
+      "discount_label": "%20'ye varan",
+      "store": {
+        "id": "store-skechers",
+        "slug": "skechers",
+        "name": "Skechers",
+        "category": "sports"
+      },
+      "category": "sports",
+      "start_date": "2026-07-01",
+      "end_date": "2026-08-15",
+      "status": "active",
+      "is_active": true,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-network-profesyonel",
+      "slug": "network-profesyonel-stil",
+      "title": "Profesyonel Stil",
+      "image": "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Network iş koleksiyonunda sezona özel indirimler.",
+      "description": "Network'ün iş hayatına özel koleksiyonunda bu sezon hem klasik hem de modern çizgiler güçlü bir şekilde bir arada. Takım elbiselerden business casual parçalara, gömlek ve aksesuvarlara uzanan geniş bir yelpazede seçkin ürünler bulunmaktadır. Tüm koleksiyon ürünlerinde kuru temizleme paketi hediyesi sunulmaktadır.",
+      "terms": "Kuru temizleme paketi 500 TL ve üzeri alışverişlerde geçerlidir. Kampanya 1-31 Temmuz 2026 tarihlerinde uygulanır.",
+      "discount_label": "Kuru Temizleme Hediye",
+      "store": {
+        "id": "store-network",
+        "slug": "network",
+        "name": "Network",
+        "category": "fashion"
+      },
+      "category": "fashion",
+      "start_date": "2026-07-01",
+      "end_date": "2026-07-31",
+      "status": "active",
+      "is_active": true,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-mediamarkt-hafta-sonu",
+      "slug": "mediamarkt-hafta-sonu-elektroniği",
+      "title": "Hafta Sonu Elektroniği",
+      "image": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Televize ve bilgisayarda vade farksız ödeme fırsatı. Son 6 gün!",
+      "description": "MediaMarkt'ın hafta sonu elektroniği kampanyası ile televizyon, bilgisayar ve tablet kategorilerinde seçili ürünlerde 12 aya kadar vade farksız taksit imkânından yararlanabilirsiniz. Ayrıca 3.000 TL ve üzeri alışverişlerde mağaza içi kurulum hizmeti ücretsiz sunulmaktadır.",
+      "terms": "Taksit seçenekleri yalnızca anlaşmalı bankalar için geçerlidir. Kurulum hizmeti yalnızca Kartal ve çevre ilçelerde uygulanır. Kampanya stok ile sınırlıdır.",
+      "discount_label": "12 Ay Taksit",
+      "store": {
+        "id": "store-mediamarkt",
+        "slug": "mediamarkt",
+        "name": "MediaMarkt",
+        "category": "electronics"
+      },
+      "category": "electronics",
+      "start_date": "2026-06-25",
+      "end_date": "2026-07-06",
+      "status": "ending-soon",
+      "is_active": true,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-starbucks-1al1",
+      "slug": "starbucks-1-al-1-bedava",
+      "title": "1 Al 1 Bedava",
+      "image": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=1920&h=900&fit=crop&q=85",
+      "short_description": "İkinci içeceğiniz bedava. Sadece bu hafta geçerli.",
+      "description": "Starbucks Metrogarden'da bu haftasonu özel \"1 Al 1 Bedava\" kampanyası düzenlenecek. Grande ve Venti boyutlarında seçili sıcak ve soğuk içecekler kampanyaya dahildir. Starbucks Rewards üyelerine yıldız ikramiyesi de verilecektir.",
+      "terms": "Kampanya 1-5 Temmuz 2026 tarihleri arasında 09:00–22:00 saatleri arasında geçerlidir. Sadece Metrogarden şubesinde uygulanır. İkinci içeceğin boyutu birinciden büyük olamaz. Günlük kişi başı 1 kullanım ile sınırlıdır.",
+      "discount_label": "1 Al 1 Bedava",
+      "store": {
+        "id": "store-starbucks",
+        "slug": "starbucks",
+        "name": "Starbucks",
+        "category": "food-and-beverage"
+      },
+      "category": "food-and-beverage",
+      "start_date": "2026-07-01",
+      "end_date": "2026-07-05",
+      "status": "ending-soon",
+      "is_active": true,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-koton-yaz",
+      "slug": "koton-yaz-indirimi",
+      "title": "Yaz İndirimi Başladı",
+      "image": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Koton'da yaz sezonu biterken son indirim fırsatları.",
+      "description": "Koton'un sezon sonu indirimi başladı. Yaz koleksiyonunun tamamında seçili ürünler özel fiyatlarla satılmaktadır. Bayan, erkek ve çocuk koleksiyonunda yüzlerce ürün belirlenen indirim oranlarıyla yer alıyor. Stoklar tükenirken bu fırsatı kaçırmayın.",
+      "terms": "Kampanya geçerlilik tarihleri 25 Haziran – 7 Temmuz 2026 arasındadır. Stok ile sınırlıdır. Yeni sezon ürünleri indirim kapsamı dışındadır.",
+      "discount_label": "%50'ye varan",
+      "store": {
+        "id": "store-koton",
+        "slug": "koton",
+        "name": "Koton",
+        "category": "fashion"
+      },
+      "category": "fashion",
+      "start_date": "2026-06-25",
+      "end_date": "2026-07-07",
+      "status": "ending-soon",
+      "is_active": true,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-hd-iskender-mutlu",
+      "slug": "hd-iskender-mutlu-saatler",
+      "title": "Mutlu Saatler Kampanyası",
+      "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920&h=900&fit=crop&q=85",
+      "short_description": "12:00–15:00 arası İskender siparişlerde içecek bedava.",
+      "description": "HD İskender'de Mutlu Saatler kampanyası kapsamında her gün öğle saatlerinde 12:00–15:00 arasında İskender siparişlerinize ücretsiz içecek ikramı yapılmaktadır. Ayran veya soda tercihine göre sunulan bu kampanya, öğle aralarınızı daha keyifli kılmayı amaçlıyor.",
+      "terms": "Kampanya 28 Haziran – 3 Temmuz 2026 tarihleri arasında 12:00–15:00 saatlerinde geçerlidir. Sadece HD İskender Metrogarden şubesine uygulanır. Diğer indirimlerle birleştirilemez.",
+      "discount_label": "İçecek Bedava",
+      "store": {
+        "id": "store-hd-iskender",
+        "slug": "hd-iskender",
+        "name": "HD İskender",
+        "category": "food-and-beverage"
+      },
+      "category": "food-and-beverage",
+      "start_date": "2026-06-28",
+      "end_date": "2026-07-03",
+      "status": "ending-soon",
+      "is_active": true,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-watsons-guzellik",
+      "slug": "watsons-guzellik-haftasi",
+      "title": "Güzellik Haftası",
+      "image": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Watsons'ın güzellik ürünlerinde özel haftalık indirimler.",
+      "description": "Watsons Güzellik Haftası kapsamında cilt bakımı, saç bakımı ve makyaj kategorilerinde %35'e varan indirimler sunuldu. Kampanya süreci boyunca düzenlenen ücretsiz cilt analizi seanslarında binlerce ziyaretçi kişiselleştirilmiş bakım önerileri aldı.",
+      "terms": "Bu kampanyanın geçerlilik süresi dolmuştur. Kampanya 1-15 Haziran 2026 tarihleri arasında uygulandı.",
+      "discount_label": "%35'e varan",
+      "store": {
+        "id": "store-watsons",
+        "slug": "watsons",
+        "name": "Watsons",
+        "category": "beauty"
+      },
+      "category": "beauty",
+      "start_date": "2026-06-01",
+      "end_date": "2026-06-15",
+      "status": "expired",
+      "is_active": false,
+      "is_featured": false
+    },
+    {
+      "id": "campaign-lcw-aile",
+      "slug": "lc-waikiki-aile-paketi",
+      "title": "Aile Paketi İndirimi",
+      "image": "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=1920&h=900&fit=crop&q=85",
+      "short_description": "LC Waikiki'de aile alışverişlerine özel kombine indirimler.",
+      "description": "LC Waikiki Aile Paketi kampanyası kapsamında, aynı aileden 3 veya daha fazla kişi için aynı anda alışveriş yapılması halinde tüm sepete özel indirim uygulandı. Anne, baba ve çocuk kategorilerinde yüzlerce model kampanyaya dahil edildi.",
+      "terms": "Bu kampanyanın geçerlilik süresi dolmuştur. Kampanya 1-20 Haziran 2026 tarihleri arasında uygulandı.",
+      "discount_label": "%15 Aile İndirimi",
+      "store": {
+        "id": "store-lc-waikiki",
+        "slug": "lc-waikiki",
+        "name": "LC Waikiki",
+        "category": "fashion"
+      },
+      "category": "fashion",
+      "start_date": "2026-06-01",
+      "end_date": "2026-06-20",
+      "status": "expired",
+      "is_active": false,
+      "is_featured": false
+    }
+  ],
+  "events": [
+    {
+      "id": "event-past-1",
+      "slug": "istanbul-caz-gecesi-haziran",
+      "title": "İstanbul Caz Gecesi",
+      "image": "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Türkiye'nin en sevilen caz müzisyenleriyle unutulmaz bir Haziran gecesi.",
+      "description": "Metrogarden AVM'nin özel sahnesinde düzenlenen İstanbul Caz Gecesi, şehrin en prestijli caz etkinliklerinden biri olarak kayıtlara geçti. Türkiye'nin önde gelen caz müzisyenlerinin eşlik ettiği gecede oda müziği, blues ve fusion caz repertuvarından seçmeler seslendirildi. Seyirciler, şarap ve aperitif eşliğinde unutulmaz bir müzik akşamı geçirdi.",
+      "date": "2026-06-15",
+      "time": "20:00",
+      "end_time": "23:30",
+      "location": "Açık Hava Amfitiyatrosu, B1 Kat",
+      "organizer": "Metrogarden Kültür & Sanat",
+      "is_free": false,
+      "ticket_price": "250 TL",
+      "category": "concert",
+      "is_featured": false,
+      "tags": [
+        "caz",
+        "müzik",
+        "canlı performans"
+      ]
+    },
+    {
+      "id": "event-past-2",
+      "slug": "cocuk-tiyatro-gosterisi-haziran",
+      "title": "Çocuk Tiyatrosu: Ormandaki Sır",
+      "image": "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Profesyonel oyuncuların sergilediği çocuk dostu interaktif tiyatro gösterisi.",
+      "description": "Çocuk Tiyatrosu: Ormandaki Sır, 4-12 yaş arası çocuklara yönelik interaktif bir tiyatro deneyimi sundu. Profesyonel oyuncular ve rengarenk kostümlerle bezeli sahnede çocuklar hem eğlendi hem de doğa, dostluk ve cesaret gibi önemli değerler üzerine düşündü.",
+      "date": "2026-06-20",
+      "time": "11:00",
+      "end_time": "12:30",
+      "end_date": "2026-06-21",
+      "location": "Etkinlik Salonu, 3. Kat",
+      "organizer": "Küçük Sahneciler Tiyatrosu",
+      "is_free": false,
+      "ticket_price": "120 TL",
+      "category": "kids",
+      "is_featured": false,
+      "tags": [
+        "çocuk",
+        "tiyatro",
+        "interaktif"
+      ]
+    },
+    {
+      "id": "event-past-3",
+      "slug": "fotograf-atolyesi-haziran",
+      "title": "Başlangıç Fotoğraf Atölyesi",
+      "image": "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Profesyonel fotoğrafçıdan ışık, kompozisyon ve renk yönetimi dersleri.",
+      "description": "Ünlü belgesel fotoğrafçısı Ahmet Yıldırım'ın yönettiği bu atölye, fotoğrafçılığa ilgi duyan herkese temel teknikler öğretti. Katılımcılar f-değerleri, poz süresi ve ISO ayarları gibi temel kavramları öğrenirken AVM koridorlarında pratik çekim deneyimi de kazandı.",
+      "date": "2026-06-10",
+      "time": "10:00",
+      "end_time": "16:00",
+      "location": "Sanat Galerisi, 2. Kat",
+      "organizer": "Ahmet Yıldırım Fotoğraf Okulu",
+      "is_free": false,
+      "ticket_price": "350 TL",
+      "category": "workshop",
+      "is_featured": false,
+      "tags": [
+        "fotoğraf",
+        "atölye",
+        "eğitim"
+      ]
+    },
+    {
+      "id": "event-past-4",
+      "slug": "gastronomi-festivali-haziran",
+      "title": "İstanbul Gastronomi Festivali",
+      "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Türkiye ve dünyadan şefler Metrogarden'da buluştu. 2 gün, 50+ lezzet.",
+      "description": "İki gün boyunca süren İstanbul Gastronomi Festivali, ülkemizin ve dünyanın dört bir yanından gelen şeflerin ellerinden çıkan eşsiz lezzetleri sever kitlesiyle buluşturdu. Ürün demoları, tadım stantları ve ödüllü şef sunumlarıyla Metrogarden adeta bir lezzet cenneti haline geldi.",
+      "date": "2026-06-22",
+      "time": "11:00",
+      "end_date": "2026-06-23",
+      "end_time": "21:00",
+      "location": "Yemek Katı & Açık Alan, 3. Kat",
+      "organizer": "Gastronomi Derneği İstanbul",
+      "is_free": true,
+      "category": "festival",
+      "is_featured": false,
+      "tags": [
+        "yemek",
+        "festival",
+        "gastronomi"
+      ]
+    },
+    {
+      "id": "event-past-5",
+      "slug": "siir-gecesi-haziran",
+      "title": "Söz & Şiir Gecesi",
+      "image": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1920&h=900&fit=crop&q=85",
+      "short_description": "Tanınmış şairlerin kaleminden İstanbul ve aşk üzerine şiirler.",
+      "description": "D&R Kitabevi'nin ev sahipliğinde düzenlenen bu özel gecede, Türkiye'nin tanınmış şairleri kendi şiirlerini seslendirdi. Kitap okuma seansları ve imza etkinlikleriyle şiir severlere unutulmaz bir akşam yaşatıldı.",
+      "date": "2026-06-05",
+      "time": "19:00",
+      "end_time": "21:00",
+      "location": "D&R Mağazası, 1. Kat",
+      "organizer": "D&R Kültür Sanat",
+      "is_free": true,
+      "category": "culture",
+      "is_featured": false,
+      "tags": [
+        "şiir",
+        "edebiyat",
+        "kültür"
+      ]
+    },
+    {
+      "id": "event-week-1",
+      "slug": "lego-kids-workshop-temmuz",
+      "title": "LEGO Kids Workshop",
+      "image": "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1611010344444-38f4d28a6c6c?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "6-12 yaş arası çocuklar için LEGO usta yapıcı eğitimi. Malzemeler dahil.",
+      "description": "LEGO Store Metrogarden'ın düzenlediği bu özel workshop'ta çocuklar deneyimli LEGO eğitmenleri eşliğinde yaratıcı inşaat projelerini hayata geçirecek. City, Technic ve Creator temalı setlerle minyatür şehirler kuran çocuklar mühendislik ve mimarlık kavramlarını eğlenceli bir şekilde öğrenecek. Katılım sonunda her çocuğa sertifika ve özel bir LEGO minyatürü verilecek.",
+      "date": "2026-07-03",
+      "time": "11:00",
+      "end_time": "14:00",
+      "end_date": "2026-07-04",
+      "location": "LEGO Mağazası, 3. Kat",
+      "organizer": "LEGO Store Metrogarden",
+      "is_free": false,
+      "ticket_price": "180 TL",
+      "ticket_url": "https://metrogarden.com.tr/etkinlikler/lego-workshop",
+      "category": "kids",
+      "is_featured": true,
+      "tags": [
+        "lego",
+        "çocuk",
+        "workshop",
+        "yaratıcılık"
+      ]
+    },
+    {
+      "id": "event-week-2",
+      "slug": "canli-caz-gecesi-temmuz",
+      "title": "Canlı Jazz Gecesi",
+      "image": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Metrogarden Sahnesi'nde Türkiye'nin en iyi caz müzisyenleriyle bir gece.",
+      "description": "Bu Cumartesi akşamı Metrogarden'ın özel açık hava sahnesi, Türkiye'nin önde gelen caz müzisyenlerine ev sahipliği yapıyor. Nükhet Ruacan Quartet'in yönetimindeki bu özel gecede swing, bebop ve Türk caz fusionundan oluşan zengin bir repertuvar seslendirilecek. Sahnede davul, trompet, kontrbas ve piyano grubu yer alacak. Oturma yerleri sınırlıdır.",
+      "date": "2026-07-05",
+      "time": "20:00",
+      "end_time": "23:00",
+      "location": "Açık Hava Amfitiyatrosu, B1 Kat",
+      "organizer": "Metrogarden Kültür & Sanat",
+      "is_free": false,
+      "ticket_price": "280 TL",
+      "ticket_url": "https://biletix.com/metrogarden-caz",
+      "category": "concert",
+      "is_featured": false,
+      "tags": [
+        "caz",
+        "konser",
+        "müzik",
+        "açık hava"
+      ]
+    },
+    {
+      "id": "event-week-3",
+      "slug": "cookshop-mutfak-dersleri",
+      "title": "Cookshop Mutfak Dersleri",
+      "image": "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Profesyonel şeften ev yemeklerini gurme seviyeye taşıma dersleri.",
+      "description": "Cookshop Metrogarden'ın baş şefi Murat Demir'in rehberliğinde gerçekleşen bu pratik mutfak atölyesinde katılımcılar Akdeniz ve Türk mutfağından seçme tarifleri uygulamalı olarak öğrenecek. Malzemeler hazırlanmış şekilde sunulacak; yemek pişirme, plating ve servis teknikleri profesyonel bir şekilde aktarılacak. Atölye sonunda hazırlanan yemekler birlikte yenecek.",
+      "date": "2026-07-04",
+      "time": "14:00",
+      "end_time": "17:00",
+      "location": "Cookshop Restoran Mutfağı, 3. Kat",
+      "organizer": "Cookshop Metrogarden",
+      "is_free": false,
+      "ticket_price": "320 TL",
+      "ticket_url": "https://metrogarden.com.tr/etkinlikler/cookshop-mutfak",
+      "category": "food",
+      "is_featured": false,
+      "tags": [
+        "yemek",
+        "atölye",
+        "şef"
+      ]
+    },
+    {
+      "id": "event-month-1",
+      "slug": "yaz-muzik-festivali",
+      "title": "Yaz Müzik Festivali",
+      "image": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1506869640319-fe1a24fd76dc?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Açık hava sahnesi, canlı müzik ve Türkiye'nin en iyi sanatçıları. Üç gün.",
+      "description": "Metrogarden'ın yılın en büyük müzik etkinliği olan Yaz Müzik Festivali, bu yıl üç gün boyunca pop, rock ve elektronik müzik severlerini ağırlıyor. 20'den fazla sanatçı ve grubun sahne aldığı festival, AVM'nin açık hava amfitiyatrosunda gerçekleşecek. Her gece farklı bir müzik türüne odaklanan programda sürpriz konuklar da yer alacak. Biletler mevcut, kapasite sınırlıdır.",
+      "date": "2026-07-10",
+      "time": "17:00",
+      "end_time": "23:30",
+      "end_date": "2026-07-12",
+      "location": "Açık Hava Amfitiyatrosu, B1 Kat",
+      "organizer": "Metrogarden Etkinlik Yönetimi",
+      "is_free": false,
+      "ticket_price": "350 TL (günlük)",
+      "ticket_url": "https://biletix.com/metrogarden-festival",
+      "category": "festival",
+      "is_featured": true,
+      "tags": [
+        "müzik",
+        "festival",
+        "canlı performans",
+        "açık hava"
+      ]
+    },
+    {
+      "id": "event-month-2",
+      "slug": "cagdas-fotografcilik-sergisi",
+      "title": "Çağdaş Fotoğrafçılık Sergisi",
+      "image": "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Türkiye'nin genç fotoğraf sanatçılarının gözünden İstanbul. 40 özgün eser.",
+      "description": "Bu Temmuz, Metrogarden'ın sergi alanı genç Türk fotoğraf sanatçılarına ev sahipliği yapıyor. \"İstanbul'un Gizli Yüzü\" temasıyla hazırlanan sergide 40 özgün fotoğraf, büyük format baskılarla sunulacak. Sanatçılar, kentin gözden kaçırılan güzelliklerini, geleneksel mahalle dokusundan modern siluete uzanan bir hikâye anlatan perspektiflerle yansıtıyor. Sergi giriş ücretsizdir.",
+      "date": "2026-07-01",
+      "time": "10:00",
+      "end_date": "2026-07-31",
+      "end_time": "22:00",
+      "location": "Sanat Galerisi, 2. Kat",
+      "organizer": "Metrogarden Kültür & Sanat",
+      "is_free": true,
+      "category": "exhibition",
+      "is_featured": true,
+      "tags": [
+        "sergi",
+        "fotoğraf",
+        "sanat",
+        "istanbul"
+      ]
+    },
+    {
+      "id": "event-month-3",
+      "slug": "cocuklar-icin-sanat-atolyesi",
+      "title": "Çocuklar İçin Sanat Atölyesi",
+      "image": "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "5-12 yaş için seramik, resim ve heykel atölyeleri. Her hafta yeni bir konu.",
+      "description": "Uzman eğitmenler eşliğinde gerçekleştirilen bu haftalık atölye serisinde çocuklar yaratıcılıklarını keşfeder, yeni teknikler ve malzemelerle tanışırlar. Seramik şekillendirme, suluboya, akrilik resim ve küçük heykel oluşturma konularında kapsamlı bir program sunulmaktadır. Tüm malzemeler atölye ücretine dahildir.",
+      "date": "2026-07-14",
+      "time": "11:00",
+      "end_time": "13:00",
+      "end_date": "2026-07-28",
+      "location": "Etkinlik Salonu, 3. Kat",
+      "organizer": "Metrogarden Kültür & Sanat",
+      "is_free": false,
+      "ticket_price": "200 TL (tek seans)",
+      "ticket_url": "https://metrogarden.com.tr/etkinlikler/sanat-atolyesi",
+      "category": "kids",
+      "is_featured": false,
+      "tags": [
+        "çocuk",
+        "sanat",
+        "atölye",
+        "resim"
+      ]
+    },
+    {
+      "id": "event-month-4",
+      "slug": "dr-kitap-imza-gunu",
+      "title": "D&R Kitap İmza Günü",
+      "image": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Çok satan yazar Elif Şimşek'in yeni romanı için imza ve söyleşi etkinliği.",
+      "description": "Türkiye'nin en çok okunan yazarlarından Elif Şimşek, yeni romanı \"Sessiz Kalan Sokaklar\" için D&R Metrogarden'da imza etkinliği düzenliyecek. Etkinlikte yazar, kitabın yazım sürecini ve ilham kaynaklarını anlatacak, ardından okuyucuların sorularını yanıtlayacak. İmza için kuyruğa girmek ücretsizdir; kitap mağazadan temin edilebilir.",
+      "date": "2026-07-15",
+      "time": "15:00",
+      "end_time": "18:00",
+      "location": "D&R Mağazası, 1. Kat",
+      "organizer": "D&R Kültür Sanat",
+      "is_free": true,
+      "category": "culture",
+      "is_featured": false,
+      "tags": [
+        "kitap",
+        "imza",
+        "yazar",
+        "edebiyat"
+      ]
+    },
+    {
+      "id": "event-month-5",
+      "slug": "yaz-kahve-festivali",
+      "title": "Yaz Kahve Festivali",
+      "image": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Türkiye ve dünyadan kahve ustaları Metrogarden'da. Tadım, demo ve yarışma.",
+      "description": "İki gün süren Yaz Kahve Festivali'nde Türkiye'nin yanı sıra Etiyopya, Kolombiya ve Vietnam'dan gelen kahve uzmanları nadir çekirdekler ve özel demleme yöntemlerini ziyaretçilerle paylaşacak. Barista yarışması, latte art gösterisi ve sensory cupping workshopları programın öne çıkan etkinlikleri arasında yer alıyor. Tüm tadım etkinlikleri ücretsizdir.",
+      "date": "2026-07-20",
+      "time": "10:00",
+      "end_date": "2026-07-21",
+      "end_time": "21:00",
+      "location": "Açık Alan & Atrium, Zemin Kat",
+      "organizer": "İstanbul Kahve Kültürü Derneği",
+      "is_free": true,
+      "category": "festival",
+      "is_featured": false,
+      "tags": [
+        "kahve",
+        "festival",
+        "tadım",
+        "barista"
+      ]
+    },
+    {
+      "id": "event-month-6",
+      "slug": "yoga-mindfulness-workshop",
+      "title": "Yoga & Mindfulness Workshop",
+      "image": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Sertifikalı yoga eğitmeninden stres yönetimi ve nefes teknikleri dersi.",
+      "description": "Bu özel workshop, günlük strese karşı etkili araçlar geliştirmek isteyenler için tasarlandı. Sertifikalı yoga eğitmeni Ayşe Kaya, hatha yoga pozisyonları, pranayama nefes teknikleri ve meditasyon uygulamalarını birleştiren 3 saatlik kapsamlı bir program sunuyor. Başlangıç seviyesine uygun olan workshop'a katılmak için önceden yoga deneyimi gerekmemektedir. Kıyafet ve mat getirilmeli.",
+      "date": "2026-07-14",
+      "time": "09:00",
+      "end_time": "12:00",
+      "location": "Etkinlik Salonu, 3. Kat",
+      "organizer": "Ayşe Kaya Wellness",
+      "is_free": false,
+      "ticket_price": "220 TL",
+      "ticket_url": "https://metrogarden.com.tr/etkinlikler/yoga-workshop",
+      "category": "workshop",
+      "is_featured": false,
+      "tags": [
+        "yoga",
+        "mindfulness",
+        "stres",
+        "sağlık"
+      ]
+    },
+    {
+      "id": "event-month-7",
+      "slug": "acik-hava-sinema-gecesi",
+      "title": "Açık Hava Sinema Gecesi",
+      "image": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Yıldızlar altında klasik Türk filmleri. Popcorn ve içecek dahil.",
+      "description": "Her yaz Metrogarden'ın çatı katı terası, film severler için açık hava sinema sahnesine dönüşüyor. Bu özel gecede iki klasik Türk filmi gösterilecek. Dev ekrana yansıtılacak filmler eşliğinde popcorn ve içecek ikramı yapılacak. İlk film saat 21:00'de, ikinci film saat 23:00'de başlayacak. Oturma yerleri sınırlıdır.",
+      "date": "2026-07-25",
+      "time": "20:30",
+      "end_time": "01:00",
+      "location": "Çatı Katı Terası, 4. Kat",
+      "organizer": "Metrogarden Etkinlik Yönetimi",
+      "is_free": false,
+      "ticket_price": "150 TL",
+      "ticket_url": "https://metrogarden.com.tr/etkinlikler/acik-hava-sinema",
+      "category": "entertainment",
+      "is_featured": false,
+      "tags": [
+        "sinema",
+        "açık hava",
+        "film"
+      ]
+    },
+    {
+      "id": "event-upcoming-1",
+      "slug": "fashion-week-defilesi",
+      "title": "Fashion Week Defilesi",
+      "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "Türkiye'nin önde gelen tasarımcılarının 2026 ilkbahar koleksiyonu defilesi.",
+      "description": "Metrogarden AVM'nin prestijli catwalk sahnesi, Türkiye'nin en yetenekli moda tasarımcılarını bir araya getiriyor. İki günlük defilede 15 tasarımcı 2026 ilkbahar-yaz koleksiyonlarını sunacak. Showroom alışverişi, tasarımcı söyleşileri ve moda fotoğrafçılığı atölyeleri de programa dahildir. Biletler sınırlıdır.",
+      "date": "2026-08-05",
+      "time": "19:00",
+      "end_time": "22:30",
+      "end_date": "2026-08-06",
+      "location": "Ana Sahne & Catwalk, Zemin Kat",
+      "organizer": "Türkiye Moda Akademisi",
+      "is_free": false,
+      "ticket_price": "400 TL",
+      "ticket_url": "https://biletix.com/metrogarden-fashionweek",
+      "category": "entertainment",
+      "is_featured": false,
+      "tags": [
+        "moda",
+        "defilе",
+        "tasarım",
+        "fashion week"
+      ]
+    },
+    {
+      "id": "event-upcoming-2",
+      "slug": "teknoloji-inovasyon-expo",
+      "title": "Teknoloji & İnovasyon Expo",
+      "image": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "AI, robotik ve sürdürülebilir teknoloji startup'larının buluşması.",
+      "description": "Türkiye'nin en büyük teknoloji startup fuarı bu yıl Metrogarden'da! Üç gün boyunca 50'den fazla startup ve teknoloji şirketi ürünlerini ve projelerini tanıtacak. Yatırımcı pitch yarışması, kodlama workshopları, VR/AR deneyim alanları ve ünlü teknoloji girişimcilerinin konuşmaları ile dolu dolu bir program sizi bekliyor. Giriş tamamen ücretsizdir.",
+      "date": "2026-08-15",
+      "time": "10:00",
+      "end_date": "2026-08-17",
+      "end_time": "20:00",
+      "location": "Tüm Katlar",
+      "organizer": "İstanbul Teknoloji Girişimcileri",
+      "is_free": true,
+      "category": "workshop",
+      "is_featured": false,
+      "tags": [
+        "teknoloji",
+        "startup",
+        "yapay zeka",
+        "expo"
+      ]
+    },
+    {
+      "id": "event-upcoming-3",
+      "slug": "gaming-tournament-eylul",
+      "title": "Metrogarden Gaming Tournament",
+      "image": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&h=533&fit=crop&q=85",
+      "hero_image": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1920&h=900&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=800&fit=crop&q=85"
+      ],
+      "short_description": "FIFA, Valorant ve Street Fighter kategorilerinde büyük ödüllü turnuva.",
+      "description": "Metrogarden'ın yıllık oyun turnuvası, bu yıl daha büyük bir katılım ve daha yüksek ödül havuzuyla geri dönüyor. FIFA, Valorant ve Street Fighter 6 kategorilerinde bireysel ve takım kayıtlarına açık olan turnuvada toplam ödül havuzu 50.000 TL'dir. Katılımcılar turnuva süresince gaming zonelarında pratik yapma imkânı da bulacak.",
+      "date": "2026-09-10",
+      "time": "12:00",
+      "end_date": "2026-09-11",
+      "end_time": "21:00",
+      "location": "Etkinlik Salonu, 3. Kat",
+      "organizer": "Metrogarden Gaming Club",
+      "is_free": false,
+      "ticket_price": "100 TL (kayıt)",
+      "ticket_url": "https://metrogarden.com.tr/etkinlikler/gaming-tournament",
+      "category": "entertainment",
+      "is_featured": false,
+      "tags": [
+        "oyun",
+        "turnuva",
+        "espor",
+        "gaming"
+      ]
+    }
+  ],
+  "movies": [
+    {
+      "id": "movie-f1",
+      "slug": "f1-film",
+      "title": "F1",
+      "poster": "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=400&h=600&fit=crop&q=85",
+      "cover_image": "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=1200&h=675&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200&h=800&fit=crop&q=85"
+      ],
+      "synopsis": "Formula 1'in efsanevi dünyasında geçen nefes kesen bir yarış filmi. Emekli bir şampiyon, genç bir sürücüyle takım kurar ve kariyerinin son büyük şansına tutunmaya çalışır. Hız, çılgınlık ve yeniden doğuş üzerine sinematik bir şölen.",
+      "genre": [
+        "Aksiyon",
+        "Spor",
+        "Dram"
+      ],
+      "director": "Joseph Kosinski",
+      "cast": [
+        "Brad Pitt",
+        "Damson Idris",
+        "Kerry Condon",
+        "Javier Bardem"
+      ],
+      "language": "İngilizce",
+      "subtitle": "Türkçe Altyazılı",
+      "rating": "13+",
+      "duration": 130,
+      "release_date": "2026-06-20",
+      "status": "now-showing",
+      "is_current": true,
+      "is_featured": true,
+      "daily_times": [
+        "11:00",
+        "13:30",
+        "16:00",
+        "18:45",
+        "21:30"
+      ],
+      "ticket_url": "#"
+    },
+    {
+      "id": "movie-superman",
+      "slug": "superman-film",
+      "title": "Superman",
+      "poster": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=600&fit=crop&q=85",
+      "cover_image": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200&h=675&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1534796636912-3b945b035a96?w=1200&h=800&fit=crop&q=85"
+      ],
+      "synopsis": "Clark Kent, Metropolis'e gelişinin ilk yıllarını yaşıyorken hem insanlığını hem de süper güçlerini dengelemeye çalışır. James Gunn'ın yönettiği bu yeni başlangıç, Superman'i modern çağa taşıyor.",
+      "genre": [
+        "Aksiyon",
+        "Macera",
+        "Bilim Kurgu"
+      ],
+      "director": "James Gunn",
+      "cast": [
+        "David Corenswet",
+        "Rachel Brosnahan",
+        "Nicholas Hoult",
+        "Edi Gathegi"
+      ],
+      "language": "İngilizce",
+      "subtitle": "Türkçe Altyazılı",
+      "rating": "13+",
+      "duration": 129,
+      "release_date": "2026-06-27",
+      "status": "now-showing",
+      "is_current": true,
+      "is_featured": true,
+      "daily_times": [
+        "10:30",
+        "13:15",
+        "16:00",
+        "18:30",
+        "21:15"
+      ],
+      "ticket_url": "#"
+    },
+    {
+      "id": "movie-jurassic-world-rebirth",
+      "slug": "jurassic-world-rebirth",
+      "title": "Jurassic World Rebirth",
+      "poster": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&h=600&fit=crop&q=85",
+      "cover_image": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&h=675&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1512070679279-8988d32161be?w=1200&h=800&fit=crop&q=85"
+      ],
+      "synopsis": "Dünya iklim felaketi sonrası dengesini yitirdi. Dinozorlar yalnızca belirli ekvatoral bölgelerde hayatta kalabilirken bir bilim ekibi, bu tehlikeli topraklara girip üç büyük dino türünün DNA'sını toplamaya çalışır.",
+      "genre": [
+        "Aksiyon",
+        "Macera",
+        "Gerilim"
+      ],
+      "director": "Gareth Edwards",
+      "cast": [
+        "Scarlett Johansson",
+        "Jonathan Bailey",
+        "Mahershala Ali",
+        "Rupert Friend"
+      ],
+      "language": "İngilizce",
+      "subtitle": "Türkçe Altyazılı",
+      "rating": "13+",
+      "duration": 118,
+      "release_date": "2026-06-13",
+      "status": "now-showing",
+      "is_current": true,
+      "is_featured": true,
+      "daily_times": [
+        "11:15",
+        "14:00",
+        "16:45",
+        "19:30",
+        "22:00"
+      ],
+      "ticket_url": "#"
+    },
+    {
+      "id": "movie-mission-impossible",
+      "slug": "mission-impossible-final-reckoning",
+      "title": "Mission: Impossible — The Final Reckoning",
+      "poster": "https://images.unsplash.com/photo-1512070679279-8988d32161be?w=400&h=600&fit=crop&q=85",
+      "cover_image": "https://images.unsplash.com/photo-1512070679279-8988d32161be?w=1200&h=675&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1512070679279-8988d32161be?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=800&fit=crop&q=85"
+      ],
+      "synopsis": "Ethan Hunt'ın son macerası. Yapay zeka kaynaklı küresel tehdidi engellemek için IMF tarihin en tehlikeli görevini üstleniyor. Tam bir epik finale hazır olun.",
+      "genre": [
+        "Aksiyon",
+        "Gerilim",
+        "Casusluk"
+      ],
+      "director": "Christopher McQuarrie",
+      "cast": [
+        "Tom Cruise",
+        "Hayley Atwell",
+        "Ving Rhames",
+        "Simon Pegg",
+        "Vanessa Kirby"
+      ],
+      "language": "İngilizce",
+      "subtitle": "Türkçe Altyazılı",
+      "rating": "13+",
+      "duration": 169,
+      "release_date": "2026-06-06",
+      "status": "now-showing",
+      "is_current": true,
+      "is_featured": false,
+      "daily_times": [
+        "12:00",
+        "15:30",
+        "19:00",
+        "22:30"
+      ],
+      "ticket_url": "#"
+    },
+    {
+      "id": "movie-elio",
+      "slug": "elio-pixar",
+      "title": "Elio",
+      "poster": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&h=600&fit=crop&q=85",
+      "cover_image": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1200&h=675&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1200&h=800&fit=crop&q=85"
+      ],
+      "synopsis": "Hayal gücü sonsuz, yalnızca kendi dünyasında yaşayan küçük Elio, bir uzaylı tarafından yanlışlıkla kaçırılır ve dünyalar arası bir büyükelçi olmak zorunda kalır. Pixar'dan eğlenceli, duygusal bir uzay macerası.",
+      "genre": [
+        "Animasyon",
+        "Aile",
+        "Macera"
+      ],
+      "director": "Adrian Molina",
+      "cast": [
+        "Yonas Kibreab",
+        "Zoe Saldaña",
+        "Brad Garrett",
+        "Shirley Henderson"
+      ],
+      "language": "Türkçe",
+      "subtitle": "Türkçe Dublaj",
+      "rating": "Genel İzleyici",
+      "duration": 98,
+      "release_date": "2026-06-27",
+      "status": "now-showing",
+      "is_current": true,
+      "is_featured": false,
+      "daily_times": [
+        "10:00",
+        "12:30",
+        "15:00",
+        "17:30"
+      ],
+      "ticket_url": "#"
+    },
+    {
+      "id": "movie-lilo-stitch",
+      "slug": "lilo-ve-stitch",
+      "title": "Lilo & Stitch",
+      "poster": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop&q=85",
+      "cover_image": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=675&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=800&fit=crop&q=85"
+      ],
+      "synopsis": "Hawaii'nin güneşli adalarında yaşayan küçük Lilo, en tuhaf arkadaşını —uzaydan kaçmış deney 626 Stitch'i— bulur. Disney'nin ikonik animasyonunun canlı aksiyon uyarlaması.",
+      "genre": [
+        "Aile",
+        "Komedi",
+        "Macera"
+      ],
+      "director": "Dean Fleischer Camp",
+      "cast": [
+        "Maia Kealoha",
+        "Sydney Agudong",
+        "Zach Galifianakis",
+        "Tia Carrere"
+      ],
+      "language": "Türkçe",
+      "subtitle": "Türkçe Dublaj",
+      "rating": "Genel İzleyici",
+      "duration": 108,
+      "release_date": "2026-06-20",
+      "status": "now-showing",
+      "is_current": true,
+      "is_featured": false,
+      "daily_times": [
+        "10:15",
+        "13:00",
+        "15:45",
+        "18:15"
+      ],
+      "ticket_url": "#"
+    },
+    {
+      "id": "movie-httyd",
+      "slug": "ejderhanı-nasıl-evcilleştirirsin",
+      "title": "How to Train Your Dragon",
+      "poster": "https://images.unsplash.com/photo-1533488765986-dfa2a9939acd?w=400&h=600&fit=crop&q=85",
+      "cover_image": "https://images.unsplash.com/photo-1533488765986-dfa2a9939acd?w=1200&h=675&fit=crop&q=85",
+      "gallery": [
+        "https://images.unsplash.com/photo-1533488765986-dfa2a9939acd?w=1200&h=800&fit=crop&q=85",
+        "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1200&h=800&fit=crop&q=85"
+      ],
+      "synopsis": "Sevilen animasyon serinin canlı aksiyon yeniden yapımı. Hiccup ve Night Fury Toothless'ın efsanevi dostluğu, nefes kesen görsellerle büyük ekrana taşınıyor.",
+      "genre": [
+        "Aile",
+        "Macera",
+        "Fantastik"
+      ],
+      "director": "Dean DeBlois",
+      "cast": [
+        "Mason Thames",
+        "Nico Parker",
+        "Gerard Butler",
+        "Julian Dennison"
+      ],
+      "language": "İngilizce",
+      "subtitle": "Türkçe Altyazılı",
+      "rating": "Genel İzleyici",
+      "duration": 125,
+      "release_date": "2026-07-01",
+      "status": "now-showing",
+      "is_current": true,
+      "is_featured": false,
+      "daily_times": [
+        "11:00",
+        "13:45",
+        "16:30",
+        "19:15",
+        "22:00"
+      ],
+      "ticket_url": "#"
+    },
+    {
+      "id": "movie-karate-kid",
+      "slug": "karate-kid-efsaneler",
+      "title": "Karate Kid: Legends",
+      "poster": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=600&fit=crop&q=85",
+      "cover_image": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&h=675&fit=crop&q=85",
+      "synopsis": "Li Fong'un New York'a taşınmasının ardından Mr. Han ve Daniel LaRusso bir araya gelir. Uluslararası bir karate turnuvasında iki efsanenin bilgeliğiyle dövüşmeye hazırlanan genç bir şampiyon adayının hikâyesi.",
+      "genre": [
+        "Aksiyon",
+        "Dram",
+        "Aile"
+      ],
+      "director": "Jonathan Entwistle",
+      "cast": [
+        "Ben Wang",
+        "Jackie Chan",
+        "Ralph Macchio",
+        "Ming-Na Wen"
+      ],
+      "language": "İngilizce",
+      "subtitle": "Türkçe Altyazılı",
+      "rating": "7+",
+      "duration": 115,
+      "release_date": "2026-07-25",
+      "status": "coming-soon",
+      "is_current": false,
+      "is_featured": false,
+      "daily_times": [],
+      "ticket_url": "#"
+    },
+    {
+      "id": "movie-fantastic-four",
+      "slug": "muhtesem-dortlu-ilk-adimlar",
+      "title": "Fantastic Four: First Steps",
+      "poster": "https://images.unsplash.com/photo-1534796636912-3b945b035a96?w=400&h=600&fit=crop&q=85",
+      "cover_image": "https://images.unsplash.com/photo-1534796636912-3b945b035a96?w=1200&h=675&fit=crop&q=85",
+      "synopsis": "Marvel'ın en sevilen takımı MCU'ya katılıyor. Reed Richards, Sue Storm, Johnny Storm ve Ben Grimm, kozmik ışınlara maruz kaldıktan sonra dünyanın en tehlikeli tehditleriyle yüzleşmek zorunda kalır.",
+      "genre": [
+        "Aksiyon",
+        "Bilim Kurgu",
+        "Macera"
+      ],
+      "director": "Matt Shakman",
+      "cast": [
+        "Pedro Pascal",
+        "Vanessa Kirby",
+        "Joseph Quinn",
+        "Ebon Moss-Bachrach",
+        "Julia Garner"
+      ],
+      "language": "İngilizce",
+      "subtitle": "Türkçe Altyazılı",
+      "rating": "13+",
+      "duration": 130,
+      "release_date": "2026-08-01",
+      "status": "coming-soon",
+      "is_current": false,
+      "is_featured": false,
+      "daily_times": [],
+      "ticket_url": "#"
+    },
+    {
+      "id": "movie-28-years-later",
+      "slug": "28-yil-sonra",
+      "title": "28 Years Later",
+      "poster": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=600&fit=crop&q=85",
+      "cover_image": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=675&fit=crop&q=85",
+      "synopsis": "Virüsün patlak verişinin 28 yılı ardından Britanya adası hâlâ tecrit altında. Karantina bölgesinden cesurca çıkan bir adam, dışarıdaki dünyayla karşılaşır. Danny Boyle'un ikincisi geldi.",
+      "genre": [
+        "Korku",
+        "Gerilim",
+        "Bilim Kurgu"
+      ],
+      "director": "Danny Boyle",
+      "cast": [
+        "Jodie Comer",
+        "Aaron Taylor-Johnson",
+        "Ralph Fiennes",
+        "Jack O'Connell"
+      ],
+      "language": "İngilizce",
+      "subtitle": "Türkçe Altyazılı",
+      "rating": "18+",
+      "duration": 115,
+      "release_date": "2026-08-08",
+      "status": "coming-soon",
+      "is_current": false,
+      "is_featured": false,
+      "daily_times": [],
+      "ticket_url": "#"
+    }
+  ],
+  "sliders": [
+    {
+      "id": "slide-1",
+      "title": "Yaz Koleksiyonu Geldi",
+      "subtitle": "Sezonun en seçkin parçaları şimdi Metrogarden'da. 180 marka, sonsuz stil.",
+      "eyebrow": "Moda & Stil",
+      "image": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1920&q=85&fit=crop",
+      "cta_label": "Mağazaları Keşfet",
+      "cta_url": "/stores",
+      "order": 1,
+      "is_active": true
+    },
+    {
+      "id": "slide-2",
+      "title": "Lezzetin Yeni Adresi",
+      "subtitle": "Dünyadan seçme mutfaklar, eşsiz tatlar. Yeme-içme deneyimini yeniden keşfedin.",
+      "eyebrow": "Restoran & Kafe",
+      "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1920&q=85&fit=crop",
+      "cta_label": "Restoranları Gör",
+      "cta_url": "/stores?category=food-and-beverage",
+      "order": 2,
+      "is_active": true
+    },
+    {
+      "id": "slide-3",
+      "title": "Büyük Yaz Festivali",
+      "subtitle": "Canlı performanslar, sanat sergileri ve çocuk etkinlikleri. Tüm aileniz için.",
+      "eyebrow": "Etkinlikler",
+      "image": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1920&q=85&fit=crop",
+      "cta_label": "Etkinlikleri İncele",
+      "cta_url": "/events",
+      "order": 3,
+      "is_active": true
+    },
+    {
+      "id": "slide-4",
+      "title": "Sinema Deneyimi",
+      "subtitle": "Blockbuster filmler, premium salon, Dolby Atmos ses sistemi. Sinema artık farklı.",
+      "eyebrow": "Sinema",
+      "image": "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=1920&q=85&fit=crop",
+      "cta_label": "Seans Saatlerini Gör",
+      "cta_url": "/cinema",
+      "order": 4,
+      "is_active": true
+    }
+  ],
+  "mediaIndex": [
+    {
+      "url": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "e3b3ce4d2b31dc5630b4cbeb250125e56f8ee92b03c7c0c5fc8b023cfa9b4b4f"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "9660209f8e81139b4cbfcba2b8019ea250f3911bca8aaa694c94ca14d3ac4b24"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1920&q=85&fit=crop",
+      "urlHash": "627835a3645ce7e531b3c55a3ca3a411ac1b4255928c193a60b18ac7e08f4b31"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=533&fit=crop&q=85",
+      "urlHash": "9a0a6b0b1579a956652120e4b5625c0fa2367c7367b2fabd6bac6e9665d1a973"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "5cf4200a5df9d3f575ca21c4ecad0a7bcba09f76a114fe39e73e62fd55b9c32a"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=533&fit=crop&q=85",
+      "urlHash": "cea51b678cfe76bd7cbd3e2d2de5eb9e2d435016c04e7b9d21a72a450225d5ac"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "88d3ae914fc78bb11e7eb906e93dafd41aacbf05b6ec04ad622fa02705776476"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "bd57af99f4f50bba988cf1a5aff08d7fe892a60869637d75a227fd2b8da7a79e"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&h=533&fit=crop&q=85",
+      "urlHash": "acd3efaca07c8d0706d8f8d8a25826e5f0b730cb5851560a67fd26efbca2982d"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "85dd3d4ad685e31fc7d832f89d10f0b3d5fbc68d23425fd2ff66b0a34e834053"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "ec2fcdfb0d3c4533fe87f646900e3858c66272c9a9e85bd5974151a6b2f405b3"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=800&h=533&fit=crop&q=85",
+      "urlHash": "e3a475c6388efd0a8230667d36c26da61e40908886ba6482ba1364f1052cb7fa"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "1978e4eb1f15fd7f81f63d56b093de36bcee02cfab3b9557c8dc260a3bfcb6a4"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "3ebe0eadeb54fbb870eeabc324b8b84709183608ac59d2d102540aa3fba498ae"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&h=533&fit=crop&q=85",
+      "urlHash": "70aa0118112214f72c8c378e6c05fcc37ec1445e84965e736c3830046870ee07"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "ac31aeb09b92286147b5d2b4447e198c1cd9724e42ae9f7d8237daa19c0c96bf"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "b36195d78c23504bfb578c7d60611cf88f90372dcebdcb8612f5c28b3c9a3e49"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800&h=533&fit=crop&q=85",
+      "urlHash": "5e488d0f0a62fd08f3371c4fe88472d704e188e9f1cbba243f328d70dc071033"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "dd462e6e39804601ad48483ccd420daccc4d6fb9146cf04e0e663212e28c211d"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "331b4dcfff58c33798cbbeb6f48eef3e1aa39b553682d55c29a8f5ac016c9c3c"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1920&q=85&fit=crop",
+      "urlHash": "275ed5635659feaeb040590acba052c81faaaded6a4e2d6b5767d51396f16d45"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&h=533&fit=crop&q=85",
+      "urlHash": "25a863a41df1dfd907b90aacc880d8fc42e987c619cdf3911110619c17cedbfa"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1487412912498-0447578fcca8?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "f4db1fa7fdc13ebe4a4394422329538b9139dc85315aa39068d88ca8b46006d0"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&h=675&fit=crop&q=85",
+      "urlHash": "ac549c954bc94004887e22c01df57206a06cbc398e957579adea4a2ec78b15b6"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "eac51faab9db7d32c7120adcc85fd4e7d2b6747bec44b0a844aa2e49af439c8e"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "272a5ac12ea8e7bec9a9165c99862d3fa90890bb7fb155688fdba5b9961308d4"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&h=600&fit=crop&q=85",
+      "urlHash": "ddb4d1cb85032654fab1bf739c4f7d0a8a2a191d213675823e5ee1add736c3c1"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&h=533&fit=crop&q=85",
+      "urlHash": "014744b98b169d0cec9f50ee55af9e32134088d2101114dc595d1c1a5bb93280"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "ec0ed589a94b6fd57e843203531850f0d87b5724323734f23c64255101001069"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "503fe2ce6cae93ee5b122692b53338be365c293a5a37a0ad05cacbf2a057f148"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800&h=533&fit=crop&q=85",
+      "urlHash": "99c070e0af55b2f32ba0dc49e9e717cb2e9c843c16db8cad69c4bc8885611c5b"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "1681963d20caa3f9a0e2734a3b2a03e9c60b40b4d601c940bea2a5b8924a8208"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "dd2cac382a101c14d42d77c059fd55416f43cf5d3c3920c5e993d4e4ff902cd4"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&h=533&fit=crop&q=85",
+      "urlHash": "a7ae08db372788d8a730913b1d99d058710303f241b7498c2f1fa97afeb7bc91"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "044ffec214bf24ffb4a10abc7c743f73df135fb14ebeb39cdd6058fa0f0eb34f"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "ccc64cc80e7f144cfae86731e757d883c9da51bc0bad2e86903a59b65d06e8dd"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1491933382434-500287f9b54b?w=800&h=533&fit=crop&q=85",
+      "urlHash": "b43243ffff087193bd03cc80c5dc440c5130372aa2ead6c3995a75ae3cf4936d"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=675&fit=crop&q=85",
+      "urlHash": "08c95accc4001a50a4b52b09bb7f63fb76158d2c8bdb571092d4383242925ce9"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "fb45dcf2fe462e4bbdeda78e3b1948e650dcf6cf23915cbc1cfd36d6fb249d82"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "95816cf41d476394b1cacd23e61644ce80afce7efb1531bd7617cbe56809287a"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop&q=85",
+      "urlHash": "6402a684d852a3f98c64753682b40d55839f67a64d54900c4eb0ca2fa6ef0574"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=533&fit=crop&q=85",
+      "urlHash": "b28dedd4122f9664b7fb7ac294c8a61d02796765efc403c1c98bbffc472786d2"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "f9c5cc7cf50aa7ef39212958efcd0696984863f64fd704a5dd4b8f99c092cd67"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&h=533&fit=crop&q=85",
+      "urlHash": "eccd2dd74fca73a294f3d7f0edd1b8a84b322f3cf1ce2165ed0f053f27135492"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "30c6a34940c61d21ecd73a7a7986e0bf7cfd71a994b1c13ceffc6f0508705ab9"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "30f48fad0caf41674f450b75986960a0980b3fdc4f81dd64eb2e3b20caea8dd4"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&h=533&fit=crop&q=85",
+      "urlHash": "08e693636b8f93b38a07992ee3c6071fdb0bc0c53f29a6d0c13ca64d0716f0e5"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1506869640319-fe1a24fd76dc?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "a0ef161f10a74ba4e060ce102dd8dd78a0241d159384ffe10b344707d1175a96"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "963dbb3f55f312ae1ef705de87499c5cb4610b9e8bb1677a1db066667e227d90"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "844cd34e87bcdb9d6e7429bf6a24f1928568d521af49a53b9bbec94a8f6c341b"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=800&h=533&fit=crop&q=85",
+      "urlHash": "cba8d442e77f53f4df7a0973d425a39e6bce416fc3fa93e200566b8c6654f7d1"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "c7f009eefe9c6c7d07036a35db8b36ae8eea04742f42e0a886dd9cd88565e987"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "91d54bbd6712dca23d053f2eba89136f39b414c93ddcdff1bc9d6f7e111e6ca4"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=800&h=533&fit=crop&q=85",
+      "urlHash": "cd1a22d315feaa04bb7d0628e8aa98e6c4686c4ca150a02f56e96dd8b121d0a8"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1512070679279-8988d32161be?w=1200&h=675&fit=crop&q=85",
+      "urlHash": "ec9b061669add5167d72ea2a80abbb3f8eb658ccd64aea76c32357dfe86105c1"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1512070679279-8988d32161be?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "3c48011c7fe01c4d4c55ebceb254bd020a6cedd1b7bbbf0767992251776e6979"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1512070679279-8988d32161be?w=400&h=600&fit=crop&q=85",
+      "urlHash": "fed7e16c6171dbd25cc3a5a878c4bd52d2e1291dcc33e6d7e0024f3432b2f152"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "a8fb3d00d7437f11e2d3f169177002ea041282b51f98ad52616e57238c3692ea"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "34cc8f9f62763a79432ce97aba938f4af2d3eccb00741be5f961c96556a5acb7"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "1650b220de1746d7bfd5ec3d947c07bfff9ad089f8cc01077b1c9b9e0dc109cd"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=800&h=533&fit=crop&q=85",
+      "urlHash": "bccc7cdf96faaaf91d8ab742986da291e6bf41d9d198cc828b3b310ef17ac831"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "df1d9840e4b6038d3bcb4f52919d291f9cd9942943049734783d888ab140a902"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "0ad6c3969458aa355a18ee1fe1fcf0838f5c29f5eebcc543407256da891c70a5"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=533&fit=crop&q=85",
+      "urlHash": "3bb74f7f17f4a4520392743e63dd632d204fd87bd0c73fe685bfb54a97fb50dd"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=1920&q=85&fit=crop",
+      "urlHash": "21f21bb307fe6e19b96cedff69e37940287cce300b750175cb6a84a66b9e8746"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=675&fit=crop&q=85",
+      "urlHash": "3b483aa8a03be2085db8717f50da96b3a7ae2f0baf3be06c8b376265b8eabe7f"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "da354c92cfa7e11e73bf3ae28ddfe3520aaa36b9f024c16500288f1de1b60cc0"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "606faedd2b14b9b171c05c31b701aa885e233abc5f069d4df4fbcbe6c233d74c"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=600&fit=crop&q=85",
+      "urlHash": "14e1e8e239d60075198dae0943995c48ff86ff74a63b07e77acefcf9cd2c3162"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&h=533&fit=crop&q=85",
+      "urlHash": "63124c49573026fde8ea1f5a4d987b908b84755d1d3c7d9915fd77281158b490"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "e78776497f6030d5ae1b8b08a3f86488af5e9f618e3b88ccf0b6daddf772666e"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "dafd837e0257f6e82a4279f15ed04e4f4d3a57df0f08aafd87ece0743f1abb45"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&h=533&fit=crop&q=85",
+      "urlHash": "1f3da2dd0c0133f341606c0ac6d6f17a51e920276cb169ef36cb69ee3a70eb90"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "008395d62992a2e5780e99f6b562ddab750fc589195a89943e141d23a40ca9f0"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "802f31c51c98eef02f94cac61abf228fbab546e1f9fb845b425bec661757d78d"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=800&h=533&fit=crop&q=85",
+      "urlHash": "7b4180175ea1b52fcf39d66f8aaad0a8e050f0800fa75fbf9a48942f1c4b1bdc"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "6e336fead16c318f0f5bbfb8d337b073d348c5e2f1257dc8b500b27acf078db6"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "1922804c3626b221fd5d8fe596d0dc142e36bd8fa8ed773c36c3c56500e13267"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "5f1f229c7787bd94267204e3750aae4d033c316704c2aec6ebf67f7aa9a72ee8"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=800&h=533&fit=crop&q=85",
+      "urlHash": "4136de3badeb173ba119bbe8178bf9913e9013390152897daa994135ab378e54"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=1200&h=675&fit=crop&q=85",
+      "urlHash": "332fd3fb5f4d01e2bf36e6094a6cf6d058678f073f0f274f5f0d53679de813e5"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "f890fa4f4f8c563f33e5841c14d161e7f874e01bc84e4865dfbb6dc4bdccf75f"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "dfd632466a3bf4de90a41e964c2d267a3ba7581af3edccf63ca1808ada01e692"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=400&h=600&fit=crop&q=85",
+      "urlHash": "2b9e822aac7118a51a0a87aa1387b0430c857620fbe1f4aedf7bf228c9d278db"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=800&h=533&fit=crop&q=85",
+      "urlHash": "dfc75eceed5220ecd967b45409f31752f31a79fa33d79587ee78bd5735a2cc92"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1533488765986-dfa2a9939acd?w=1200&h=675&fit=crop&q=85",
+      "urlHash": "7717407e7adae90ed2c9e40e98cec40f47898f99da355019323dda7825e10b8c"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1533488765986-dfa2a9939acd?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "e3ce67c7bf78c5c47ac7480f4ce94f71bae86647ab3c8c70e9e5091a1f1e2d94"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1533488765986-dfa2a9939acd?w=400&h=600&fit=crop&q=85",
+      "urlHash": "8cb5012683b80747742cd259d3e62281501cd197df611df52d7b40182cd63af4"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1200&h=675&fit=crop&q=85",
+      "urlHash": "49ade5097e35b853014eee123a48edbdc4837dca27c5f89179f9d554f288dd1b"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "3cda47784a43d928ac9980f754dc7b8643d6c651823c7acbdd141ef7d5e29ae2"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&h=600&fit=crop&q=85",
+      "urlHash": "1a2beff3c863bf74115621fe3e777f32f369a10da7f2faf37b3d713b6e970523"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1534796636912-3b945b035a96?w=1200&h=675&fit=crop&q=85",
+      "urlHash": "dc8ac07bbb33056dbceeb6800cc7f1fc9c7612b2c57e9d9ab3dffae6a7d933a1"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1534796636912-3b945b035a96?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "d501c3255b806a063d7ae619d87532fb19e819d64c8bdd7a6233ba80d9653c43"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1534796636912-3b945b035a96?w=400&h=600&fit=crop&q=85",
+      "urlHash": "341f54ea016445df2d5424f8250c32ce2b42043f0ec14dd28fc0cc51c900a960"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200&h=675&fit=crop&q=85",
+      "urlHash": "e5fbca7a77e10537aeb4768483f84fd0421af1999a8e2f31af3009c78c02574c"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "0d0a56f16b4ef77106a3b72321729fe3437e2f1046e4d4880278f854c06bb2c1"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400&h=600&fit=crop&q=85",
+      "urlHash": "458e91f89db2143e4fa83254c1e03ef2f5ff83e3d0dfa8011d46d6bc767fa418"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "4018b7a50f99f1c214425a5c439d31cf13127db212deb7c8ef160628bec63fe4"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "d60fda221c8b581c9fa3a39e532009407d8d57ad48cebeaf2045dcd40f68a657"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1920&q=85&fit=crop",
+      "urlHash": "53d8adfd1e517ffdb04097ae44917477b64af61380b23f7e0d085b71688732a3"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=533&fit=crop&q=85",
+      "urlHash": "958efcbabe20f09f11380cd9bb743e16395521775b7685e2c96e19a4761993fa"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "96dc8cd7b82f41cdf2eee680bd1bc7865fc91209ca5a9735afe9c5095426f6cf"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "760f7c92e68cee815eb817d373dffa54daf96b2e6fab4c3e7b471020280b9970"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&h=533&fit=crop&q=85",
+      "urlHash": "69a1bb8d3bf03c654dc0b1c1e4e1d33d933f76a7c17c23087b038f862862f8bf"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&h=675&fit=crop&q=85",
+      "urlHash": "97405d45bf7ba23af9efab870936aa6439783634db3ffa63e9e2f1fccea635d7"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "1f638afb94c1089e3fcf57e725b7a0abfa5962c6c6f48fa5a4554a97a67de304"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "5940039e3b6f1d049de363c8893a5857087a053deb4e376db6856183c32f9b01"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=600&fit=crop&q=85",
+      "urlHash": "db64d1632cfafe31e55406451a1505562bfdb4298af69e08b9b58ce5f756a499"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&h=533&fit=crop&q=85",
+      "urlHash": "bf689bd583a129fa8f6cafa96418fba93d246189009b8364e47de9c57ecc530a"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "d6892e862ec7374ab8a01bf0ae6281532ebd946eebc2aff2b89a61a25a306fcf"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "c8fcd5508593709921ed19fd9bd172f878d0b86ef82e5a429c8ce698f8fd4034"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=800&h=533&fit=crop&q=85",
+      "urlHash": "b166200b41c018ea5dabd799f3daa6258837ef8304f1ecf4053b8df6c1730fea"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1556906781-9a412961a28f?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "c5872348a06e92374eb042eaded55d110a1b3ca5c416fcc867fd6038e25882d6"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "e8382a2363548c14f70185eadfa6c9309fb87b966f63ebaf67b34d96405f8658"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "2053e60875ffb148e83532d537fc27ad56fed223066be806137caa9e80838c11"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=800&h=533&fit=crop&q=85",
+      "urlHash": "f58c8ac46e2112c9064e293c54866bc188a137c3cf2fdbeb132683115185cabe"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "ab0b10c41b670d7f179eb8d87e3ba46d6c90d6682d596b4e93dfcdf2fd1c5718"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "0b2acdebff6a0cc42122878583eb52c7f5b204345cb65ee0bdc1305348050932"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=533&fit=crop&q=85",
+      "urlHash": "3f0dd240db44def883ed8ee70fee9a33d424363dccee68c720f7720d4194273e"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "c5131317bb445a517da42b844549ccdddeaf839c829daa73119afdc605756680"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "76adc182a6251dd86328dc2ba49cd305e05941186bf845f1a8b6a8a9a11f0dc4"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&h=533&fit=crop&q=85",
+      "urlHash": "4e4638a1b0a8940962aa20b9e65879f4f1c872ad73176bbe9f74fc9a86258381"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "783049d359a34cd6639e30a48698f921a5dbf86e6c65cae9e11f2943d34df8b8"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "f19ecef270e64e23eae483e2df41051511362e5dc6d5006c9558d469e097abd9"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=800&h=533&fit=crop&q=85",
+      "urlHash": "dc98dff3ace9faf9cf302f2283bda5dc5c8aea8c3d6b688cf2bc338606f649b0"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "6db7a58827b13df18d2761cf5f72e9a2f0f102404f5e6f5f21f220bdd33b233f"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "fbdf430d9a69f4634f9a10009263a73c4cef254a50496d436a13d8e6424e0374"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=1920&h=900&fit=crop&q=85",
+      "urlHash": "912b8b182fb06ad425493c5c05c726e07146c87d326d6d692022a9718e50a6a6"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=800&h=533&fit=crop&q=85",
+      "urlHash": "90fb97059325dc568d120f8aa020028f479c05436717d776b7918a195116d92e"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "db7f6b5a7f33bb974e6afb63352f2e68fdb1bde47c68df37c5bc91a1f25bcded"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1611010344444-38f4d28a6c6c?w=1200&h=800&fit=crop&q=85",
+      "urlHash": "0a2683dd8a6c557aeea79214a46a8e13c7c618f3f53def1f91b6ed3152748c8e"
+    }
+  ],
+  "counts": {
+    "stores": 20,
+    "campaigns": 18,
+    "events": 18,
+    "movies": 10,
+    "sliders": 4,
+    "uniqueMediaUrls": 131
+  }
+}

@@ -216,6 +216,7 @@ export class MallStoresService {
         categoryId,
         detailTitle: dto.detailTitle?.trim() || null,
         localDescription: dto.localDescription?.trim() || null,
+        localLogoMediaId: dto.localLogoMediaId?.trim() || null,
         floor: floorFields.floor,
         floorId: floorFields.floorId,
         storeNo: dto.storeNo?.trim() || null,
@@ -290,6 +291,11 @@ export class MallStoresService {
     const data: Prisma.MallStoreUpdateInput = {
       ...(dto.detailTitle !== undefined && { detailTitle: dto.detailTitle }),
       ...(dto.localDescription !== undefined && { localDescription: dto.localDescription }),
+      ...(dto.localLogoMediaId !== undefined && {
+        localLogoMedia: dto.localLogoMediaId
+          ? { connect: { id: dto.localLogoMediaId } }
+          : { disconnect: true },
+      }),
       ...floorUpdate,
       ...(dto.storeNo !== undefined && { storeNo: dto.storeNo }),
       ...(dto.phone !== undefined && { phone: dto.phone?.trim() || null }),

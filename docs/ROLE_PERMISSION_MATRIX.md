@@ -210,6 +210,9 @@ The following permissions are marked with a ⚠ warning indicator in the Role UI
 | `audit:security` | Access to security-sensitive audit trail |
 | `audit:export` | Can export all audit data |
 | `location:delete` | Irreversible location removal |
+| `demo:import` | Load Metrogarden-style demo content into a single mall (preview + apply) |
+| `demo:remove` | Remove only demo-batch content for a mall |
+| `mall:content-reset` | Super Admin only — soft-delete all mall-scoped content after typed confirm |
 | `settings:update` | Can change platform-wide configuration |
 
 **Critical guard:** The SUPER_ADMIN system role cannot have its critical platform permissions removed (enforced in `RolesService.assertSuperAdminCriticalPermissions`).
