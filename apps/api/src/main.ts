@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { parseCorsOrigins } from './common/cors-origins';
+import { buildCorsOptions } from './common/cors-options';
 import { join } from 'node:path';
 import { mkdirSync, existsSync } from 'node:fs';
 import { Logger, ValidationPipe } from '@nestjs/common';
@@ -95,14 +95,10 @@ async function bootstrap() {
     app.useStaticAssets(storageRoot, { prefix: '/uploads' });
   }
 
+  // enableCors registers Express cors middleware early so OPTIONS preflight
+  // is answered before JwtAuthGuard / PublicApiKeyGuard run.
   const corsOrigins = config.get<string>('CORS_ORIGINS', '');
-  if (corsOrigins.trim().length > 0) {
-    app.enableCors({
-      origin: parseCorsOrigins(corsOrigins),
-    });
-  } else {
-    app.enableCors({ origin: true });
-  }
+  app.enableCors(buildCorsOptions(corsOrigins));
 
   app.enableShutdownHooks();
 

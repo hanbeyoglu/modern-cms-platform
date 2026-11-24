@@ -826,3 +826,13 @@ Liste `sortOrder` artan sıradadır. Grup yayın aralığı, tenant/AVM kapsamı
 aktiflik/silinme kontrolleri uygulanır; görsel dili mevcut varsayılan dil yedeğini
 kullanır. Uygun slayt yoksa `[]` döner. Kapak (`image`, `coverMedia`) ve SEO görseli
 ayrı kalır; kapak görselinden slayt üretilmez. `/public/sliders` grup sözleşmesi değişmez.
+
+### Etkinlik içeriğinin güncelliği
+
+`GET /public/events` ve `GET /public/events/:slug` sunucu yanıt cache'ini
+kullanmaz ve `Cache-Control: no-store` döndürür. Kaydedilmiş değişiklikler sonraki
+istekte okunur. Varsayılan dilin metni ana etkinlik kaydından gelir; eski varsayılan
+dil çevirileri bunu ezmez. Diğer dillerde çeviri ve varsayılan dil yedeği korunur.
+Çeviri değişiklikleri ana sayfa gibi cache'lenen toplu public yanıtları da temizler.
+Web sitesi kendi HTML/veri cache'ini kullanıyorsa onun da yeniden doğrulanması
+veya bu istekler için `cache: 'no-store'` kullanması gerekir.

@@ -5,6 +5,7 @@ import {
   Controller,
   Get,
   Headers,
+  Header,
   NotFoundException,
   Param,
   Query,
@@ -359,6 +360,7 @@ export class PublicController {
   // ── Events ────────────────────────────────────────────────────────────────
 
   @Get('events')
+  @Header('Cache-Control', 'no-store')
   @ApiPublicOperation({ summary: 'public.events.summary',
     description: 'Paginated list of published events. Filter by category slug or free-text search.',
     related: [SWAGGER_TAGS.EVENTS],
@@ -379,12 +381,6 @@ export class PublicController {
   ) {
     const context = await this.ctx.resolve(tenantId, mallId, locale);
     const { page, limit } = parsePagination(pageStr, limitStr, 20, 50);
-    const cacheKey =
-      `public:${context.tenantId}:${context.mallId ?? 'none'}:events:${category ?? ''}:${search ?? ''}:${page}:${limit}` +
-      lseg(context.locale?.code);
-
-    const cached = await this.cache.get(cacheKey);
-    if (cached) return cached;
 
     const { items, total } = await this.content.getEvents({
       tenantId: context.tenantId,
@@ -397,11 +393,11 @@ export class PublicController {
       defaultLocaleId: context.defaultLocale?.id ?? null,
     });
     const result = paginatedEnvelop(items, total, page, limit, context);
-    await this.cache.set(cacheKey, result, TTL.list);
     return result;
   }
 
   @Get('events/:slug')
+  @Header('Cache-Control', 'no-store')
   @ApiPublicOperation({ summary: 'public.event.getBySlug.summary',
     description: 'Returns event detail including isFree, ordered published event slides (id, sortOrder, image: { id, url, alt, caption }), SEO metadata, cover media, and schedule.',
     related: [SWAGGER_TAGS.EVENTS],
@@ -416,12 +412,6 @@ export class PublicController {
     @Query('locale') locale: string | undefined,
   ) {
     const context = await this.ctx.resolve(tenantId, mallId, locale);
-    const cacheKey =
-      `public:${context.tenantId}:${context.mallId ?? 'none'}:event:v3:${slug}` +
-      lseg(context.locale?.code);
-
-    const cached = await this.cache.get(cacheKey);
-    if (cached) return cached;
 
     const data = await this.content.getEventBySlug({
       tenantId: context.tenantId,
@@ -433,7 +423,6 @@ export class PublicController {
     if (!data) throw new NotFoundException('Event not found');
 
     const result = envelop(data, context);
-    await this.cache.set(cacheKey, result, TTL.detail);
     return result;
   }
 

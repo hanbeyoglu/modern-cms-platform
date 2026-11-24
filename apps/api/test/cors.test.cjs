@@ -3,18 +3,49 @@ const { test } = require('node:test');
 const { createRequire } = require('node:module');
 const cors = createRequire(require.resolve('@nestjs/platform-express'))('cors');
 const { parseCorsOrigins } = require('../dist/common/cors-origins');
+const {
+  buildCorsOptions,
+  CORS_ALLOWED_HEADERS,
+  CORS_ALLOWED_METHODS,
+} = require('../dist/common/cors-options');
+
+function applyCors(configuration, req) {
+  const headers = new Map();
+  let statusCode;
+  const options = buildCorsOptions(configuration);
+  cors(options)(
+    req,
+    {
+      statusCode: 200,
+      getHeader: (name) => headers.get(String(name).toLowerCase()),
+      setHeader: (name, value) => headers.set(String(name).toLowerCase(), value),
+      end: () => {},
+    },
+    (error) => {
+      if (error) throw error;
+    },
+  );
+  return { headers, statusCode };
+}
 
 function responseOrigin(configuration, origin) {
-  const headers = new Map();
-  cors({ origin: parseCorsOrigins(configuration) })(
-    { method: 'GET', headers: origin === undefined ? {} : { origin } },
-    {
-      getHeader: (name) => headers.get(name.toLowerCase()),
-      setHeader: (name, value) => headers.set(name.toLowerCase(), value),
-    },
-    (error) => { if (error) throw error; },
-  );
+  const { headers } = applyCors(configuration, {
+    method: 'GET',
+    headers: origin === undefined ? {} : { origin },
+  });
   return headers.get('access-control-allow-origin');
+}
+
+function preflight(configuration, origin, requestHeaders) {
+  const { headers } = applyCors(configuration, {
+    method: 'OPTIONS',
+    headers: {
+      origin,
+      'access-control-request-method': 'GET',
+      'access-control-request-headers': requestHeaders,
+    },
+  });
+  return headers;
 }
 
 test('bare localhost permits HTTP and HTTPS on different ports', () => {
@@ -42,4 +73,46 @@ test('mixed lists trim entries and do not introduce wildcard support', () => {
   assert.equal(responseOrigin(' localhost, ,https://example.com ', 'https://example.com'), 'https://example.com');
   assert.equal(responseOrigin('*', 'https://other.example'), undefined);
   assert.equal(responseOrigin('localhost', undefined), undefined);
+});
+
+test('production-style list allows metrogarden without wildcard', () => {
+  const configuration =
+    'localhost,https://modern-cms.hanbeyoglu.com,https://metrogarden.hanbeyoglu.com';
+  assert.equal(
+    responseOrigin(configuration, 'https://metrogarden.hanbeyoglu.com'),
+    'https://metrogarden.hanbeyoglu.com',
+  );
+  assert.equal(
+    responseOrigin(configuration, 'https://modern-cms.hanbeyoglu.com'),
+    'https://modern-cms.hanbeyoglu.com',
+  );
+  assert.equal(responseOrigin(configuration, 'https://evil.example'), undefined);
+  assert.ok(!parseCorsOrigins(configuration).includes('*'));
+});
+
+test('OPTIONS preflight returns ACAO and public API headers for metrogarden', () => {
+  const configuration =
+    'localhost,https://modern-cms.hanbeyoglu.com,https://metrogarden.hanbeyoglu.com';
+  const headers = preflight(
+    configuration,
+    'https://metrogarden.hanbeyoglu.com',
+    'accept,x-api-key,x-tenant-id,x-mall-id',
+  );
+  assert.equal(headers.get('access-control-allow-origin'), 'https://metrogarden.hanbeyoglu.com');
+  const allowedHeaders = String(headers.get('access-control-allow-headers') ?? '').toLowerCase();
+  for (const header of ['accept', 'content-type', 'x-api-key', 'x-tenant-id', 'x-mall-id']) {
+    assert.match(allowedHeaders, new RegExp(header));
+  }
+  const allowedMethods = String(headers.get('access-control-allow-methods') ?? '').toUpperCase();
+  assert.match(allowedMethods, /\bGET\b/);
+  assert.equal(headers.get('access-control-allow-credentials'), undefined);
+});
+
+test('buildCorsOptions keeps credentials disabled and lists required headers/methods', () => {
+  const options = buildCorsOptions('https://metrogarden.hanbeyoglu.com');
+  assert.equal(options.credentials, false);
+  assert.deepEqual(options.allowedHeaders, [...CORS_ALLOWED_HEADERS]);
+  assert.deepEqual(options.methods, [...CORS_ALLOWED_METHODS]);
+  assert.ok(options.allowedHeaders.includes('Authorization'));
+  assert.ok(options.allowedHeaders.includes('x-api-key'));
 });

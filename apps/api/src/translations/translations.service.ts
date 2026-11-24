@@ -1,7 +1,9 @@
+import { PublicCacheService } from '../public/cache/public-cache.service';
 import { sanitizeLocalizedRichText } from '../common/utils/rich-text';
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type { LocalizedContent, User } from '@prisma/client';
@@ -14,10 +16,12 @@ import type { ListTranslationsDto } from './dto/list-translations.dto';
 
 @Injectable()
 export class TranslationsService {
+  private readonly logger = new Logger(TranslationsService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
     private readonly searchIndexer: SearchIndexerService,
+    private readonly cache: PublicCacheService,
   ) {}
 
   async list(tenantId: string, query: ListTranslationsDto): Promise<LocalizedContent[]> {
@@ -82,6 +86,7 @@ export class TranslationsService {
         .touchByLocalizedEntity(tenantId, dto.entityType, dto.entityId)
         .catch(() => undefined);
 
+      await this.invalidate(tenantId);
       return updated;
     }
 
@@ -114,6 +119,7 @@ export class TranslationsService {
       .touchByLocalizedEntity(tenantId, dto.entityType, dto.entityId)
       .catch(() => undefined);
 
+    await this.invalidate(tenantId);
     return translation;
   }
 
@@ -144,6 +150,7 @@ export class TranslationsService {
       .touchByLocalizedEntity(tenantId, existing.entityType, existing.entityId)
       .catch(() => undefined);
 
+    await this.invalidate(tenantId);
     return translation;
   }
 
@@ -169,6 +176,12 @@ export class TranslationsService {
     void this.searchIndexer
       .touchByLocalizedEntity(tenantId, existing.entityType, existing.entityId)
       .catch(() => undefined);
+    await this.invalidate(tenantId);
+  }
+
+  private async invalidate(tenantId: string): Promise<void> {
+    try { await this.cache.invalidateTenant(tenantId); }
+    catch { this.logger.warn('Translation public cache invalidation failed'); }
   }
 
   private async resolveLocaleId(

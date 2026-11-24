@@ -268,7 +268,7 @@ export class PublicContentService {
     const localeId = opts.localeId ?? null;
     const defaultLocaleId = opts.defaultLocaleId ?? null;
     const events = rows.map((row) => mapEvent(row, localeId, defaultLocaleId));
-    if (!localeId || events.length === 0) return { items: events, total };
+    if (!localeId || localeId === defaultLocaleId || events.length === 0) return { items: events, total };
 
     const tMap = await this.resolver.getTranslationsForEntities(
       opts.tenantId,
@@ -339,7 +339,7 @@ export class PublicContentService {
         }))
         .sort((a, b) => a.sortOrder - b.sortOrder),
     };
-    if (!opts.localeId) return event;
+    if (!opts.localeId || opts.localeId === opts.defaultLocaleId) return event;
 
     const tMap = await this.resolver.getTranslationsForEntities(
       opts.tenantId,
@@ -1531,19 +1531,22 @@ function mapEvent(
     coverImage: toCoverMediaRow(t.coverImage),
   }));
 
+  // Canonical event fields belong to the default language. Legacy default
+  // translation rows must never overwrite edits made in the CMS form.
+  const textRows = translationRows.filter(tr => tr.localeId !== defaultLocaleId);
   const resolvedText =
-    localeId != null
+    localeId != null && localeId !== defaultLocaleId
       ? {
-          title: pickLocalizedField('title', e.title, localeId, defaultLocaleId, translationRows),
-          description: pickLocalizedField('description', e.description, localeId, defaultLocaleId, translationRows),
+          title: pickLocalizedField('title', e.title, localeId, defaultLocaleId, textRows),
+          description: pickLocalizedField('description', e.description, localeId, defaultLocaleId, textRows),
           shortDescription: pickLocalizedField(
             'shortDescription',
             e.shortDescription,
             localeId,
             defaultLocaleId,
-            translationRows,
+            textRows,
           ),
-          buttonText: pickLocalizedField('buttonText', e.buttonText, localeId, defaultLocaleId, translationRows),
+          buttonText: pickLocalizedField('buttonText', e.buttonText, localeId, defaultLocaleId, textRows),
         }
       : {
           title: e.title,

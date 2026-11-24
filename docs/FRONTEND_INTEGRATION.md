@@ -462,6 +462,12 @@ The API supports `CORS_ORIGINS` configuration. For development with `localhost`,
 For production, add your frontend domain(s) to the `CORS_ORIGINS` environment variable:
 ```
 CORS_ORIGINS=https://yoursite.com,https://yoursite-staging.com
+
+Public site example used by this platform:
+
+```
+CORS_ORIGINS=localhost,https://modern-cms.hanbeyoglu.com,https://metrogarden.hanbeyoglu.com
+```
 ```
 
 ---
