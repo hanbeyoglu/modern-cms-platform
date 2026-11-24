@@ -1,3 +1,4 @@
+import { RichTextEditor } from '../components/RichTextEditor';
 import { useCallback, useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { toast } from 'sonner';
@@ -361,7 +362,7 @@ export function PopupsPage() {
               </div>
               <div>
                 <label style={labelStyle}>Açıklama</label>
-                <textarea style={inputStyle} rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                <RichTextEditor value={form.description} onChange={(value) => setForm({ ...form, description: value })} />
               </div>
               <div>
                 <ContextualMediaPicker

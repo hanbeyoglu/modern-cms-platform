@@ -1,3 +1,4 @@
+import { RichText } from '../../common/utils/rich-text';
 import { IsArray, IsBoolean, IsEmail, IsInt, IsObject, IsOptional, IsString, MaxLength, Min, ValidateIf, IsIn } from 'class-validator';
 import { STORE_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
@@ -12,11 +13,17 @@ export class UpdateMallStoreDto {
   @IsOptional()
   @IsString()
   @MaxLength(5000)
+  @RichText()
   localDescription?: string | null;
 
   @IsOptional()
   @IsString()
   localLogoMediaId?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  floorIds?: string[];
 
   @IsOptional()
   @IsString()

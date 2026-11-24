@@ -1,3 +1,4 @@
+import { RichTextEditor } from '../components/RichTextEditor';
 import { useCallback, useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { toast } from 'sonner';
@@ -320,7 +321,7 @@ export function CinemasPage() {
               />
             </div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Açıklama</label>
-            <textarea style={{ ...inputStyle, minHeight: 60, marginBottom: 12 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <RichTextEditor value={form.description} onChange={(value) => setForm({ ...form, description: value })} />
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Sağlayıcı tipi</label>
             <select
               style={{ ...inputStyle, marginBottom: 12 }}

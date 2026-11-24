@@ -658,6 +658,7 @@ model MallFloor {
   tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   mall       Mall        @relation(fields: [mallId], references: [id], onDelete: Cascade)
   mallStores MallStore[]
+  multiFloorStores MallStore[] @relation("MallStoreFloors")
   services Service[] @relation("ServiceFloors")
 
   @@unique([mallId, name])
@@ -666,6 +667,7 @@ model MallFloor {
 }
 
 model MallStore {
+  floors MallFloor[] @relation("MallStoreFloors")
   id               String                @id @default(cuid())
   tenantId         String
   mallId           String

@@ -1,3 +1,4 @@
+import { RichText } from '../../common/utils/rich-text';
 import { Type } from 'class-transformer';
 import { IsArray, IsOptional, IsString, ValidateNested } from 'class-validator';
 
@@ -11,6 +12,7 @@ export class SliderItemTranslationDto {
 
   @IsOptional()
   @IsString()
+  @RichText()
   description?: string | null;
 
   @IsOptional()

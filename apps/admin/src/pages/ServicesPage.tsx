@@ -1,3 +1,4 @@
+import { RichTextEditor } from '../components/RichTextEditor';
 import { useCallback, useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { toast } from 'sonner';
@@ -362,7 +363,7 @@ export function ServicesPage() {
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Açıklama</label>
-                <textarea style={inputStyle} rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                <RichTextEditor value={form.description} onChange={(value) => setForm({ ...form, description: value })} />
               </div>
               <div>
                 <ContextualMediaPicker

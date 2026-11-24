@@ -256,6 +256,7 @@ export interface CmsStore {
   displayTitle?: string | null;
   description: string | null;
   floor: CmsStoreFloor | null;
+  floors?: CmsStoreFloor[];
   /** @deprecated Use floor.label */
   floorLabel?: string | null;
   storeNo: string | null;

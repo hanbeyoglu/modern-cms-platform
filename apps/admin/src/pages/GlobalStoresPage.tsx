@@ -1,3 +1,4 @@
+import { RichTextEditor } from '../components/RichTextEditor';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
@@ -355,6 +356,7 @@ export function GlobalStoresPage() {
             <div style={{ gridColumn: '1 / -1' }}>
               {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
                 <MultilingualContentFields
+                    richTextFields={['description']}
                   locales={tenantLocales}
                   fields={GLOBAL_STORE_I18N_FIELDS}
                   activeLocaleId={contentLocaleTab}
@@ -397,7 +399,7 @@ export function GlobalStoresPage() {
                   </label>
                   <label style={{ display: 'block', marginBottom: 10 }}>
                     Açıklama
-                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
+                    <RichTextEditor value={description} onChange={(value) => setDescription(value)} />
                   </label>
                 </>
               )}

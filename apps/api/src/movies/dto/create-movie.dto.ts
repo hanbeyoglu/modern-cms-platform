@@ -1,3 +1,4 @@
+import { RichText } from '../../common/utils/rich-text';
 import type { MovieStatus, MovieListingStatus } from '@prisma/client';
 import { MOVIE_STATUSES, MOVIE_LISTING_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
@@ -22,6 +23,7 @@ export class CreateMovieDto {
 
   @IsOptional()
   @IsString()
+  @RichText()
   description?: string;
 
   @IsOptional()

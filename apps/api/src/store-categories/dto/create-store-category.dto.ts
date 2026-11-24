@@ -1,3 +1,4 @@
+import { RichText } from '../../common/utils/rich-text';
 import {
   IsBoolean,
   IsNotEmpty,
@@ -18,6 +19,7 @@ export class CreateStoreCategoryDto {
   @IsOptional()
   @IsString()
   @MaxLength(5000)
+  @RichText()
   description?: string;
 
   @IsOptional()

@@ -1,3 +1,4 @@
+import { RichText } from '../../common/utils/rich-text';
 import { IsBoolean, IsNumber, IsOptional, IsString, MaxLength, IsIn } from 'class-validator';
 import { MALL_STATUSES, LOCATION_TYPES } from '../../common/prisma-validation-enums.js';
 import type { LocationType, MallStatus } from '@prisma/client';
@@ -10,7 +11,8 @@ export class UpdateLocationDto {
   @IsOptional() @IsString() legalName?: string;
   @IsOptional() @IsString() displayName?: string;
   @IsOptional() @IsString() @MaxLength(500) shortDescription?: string;
-  @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsString() @RichText()
+  description?: string;
   @IsOptional() @IsString() logoMediaId?: string | null;
   @IsOptional() @IsString() coverMediaId?: string | null;
   @IsOptional() @IsString() websiteUrl?: string;

@@ -1,3 +1,4 @@
+import { RichTextEditor } from '../components/RichTextEditor';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -1111,12 +1112,7 @@ export function MoviesPage() {
             </div>
 
             <label style={LABEL}>Özet</label>
-            <textarea
-              style={{ ...FORM_INPUT, minHeight: 60, marginBottom: 12 }}
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Film hakkında kısa açıklama"
-            />
+            <RichTextEditor value={form.description} onChange={(value) => setForm({ ...form, description: value })} />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
               <div>

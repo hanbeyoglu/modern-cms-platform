@@ -1,3 +1,4 @@
+import { RichTextEditor } from '../components/RichTextEditor';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -497,6 +498,7 @@ export function SliderDetailPage() {
 
         {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
           <MultilingualContentFields
+                    richTextFields={['description']}
             locales={tenantLocales}
             fields={SLIDER_I18N_FIELDS}
             activeLocaleId={contentLocaleTab}
@@ -765,6 +767,7 @@ export function SliderDetailPage() {
 
             {tenantLocales.filter((l) => l.isActive).length > 0 && itemContentLocaleTab ? (
               <MultilingualContentFields
+                    richTextFields={['description']}
                 locales={tenantLocales}
                 fields={SLIDER_ITEM_I18N_FIELDS}
                 activeLocaleId={itemContentLocaleTab}
@@ -812,11 +815,7 @@ export function SliderDetailPage() {
                 </div>
                 <div style={{ marginBottom: 10 }}>
                   <label style={labelStyle}>Açıklama</label>
-                  <textarea
-                    style={{ ...inputStyle, minHeight: 60 }}
-                    value={itemForm.description}
-                    onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
-                  />
+                  <RichTextEditor value={itemForm.description} onChange={(value) => setItemForm({ ...itemForm, description: value })} />
                 </div>
               </>
             )}

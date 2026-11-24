@@ -282,6 +282,7 @@ export interface PublicStore {
   displayTitle?: string | null;
   description: string | null;
   floor: PublicStoreFloor | null;
+  floors?: PublicStoreFloor[];
   /** @deprecated Use floor.label */
   floorLabel?: string | null;
   storeNo: string | null;

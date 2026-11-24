@@ -516,6 +516,7 @@ export class PublicContentService {
         where,
         include: {
           floorRecord: true,
+          floors: { where: { active: true }, select: { id: true, name: true, label: true }, orderBy: { sortOrder: 'asc' } },
           category: {
             include: {
               iconMedia: { select: MEDIA_SELECT },
@@ -576,6 +577,7 @@ export class PublicContentService {
       },
       include: {
         floorRecord: true,
+        floors: { where: { active: true }, select: { id: true, name: true, label: true }, orderBy: { sortOrder: 'asc' } },
         category: {
           include: {
             iconMedia: { select: MEDIA_SELECT },
@@ -1856,6 +1858,7 @@ function mapStore(
     floor: string | null;
     floorId: string | null;
     floorRecord: { id: string; name: string; label: string } | null;
+    floors?: { id: string; name: string; label: string }[];
     storeNo: string | null;
     phone: string | null;
     whatsappPhone: string | null;
@@ -1918,7 +1921,8 @@ function mapStore(
     displayTitle: detailTitle,
     description: resolvedDesc,
     floor,
-    floorLabel: floor?.label ?? r.floor,
+    floors: r.floors?.length ? r.floors : (floor ? [floor] : []),
+    floorLabel: r.floors?.length ? r.floors.map(f => f.label).join(', ') : floor?.label ?? r.floor,
     storeNo: r.storeNo,
     phone,
     whatsappPhone: r.whatsappPhone,

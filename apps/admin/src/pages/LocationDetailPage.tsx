@@ -1,3 +1,4 @@
+import { RichTextEditor } from '../components/RichTextEditor';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -329,6 +330,7 @@ export function LocationDetailPage() {
             <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
               {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
                 <MultilingualContentFields
+                    richTextFields={['description']}
                   locales={tenantLocales}
                   fields={LOCATION_I18N_FIELDS}
                   activeLocaleId={contentLocaleTab}
@@ -388,12 +390,7 @@ export function LocationDetailPage() {
                   </div>
                   <div style={fieldStyle}>
                     <label style={labelStyle}>Açıklama</label>
-                    <textarea
-                      style={{ ...inputStyle, height: 100, resize: 'vertical' }}
-                      value={form.description ?? ''}
-                      onChange={(e) => setField('description', e.target.value)}
-                      disabled={!canEdit}
-                    />
+                    <RichTextEditor value={form.description ?? ''} onChange={(value) => setField('description', value)} disabled={!canEdit} />
                   </div>
                 </>
               )}

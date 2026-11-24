@@ -1,3 +1,4 @@
+import { RichText } from '../../common/utils/rich-text';
 import { ArrayUnique, IsArray, IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { STORE_STATUSES } from '../../common/prisma-validation-enums.js';
@@ -31,6 +32,7 @@ export class CreateGlobalStoreDto {
   @IsOptional()
   @IsString()
   @MaxLength(5000)
+  @RichText()
   description?: string;
 
   @IsOptional()

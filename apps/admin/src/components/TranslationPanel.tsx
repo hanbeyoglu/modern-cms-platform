@@ -1,3 +1,4 @@
+import { RichTextEditor } from './RichTextEditor';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../auth/useAuth';
@@ -400,7 +401,12 @@ export function TranslationPanel({ entityType, entityId, fields, title }: Props)
                 return (
                   <div key={field}>
                     <label style={labelStyle}>{FIELD_LABELS[field] ?? field}</label>
-                    {multiline ? (
+                    {field === 'description' || field === 'localDescription' || field === 'terms' ? (
+                      <div dir={isRtl ? 'rtl' : 'ltr'}>
+                        <RichTextEditor value={draft[activeLocaleId]?.[field] ?? ''} disabled={!canWrite}
+                          onChange={value => setDraft(d => ({ ...d, [activeLocaleId]: { ...d[activeLocaleId], [field]: value } }))} />
+                      </div>
+                    ) : multiline ? (
                       <textarea
                         style={{
                           ...rtlBox,

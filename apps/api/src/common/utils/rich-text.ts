@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import sanitizeHtml from 'sanitize-html';
 
 /** Allow only the formatting emitted by the content editor. Keep legacy plain text intact. */
@@ -18,6 +19,11 @@ export function sanitizeRichText(value: string): string {
 /** Limit rich text handling to fields that have a rich editor. */
 export function sanitizeLocalizedRichText(entityType: string, field: string, value: string): string {
   const richField = (entityType === 'CAMPAIGN' && ['description', 'terms'].includes(field)) ||
-    (entityType === 'EVENT' && field === 'description');
+    (['EVENT', 'GLOBAL_STORE', 'STORE_CATEGORY', 'MALL_STORE', 'STORE', 'MOVIE', 'CINEMA', 'SLIDER_ITEM', 'SLIDER', 'SERVICE', 'LOCATION', 'POPUP'].includes(entityType) && ['description', 'localDescription'].includes(field));
   return richField ? sanitizeRichText(value) : value;
+}
+
+/** Sanitize rich descriptions at the DTO boundary without coercing invalid types. */
+export function RichText() {
+  return Transform(({ value }: { value: unknown }) => typeof value === 'string' ? sanitizeRichText(value) : value);
 }

@@ -1,3 +1,4 @@
+import { RichTextEditor } from '../components/RichTextEditor';
 import { Link } from 'react-router-dom';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -168,7 +169,7 @@ export function MallStoresPage() {
   const [editing, setEditing] = useState<MallStore | null>(null);
   const [detailTitle, setDetailTitle] = useState('');
   const [localDescription, setLocalDescription] = useState('');
-  const [floorId, setFloorId] = useState('');
+  const [floorIds, setFloorIds] = useState<string[]>([]);
   const [customFloor, setCustomFloor] = useState('');
   const [useCustomFloor, setUseCustomFloor] = useState(false);
   const [floors, setFloors] = useState<MallFloor[]>([]);
@@ -335,7 +336,7 @@ export function MallStoresPage() {
     setCategoryId('');
     setDetailTitle('');
     setLocalDescription('');
-    setFloorId('');
+    setFloorIds([]);
     setCustomFloor('');
     setUseCustomFloor(false);
     setStoreNo('');
@@ -359,7 +360,7 @@ export function MallStoresPage() {
     setCategoryId(m.categoryId ?? m.category?.id ?? '');
     setDetailTitle(m.detailTitle ?? '');
     setLocalDescription(m.localDescription ?? '');
-    setFloorId(m.floorId ?? m.floorRecord?.id ?? '');
+    setFloorIds(m.floors?.map(f => f.id) ?? (m.floorId ? [m.floorId] : []));
     setCustomFloor(m.floor && !m.floorId ? m.floor : '');
     setUseCustomFloor(Boolean(m.floor && !m.floorId));
     setStoreNo(m.storeNo ?? '');
@@ -405,8 +406,8 @@ export function MallStoresPage() {
       }
 
       const floorPayload = useCustomFloor
-        ? { floor: customFloor.trim() || null, floorId: null }
-        : { floorId: floorId || null, floor: null };
+        ? { floor: customFloor.trim() || null, floorId: null, floorIds: [] }
+        : { floorIds, floorId: floorIds[0] || null, floor: null };
 
       if (editing) {
         const u = await apiMallStoreUpdate(accessToken, tenantId, mallId, editing.id, {
@@ -439,7 +440,7 @@ export function MallStoresPage() {
           localDescription: localDescription.trim() || undefined,
           ...(useCustomFloor
             ? { floor: customFloor.trim() || undefined }
-            : { floorId: floorId || undefined }),
+            : { floorIds }),
           storeNo: storeNo.trim() || undefined,
           phone: phone.trim() || undefined,
           whatsappPhone: whatsappPhone.trim() || undefined,
@@ -557,6 +558,7 @@ export function MallStoresPage() {
             <div style={{ gridColumn: '1 / -1' }}>
               {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
                 <MultilingualContentFields
+                    richTextFields={['localDescription']}
                   locales={tenantLocales}
                   fields={MALL_STORE_I18N_FIELDS}
                   requiredField={null}
@@ -604,7 +606,7 @@ export function MallStoresPage() {
                   </label>
                   <label style={{ display: 'block', marginBottom: 10 }}>
                     Yerel açıklama
-                    <textarea value={localDescription} onChange={(e) => setLocalDescription(e.target.value)} rows={2} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} />
+                    <RichTextEditor value={localDescription} onChange={(value) => setLocalDescription(value)} />
                   </label>
                 </>
               )}
@@ -612,16 +614,12 @@ export function MallStoresPage() {
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Kat</label>
               {!useCustomFloor ? (
-                <select
-                  value={floorId}
-                  onChange={(e) => setFloorId(e.target.value)}
-                  style={{ display: 'block', width: '100%', padding: 6, marginBottom: 6 }}
-                >
-                  <option value="">— Kat seçin —</option>
-                  {floors.filter((f) => f.active).map((f) => (
-                    <option key={f.id} value={f.id}>{f.label}</option>
-                  ))}
-                </select>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: 8 }}>
+                  {floors.filter(f => f.active).map(f => <label key={f.id} style={{ display: 'flex', gap: 6 }}>
+                    <input type="checkbox" checked={floorIds.includes(f.id)} onChange={e => setFloorIds(current => e.target.checked ? [...current, f.id] : current.filter(id => id !== f.id))} />{f.label}
+                  </label>)}
+                  {!floors.some(f => f.active) && <span>Önce Katlar ekranından kat ekleyin.</span>}
+                </div>
               ) : (
                 <input
                   value={customFloor}

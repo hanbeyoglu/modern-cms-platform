@@ -1,3 +1,4 @@
+import { RichText } from '../../common/utils/rich-text';
 import { IsBoolean, IsNumber, IsOptional, IsString, MaxLength, IsIn } from 'class-validator';
 import { LOCATION_TYPES } from '../../common/prisma-validation-enums.js';
 import type { LocationType } from '@prisma/client';
@@ -9,7 +10,8 @@ export class CreateLocationDto {
   @IsOptional() @IsString() legalName?: string;
   @IsOptional() @IsString() displayName?: string;
   @IsOptional() @IsString() @MaxLength(500) shortDescription?: string;
-  @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsString() @RichText()
+  description?: string;
   @IsOptional() @IsString() logoMediaId?: string;
   @IsOptional() @IsString() coverMediaId?: string;
   @IsOptional() @IsString() websiteUrl?: string;

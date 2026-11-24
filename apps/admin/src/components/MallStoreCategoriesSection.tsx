@@ -1,3 +1,4 @@
+import { RichTextEditor } from './RichTextEditor';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -390,6 +391,7 @@ export function MallStoreCategoriesSection({
             {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
               <div style={{ gridColumn: '1 / -1' }}>
                 <MultilingualContentFields
+                  richTextFields={['description']}
                   locales={tenantLocales}
                   fields={STORE_CATEGORY_I18N_FIELDS}
                   requiredField="name"
@@ -438,7 +440,7 @@ export function MallStoreCategoriesSection({
                 </label>
                 <label style={{ gridColumn: '1 / -1' }}>
                   Açıklama
-                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} disabled={!canEdit} style={{ display: 'block', width: '100%', marginTop: 4, padding: 6, minHeight: 60 }} />
+                  <RichTextEditor value={description} onChange={setDescription} disabled={!canEdit} />
                 </label>
               </>
             )}

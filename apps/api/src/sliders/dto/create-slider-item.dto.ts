@@ -1,3 +1,4 @@
+import { RichText } from '../../common/utils/rich-text';
 import { IsInt, IsOptional, IsString, IsUrl, Min, ValidateIf, IsIn, IsBoolean, IsArray, ValidateNested } from 'class-validator';
 import { SLIDER_STATUSES } from '../../common/prisma-validation-enums.js';
 import { Transform, Type } from 'class-transformer';
@@ -11,6 +12,7 @@ export class CreateSliderItemDto {
 
   @IsOptional()
   @IsString()
+  @RichText()
   description?: string;
 
   @IsOptional()

@@ -1,3 +1,4 @@
+import { RichText } from '../../common/utils/rich-text';
 import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsEnum, IsInt, IsObject, IsOptional, IsString, IsNumber, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
@@ -9,6 +10,7 @@ export class CreateServiceDto {
 
   @IsOptional()
   @IsString()
+  @RichText()
   description?: string;
 
   @IsOptional()

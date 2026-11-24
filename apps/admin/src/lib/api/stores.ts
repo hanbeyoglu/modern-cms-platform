@@ -98,6 +98,7 @@ export type MallStore = {
   localDescription: string | null;
   localLogoMediaId: string | null;
   floorId: string | null;
+  floors?: MallFloor[];
   floor: string | null;
   storeNo: string | null;
   phone: string | null;
@@ -443,6 +444,7 @@ export async function apiMallStoreAssign(
     detailTitle?: string;
     localDescription?: string;
     floorId?: string;
+    floorIds?: string[];
     floor?: string;
     storeNo?: string;
     phone?: string;
@@ -475,6 +477,7 @@ export async function apiMallStoreUpdate(
     localDescription: string | null;
     categoryId: string | null;
     floorId: string | null;
+    floorIds: string[];
     floor: string | null;
     storeNo: string | null;
     phone: string | null;

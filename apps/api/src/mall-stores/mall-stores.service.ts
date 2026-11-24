@@ -41,6 +41,7 @@ const MALL_STORE_INCLUDE = {
   },
   localLogoMedia: { select: MEDIA_SELECT },
   floorRecord: true,
+  floors: { orderBy: { sortOrder: 'asc' as const } },
   category: { select: CATEGORY_SELECT },
 } satisfies Prisma.MallStoreInclude;
 
@@ -201,7 +202,8 @@ export class MallStoresService {
       if (err) throw new BadRequestException(err);
     }
 
-    const floorFields = await this.resolveFloorFields(tenantId, mallId, dto.floorId, dto.floor);
+    const floorIds = await this.resolveFloorIds(tenantId, mallId, dto.floorIds ?? (dto.floorId ? [dto.floorId] : []));
+    const floorFields = await this.resolveFloorFields(tenantId, mallId, floorIds[0], dto.floor);
 
     let categoryId: string | null = null;
     if (dto.categoryId) {
@@ -219,6 +221,7 @@ export class MallStoresService {
         localLogoMediaId: dto.localLogoMediaId?.trim() || null,
         floor: floorFields.floor,
         floorId: floorFields.floorId,
+        floors: { connect: floorIds.map(id => ({ id })) },
         storeNo: dto.storeNo?.trim() || null,
         phone: dto.phone?.trim() || null,
         whatsappPhone: dto.whatsappPhone?.trim() || null,
@@ -272,15 +275,17 @@ export class MallStoresService {
     }
 
     let floorUpdate: Prisma.MallStoreUpdateInput = {};
-    if (dto.floorId !== undefined || dto.floor !== undefined) {
+    if (dto.floorIds !== undefined || dto.floorId !== undefined || dto.floor !== undefined) {
+      const floorIds = await this.resolveFloorIds(tenantId, mallId, dto.floorIds ?? (dto.floorId ? [dto.floorId] : []));
       const floorFields = await this.resolveFloorFields(
         tenantId,
         mallId,
-        dto.floorId ?? undefined,
+        floorIds[0],
         dto.floor ?? undefined,
         true,
       );
       floorUpdate = {
+        floors: { set: floorIds.map(id => ({ id })) },
         floor: floorFields.floor,
         floorRecord: floorFields.floorId
           ? { connect: { id: floorFields.floorId } }
@@ -462,6 +467,7 @@ export class MallStoresService {
           : {}),
       },
       include: {
+        floors: { orderBy: { sortOrder: 'asc' } },
         category: { select: { id: true, name: true, slug: true } },
         globalStore: {
           include: {
@@ -482,6 +488,7 @@ export class MallStoresService {
         localDescription: r.localDescription,
         floor: r.floor,
         floorId: r.floorId,
+        floors: r.floors,
         storeNo: r.storeNo,
         phone: r.phone ?? r.globalStore.phone,
         whatsappPhone: r.whatsappPhone,
@@ -505,6 +512,14 @@ export class MallStoresService {
         },
       };
     });
+  }
+
+  private async resolveFloorIds(tenantId: string, mallId: string, ids: string[]): Promise<string[]> {
+    const unique = [...new Set(ids)];
+    if (!unique.length) return [];
+    const rows = await this.prisma.mallFloor.findMany({ where: { id: { in: unique }, tenantId, mallId, active: true }, orderBy: { sortOrder: 'asc' } });
+    if (rows.length !== unique.length) throw new BadRequestException('Katlar bu AVM’nin aktif katlarından seçilmelidir');
+    return rows.map(row => row.id);
   }
 
   private async resolveFloorFields(

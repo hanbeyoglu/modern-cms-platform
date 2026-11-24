@@ -1,3 +1,4 @@
+import { RichText } from '../../common/utils/rich-text';
 import { IsArray, IsBoolean, IsEnum, IsISO8601, IsOptional, IsString, IsInt, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import type { PopupStatusType, ChannelType } from './create-popup.dto';
@@ -9,6 +10,7 @@ export class UpdatePopupDto {
 
   @IsOptional()
   @IsString()
+  @RichText()
   description?: string;
 
   @IsOptional()

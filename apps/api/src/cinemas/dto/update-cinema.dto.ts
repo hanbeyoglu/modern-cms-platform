@@ -1,3 +1,4 @@
+import { RichText } from '../../common/utils/rich-text';
 import type { CinemaProviderType, CinemaStatus } from '@prisma/client';
 import { CINEMA_STATUSES, CINEMA_PROVIDER_TYPES } from '../../common/prisma-validation-enums.js';
 import { Transform } from 'class-transformer';
@@ -19,6 +20,7 @@ export class UpdateCinemaDto {
 
   @IsOptional()
   @IsString()
+  @RichText()
   description?: string;
 
   @IsOptional()
