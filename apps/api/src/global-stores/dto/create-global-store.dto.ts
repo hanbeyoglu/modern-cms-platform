@@ -15,6 +15,10 @@ class StoreSocialLinkDto {
 }
 
 export class CreateGlobalStoreDto {
+  @IsOptional()
+  @IsIn(['STORE', 'RESTAURANT'])
+  kind?: 'STORE' | 'RESTAURANT';
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(300)

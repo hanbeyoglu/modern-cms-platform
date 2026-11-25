@@ -56,6 +56,7 @@ export class GlobalStoresService {
 
     const where: Prisma.GlobalStoreWhereInput = {
       deletedAt: null,
+      ...(query.kind ? { kind: query.kind } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.search
         ? { name: { contains: query.search, mode: 'insensitive' as const } }
@@ -125,6 +126,7 @@ export class GlobalStoresService {
         email: this.normalizeEmail(dto.email),
         websiteUrl: dto.websiteUrl?.trim() || null,
         socialLinksJson: socialLinks.length > 0 ? (socialLinks as Prisma.InputJsonValue) : undefined,
+        kind: dto.kind ?? 'STORE',
         status: dto.status ?? 'ACTIVE',
         createdByUser: { connect: { id: user.id } },
       },
@@ -164,6 +166,7 @@ export class GlobalStoresService {
       dto.socialLinks !== undefined ? this.resolveSocialLinks(dto.socialLinks ?? []) : undefined;
 
     const data: Prisma.GlobalStoreUpdateInput = {
+      ...(dto.kind !== undefined && { kind: dto.kind }),
       ...(dto.name !== undefined && {
         name: dto.name.trim(),
         normalizedName: normalizeStoreName(dto.name),
@@ -194,10 +197,15 @@ export class GlobalStoresService {
       }
     }
 
-    const row = await this.prisma.globalStore.update({
-      where: { id },
-      data,
-      include: GLOBAL_STORE_INCLUDE,
+    const row = await this.prisma.$transaction(async tx => {
+      const updated = await tx.globalStore.update({ where: { id }, data, include: GLOBAL_STORE_INCLUDE });
+      if (dto.kind !== undefined && dto.kind !== existing.kind) {
+        await tx.mallStore.updateMany({ where: { globalStoreId: id }, data: {
+          kind: dto.kind,
+          ...(dto.kind === 'RESTAURANT' ? { categoryId: null } : {}),
+        } });
+      }
+      return updated;
     });
 
     await this.audit.logAction({

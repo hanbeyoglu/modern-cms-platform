@@ -50,6 +50,7 @@ export type StoreSocialLink = {
 };
 
 export type GlobalStore = {
+  kind: 'STORE' | 'RESTAURANT';
   id: string;
   name: string;
   normalizedName?: string;
@@ -265,9 +266,10 @@ export async function apiStoreCategoryDelete(
 export async function apiGlobalStoresList(
   token: string,
   tenantId: string,
-  opts?: { search?: string; status?: StoreStatus; page?: number; limit?: number },
+  opts?: { kind?: 'STORE' | 'RESTAURANT'; search?: string; status?: StoreStatus; page?: number; limit?: number },
 ): Promise<GlobalStoreListResponse> {
   const params = new URLSearchParams();
+  if (opts?.kind) params.set('kind', opts.kind);
   if (opts?.search) params.set('search', opts.search);
   if (opts?.status) params.set('status', opts.status);
   if (opts?.page) params.set('page', String(opts.page));
@@ -288,6 +290,7 @@ export async function apiGlobalStoreCreate(
   token: string,
   tenantId: string,
   body: {
+    kind?: 'STORE' | 'RESTAURANT';
     name: string;
     slug?: string;
     logoMediaId?: string;
@@ -312,6 +315,7 @@ export async function apiGlobalStoreUpdate(
   tenantId: string,
   id: string,
   body: Partial<{
+    kind?: 'STORE' | 'RESTAURANT';
     name: string;
     slug: string;
     logoMediaId: string | null;

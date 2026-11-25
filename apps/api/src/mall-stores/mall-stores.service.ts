@@ -190,6 +190,7 @@ export class MallStoresService {
       where: { id: dto.globalStoreId, deletedAt: null },
     });
     if (!global) throw new BadRequestException('Geçersiz globalStoreId');
+    if (dto.kind && dto.kind !== global.kind) throw new BadRequestException('Kayıt türü global havuzdaki tür ile aynı olmalıdır');
 
     const dup = await this.prisma.mallStore.findFirst({
       where: { mallId, globalStoreId: dto.globalStoreId, deletedAt: null },
@@ -207,7 +208,7 @@ export class MallStoresService {
     const floorFields = await this.resolveFloorFields(tenantId, mallId, floorIds[0], dto.floor);
 
     let categoryId: string | null = null;
-    if (dto.categoryId) {
+    if (global.kind !== 'RESTAURANT' && dto.categoryId) {
       categoryId = await this.assertCategoryInMall(dto.categoryId, tenantId, mallId);
     }
 
@@ -216,7 +217,7 @@ export class MallStoresService {
         tenantId,
         mallId,
         globalStoreId: dto.globalStoreId,
-        kind: dto.kind ?? 'STORE',
+        kind: global.kind,
         categoryId,
         detailTitle: dto.detailTitle?.trim() || null,
         localDescription: dto.localDescription?.trim() || null,
@@ -276,6 +277,10 @@ export class MallStoresService {
       if (err) throw new BadRequestException(err);
     }
 
+    const global = await this.prisma.globalStore.findFirst({ where: { id: existing.globalStoreId, deletedAt: null } });
+    if (!global) throw new BadRequestException('Global kayıt bulunamadı');
+    if (dto.kind && dto.kind !== global.kind) throw new BadRequestException('Kayıt türünü global havuzdan değiştirin');
+
     let floorUpdate: Prisma.MallStoreUpdateInput = {};
     if (dto.floorIds !== undefined || dto.floorId !== undefined || dto.floor !== undefined) {
       const floorIds = await this.resolveFloorIds(tenantId, mallId, dto.floorIds ?? (dto.floorId ? [dto.floorId] : []));
@@ -296,7 +301,7 @@ export class MallStoresService {
     }
 
     const data: Prisma.MallStoreUpdateInput = {
-      ...(dto.kind !== undefined && { kind: dto.kind }),
+      kind: global.kind,
       ...(dto.detailTitle !== undefined && { detailTitle: dto.detailTitle }),
       ...(dto.localDescription !== undefined && { localDescription: dto.localDescription }),
       ...(dto.localLogoMediaId !== undefined && {
@@ -325,7 +330,9 @@ export class MallStoresService {
       updatedByUser: { connect: { id: user.id } },
     };
 
-    if (dto.categoryId !== undefined) {
+    if (global.kind === 'RESTAURANT') {
+      data.category = { disconnect: true };
+    } else if (dto.categoryId !== undefined) {
       if (dto.categoryId === null || dto.categoryId === '') {
         data.category = { disconnect: true };
       } else {

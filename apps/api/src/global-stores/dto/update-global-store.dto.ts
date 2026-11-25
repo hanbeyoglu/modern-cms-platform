@@ -16,6 +16,10 @@ class StoreSocialLinkDto {
 
 export class UpdateGlobalStoreDto {
   @IsOptional()
+  @IsIn(['STORE', 'RESTAURANT'])
+  kind?: 'STORE' | 'RESTAURANT';
+
+  @IsOptional()
   @IsString()
   @MaxLength(300)
   name?: string;

@@ -153,7 +153,6 @@ function parseJsonField(raw: string, label: string): Record<string, unknown> | u
 
 export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURANT' }) {
   const restaurant = kind === 'RESTAURANT';
-  const [formKind, setFormKind] = useState<'STORE' | 'RESTAURANT'>(kind);
   const { accessToken } = useAuth();
   const mallCtx = useMallRequired();
   const { can } = usePermission();
@@ -204,8 +203,8 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
     try {
       const [res, glob, cats, floorRows, location] = await Promise.all([
         apiMallStoresList(accessToken, tenantId, mallId, { kind, search: search || undefined, limit: 100 }),
-        apiGlobalStoresList(accessToken, tenantId, { limit: 100, status: 'ACTIVE' }),
-        apiStoreCategoriesList(accessToken, tenantId, mallId, { activeOnly: true }),
+        apiGlobalStoresList(accessToken, tenantId, { kind, limit: 100, status: 'ACTIVE' }),
+        restaurant ? Promise.resolve([]) : apiStoreCategoriesList(accessToken, tenantId, mallId, { activeOnly: true }),
         apiMallFloorsList(accessToken, tenantId, mallId),
         apiLocationGet(accessToken, mallId).catch(() => null),
       ]);
@@ -220,7 +219,7 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
     } finally {
       setLoading(false);
     }
-  }, [accessToken, tenantId, mallId, search, kind]);
+  }, [accessToken, tenantId, mallId, search, kind, restaurant]);
 
   useEffect(() => {
     void load();
@@ -339,7 +338,6 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
     setDetailTitle('');
     setLocalDescription('');
     setFloorIds([]);
-    setFormKind(kind);
     setCustomFloor('');
     setUseCustomFloor(false);
     setStoreNo('');
@@ -363,7 +361,6 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
     setCategoryId(m.categoryId ?? m.category?.id ?? '');
     setDetailTitle(m.detailTitle ?? '');
     setLocalDescription(m.localDescription ?? '');
-    setFormKind(m.kind ?? 'STORE');
     setFloorIds(m.floors?.map(f => f.id) ?? (m.floorId ? [m.floorId] : []));
     setCustomFloor(m.floor && !m.floorId ? m.floor : '');
     setUseCustomFloor(Boolean(m.floor && !m.floorId));
@@ -415,7 +412,7 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
 
       if (editing) {
         const u = await apiMallStoreUpdate(accessToken, tenantId, mallId, editing.id, {
-          kind: formKind,
+          kind,
           detailTitle: detailTitle.trim() || null,
           localDescription: localDescription.trim() || null,
           ...floorPayload,
@@ -429,7 +426,7 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
           isFeatured,
           isSoon,
           searchTags: parseSearchTags(searchTagsText),
-          categoryId: categoryId || null,
+          ...(restaurant ? {} : { categoryId: categoryId || null }),
         });
         setItems((prev) => prev.map((x) => (x.id === u.id ? u : x)).filter(x => x.kind === kind));
         await flushMallStoreTranslations(u.id);
@@ -441,7 +438,7 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
         }
         const c = await apiMallStoreAssign(accessToken, tenantId, mallId, {
           globalStoreId,
-          kind: formKind,
+          kind,
           detailTitle: detailTitle.trim() || undefined,
           localDescription: localDescription.trim() || undefined,
           ...(useCustomFloor
@@ -457,7 +454,7 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
           isFeatured,
           isSoon,
           searchTags: parseSearchTags(searchTagsText),
-          categoryId: categoryId || null,
+          ...(restaurant ? {} : { categoryId: categoryId || null }),
         });
         setItems((prev) => [c, ...prev]);
         setTotal((t) => t + 1);
@@ -536,6 +533,7 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
               {selectedGlobal ? <GlobalStorePreview store={selectedGlobal} readonly={!!editing} /> : null}
             </div>
 
+            {!restaurant && (
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Kategori</label>
               <p style={{ margin: '0 0 8px', fontSize: 12, color: '#6b7280' }}>
@@ -562,6 +560,7 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
                 </select>
               )}
             </div>
+            )}
             <div style={{ gridColumn: '1 / -1' }}>
               {tenantLocales.filter((l) => l.isActive).length > 0 && contentLocaleTab ? (
                 <MultilingualContentFields
@@ -619,11 +618,6 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
               )}
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Kayıt türü
-                <select value={formKind} onChange={e => setFormKind(e.target.value as 'STORE' | 'RESTAURANT')} disabled={saving} style={{ display: 'block', width: '100%', padding: 8, margin: '6px 0 16px' }}>
-                  <option value="STORE">Mağaza</option><option value="RESTAURANT">Restoran</option>
-                </select>
-              </label>
               <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Kat</label>
               {!useCustomFloor ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: 8 }}>
@@ -727,7 +721,7 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
             <tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}>
               <th style={{ padding: 8 }}>Mağaza</th>
               <th style={{ padding: 8 }}>Global marka</th>
-              <th style={{ padding: 8 }}>Kategoriler</th>
+              {!restaurant && <th style={{ padding: 8 }}>Kategoriler</th>}
               <th style={{ padding: 8 }}>Kat / No</th>
               <th style={{ padding: 8 }}>Öne çıkan</th>
               <th style={{ padding: 8 }}>Durum</th>
@@ -770,6 +764,7 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
                     </div>
                   </div>
                 </td>
+                {!restaurant && (
                 <td style={{ padding: 8 }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                     {mallStoreCategory(m) ? (
@@ -779,6 +774,7 @@ export function MallStoresPage({ kind = 'STORE' }: { kind?: 'STORE' | 'RESTAURAN
                     )}
                   </div>
                 </td>
+                )}
                 <td style={{ padding: 8 }}>
                   {m.floorRecord?.label ?? m.floor ?? '—'} / {m.storeNo ?? '—'}
                 </td>

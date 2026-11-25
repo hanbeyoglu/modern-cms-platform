@@ -28,6 +28,7 @@ test('store updates replace or clear floors and preserve them when the property 
   service.searchIndexer = { syncMallStore: async () => {} };
   service.findOne = async () => ({});
   service.prisma = {
+    globalStore: { findFirst: async () => ({ kind: 'STORE' }) },
     mallFloor: { findMany: async () => [{ id: 'a' }, { id: 'b' }], findFirst: async () => ({ id: 'a', label: 'Zemin' }) },
     mallStore: { findFirst: async () => ({ id: 'store' }), update: async args => { updates.push(args.data); return { id: 'store' }; } },
   };

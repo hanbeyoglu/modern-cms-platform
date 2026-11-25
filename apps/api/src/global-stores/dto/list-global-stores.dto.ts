@@ -5,6 +5,10 @@ import type { StoreStatus } from '@prisma/client';
 
 export class ListGlobalStoresDto {
   @IsOptional()
+  @IsIn(['STORE', 'RESTAURANT'])
+  kind?: 'STORE' | 'RESTAURANT';
+
+  @IsOptional()
   @Transform(({ value }: { value: string }) => Number(value))
   @IsInt()
   @Min(1)

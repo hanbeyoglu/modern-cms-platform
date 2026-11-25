@@ -620,6 +620,7 @@ model StoreCategoryTranslation {
 }
 
 model GlobalStore {
+  kind MallStoreKind @default(STORE)
   id                String         @id @default(cuid())
   name              String
   normalizedName    String         @unique

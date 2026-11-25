@@ -75,6 +75,7 @@ export function GlobalStoresPage() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [logoMediaId, setLogoMediaId] = useState('');
+  const [kind, setKind] = useState<'STORE' | 'RESTAURANT'>('STORE');
   const [formStatus, setFormStatus] = useState<StoreStatus>('ACTIVE');
   const [useCustomSlug, setUseCustomSlug] = useState(false);
   const [socialLinks, setSocialLinks] = useState<StoreSocialLink[]>([]);
@@ -212,6 +213,7 @@ export function GlobalStoresPage() {
     setEmail('');
     setLogoMediaId('');
     setFormStatus('ACTIVE');
+    setKind('STORE');
     setLocaleDrafts({});
     setI18nDirty(false);
     setShowForm(true);
@@ -230,6 +232,7 @@ export function GlobalStoresPage() {
     setEmail(g.email ?? '');
     setLogoMediaId(g.logoMediaId ?? '');
     setFormStatus(g.status);
+    setKind(g.kind);
     setI18nDirty(false);
     setShowForm(true);
   }
@@ -256,6 +259,7 @@ export function GlobalStoresPage() {
           logoMediaId: logoMediaId || null,
           socialLinks,
           status: formStatus,
+          kind,
         });
         setItems((prev) => prev.map((x) => (x.id === u.id ? u : x)));
         await flushGlobalStoreTranslations(u.id);
@@ -270,6 +274,7 @@ export function GlobalStoresPage() {
           logoMediaId: logoMediaId || undefined,
           socialLinks,
           status: formStatus,
+          kind,
         });
         setItems((prev) => [c, ...prev]);
         setTotal((t) => t + 1);
@@ -445,6 +450,11 @@ export function GlobalStoresPage() {
             <label>
               Web sitesi
               <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 2, padding: 5 }} placeholder="https://..." />
+            </label>
+            <label>Kayıt türü
+              <select value={kind} onChange={e => setKind(e.target.value as 'STORE' | 'RESTAURANT')} disabled={saving} style={{ display: 'block', marginTop: 2, padding: 5 }}>
+                <option value="STORE">Mağaza</option><option value="RESTAURANT">Restoran</option>
+              </select>
             </label>
             <label>
               Durum
